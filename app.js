@@ -1,4 +1,7 @@
 const grid = document.querySelector("#adventure-grid");
+const newsletterForm = document.querySelector("#newsletter-form");
+const newsletterHiddenFields = document.querySelector("#newsletter-hidden-fields");
+const newsletterProviderNote = document.querySelector("#newsletter-provider-note");
 
 async function loadCatalog() {
   if (!grid) {
@@ -69,6 +72,42 @@ function escapeHtml(value) {
     .replaceAll("'", "&#39;");
 }
 
+function initNewsletterForm() {
+  if (!newsletterForm || !newsletterHiddenFields) {
+    return;
+  }
+
+  const config = {
+    provider: "formsubmit",
+    formsubmitEndpoint: "https://formsubmit.co/txtmaster@yahoo.com",
+    nextUrl: "https://bergman90.github.io/txt_master_site/",
+    buttondownUsername: "",
+    buttondownEndpoint: "",
+    ...(window.TXT_MASTER_NEWSLETTER ?? {})
+  };
+
+  if (config.provider === "buttondown" && config.buttondownUsername) {
+    newsletterForm.action = config.buttondownEndpoint || `https://buttondown.com/api/emails/embed-subscribe/${encodeURIComponent(config.buttondownUsername)}`;
+    newsletterHiddenFields.innerHTML = "";
+    if (newsletterProviderNote) {
+      newsletterProviderNote.innerHTML = `Iscrizioni gestite da Buttondown. <a href="https://buttondown.com/refer/${encodeURIComponent(config.buttondownUsername)}" target="_blank" rel="noopener">Powered by Buttondown.</a>`;
+    }
+    return;
+  }
+
+  newsletterForm.action = config.formsubmitEndpoint;
+  newsletterHiddenFields.innerHTML = `
+    <input type="hidden" name="_subject" value="Nuova iscrizione newsletter .txt-Master">
+    <input type="hidden" name="_template" value="table">
+    <input type="hidden" name="_captcha" value="false">
+    <input type="hidden" name="_next" value="${escapeHtml(config.nextUrl)}">
+    <input type="text" name="_honey" class="hp-field" tabindex="-1" autocomplete="off">
+  `;
+  if (newsletterProviderNote) {
+    newsletterProviderNote.textContent = "Iscrizioni gestite con il form statico attuale. Quando configurerai Buttondown, il sito passerà al provider newsletter dedicato senza rifare il layout.";
+  }
+}
+
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("./service-worker.js").catch(() => {
@@ -77,4 +116,5 @@ if ("serviceWorker" in navigator) {
   });
 }
 
+initNewsletterForm();
 loadCatalog();
