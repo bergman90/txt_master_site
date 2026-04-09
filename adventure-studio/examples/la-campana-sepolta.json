@@ -2,6 +2,7 @@
   "id": "la-campana-sepolta",
   "title": "La Campana Sepolta",
   "description": "Avventura dark fantasy da librogame su un'abbazia sprofondata nella torbiera, con chiavi specifiche, ritirata significativa e finali multipli.",
+  "tags": ["torbiera", "abbazia", "mistero"],
   "startingSceneId": "scene_1",
   "allowCarryOverLoadout": true,
   "allowFreshStart": true,

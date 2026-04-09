@@ -360,6 +360,7 @@ const state = {
     id: "new-adventure",
     title: "Nuova Avventura",
     description: "",
+    tags: [],
     startingSceneId: "",
     allowCarryOverLoadout: true,
     allowFreshStart: true,
@@ -386,6 +387,7 @@ function createEmptyAdventure() {
     id: "new-adventure",
     title: "Nuova Avventura",
     description: "",
+    tags: [],
     startingSceneId: "",
     allowCarryOverLoadout: true,
     allowFreshStart: true,
@@ -398,6 +400,9 @@ function createEmptyAdventure() {
 const els = {
   adventureTitle: document.getElementById("adventure-title"),
   adventureDescription: document.getElementById("adventure-description"),
+  adventureTag1: document.getElementById("adventure-tag-1"),
+  adventureTag2: document.getElementById("adventure-tag-2"),
+  adventureTag3: document.getElementById("adventure-tag-3"),
   exampleAdventureSelect: document.getElementById("example-adventure-select"),
   loadExampleBtn: document.getElementById("load-example-btn"),
   importJsonBtn: document.getElementById("import-json-btn"),
@@ -498,6 +503,16 @@ function bindMeta() {
   els.adventureDescription.addEventListener("input", (e) => {
     state.adventure.description = e.target.value;
     renderJson();
+  });
+  [els.adventureTag1, els.adventureTag2, els.adventureTag3].forEach((input) => {
+    input.addEventListener("input", () => {
+      state.adventure.tags = normalizeAdventureTags([
+        els.adventureTag1.value,
+        els.adventureTag2.value,
+        els.adventureTag3.value
+      ]);
+      renderJson();
+    });
   });
   els.adventureCarryOver.addEventListener("change", (e) => {
     state.adventure.allowCarryOverLoadout = Boolean(e.target.checked);
@@ -989,6 +1004,9 @@ function render() {
 function renderAdventureSetup() {
   els.adventureTitle.value = state.adventure.title || "";
   els.adventureDescription.value = state.adventure.description || "";
+  els.adventureTag1.value = state.adventure.tags?.[0] || "";
+  els.adventureTag2.value = state.adventure.tags?.[1] || "";
+  els.adventureTag3.value = state.adventure.tags?.[2] || "";
   els.adventureCarryOver.checked = Boolean(state.adventure.allowCarryOverLoadout);
   els.adventureFreshStart.checked = Boolean(state.adventure.allowFreshStart);
   els.alphaStrictValidation.checked = Boolean(state.ui.strictAlpha);
@@ -1885,6 +1903,7 @@ function cleanAdventure(adventure) {
     id: slugify(adventure.title || "new-adventure"),
     title: adventure.title,
     description: adventure.description,
+    tags: normalizeAdventureTags(adventure.tags),
     startingSceneId: adventure.startingSceneId,
     allowCarryOverLoadout: Boolean(adventure.allowCarryOverLoadout),
     allowFreshStart: Boolean(adventure.allowFreshStart),
@@ -2026,6 +2045,7 @@ function normalizeAdventureImport(adventure) {
     id: normalizeString(adventure.id) || slugify(adventure.title || "new-adventure"),
     title: adventure.title || "Nuova Avventura",
     description: adventure.description || "",
+    tags: normalizeAdventureTags(adventure.tags),
     startingSceneId,
     allowCarryOverLoadout: adventure.allowCarryOverLoadout !== false,
     allowFreshStart: adventure.allowFreshStart !== false,
@@ -2498,6 +2518,16 @@ function normalizeLoot(loot) {
   };
 }
 
+function normalizeAdventureTags(value) {
+  const raw = Array.isArray(value)
+    ? value
+    : String(value || "").split(",");
+  return raw
+    .map((entry) => String(entry || "").trim())
+    .filter(Boolean)
+    .slice(0, 3);
+}
+
 function renderValidation(validation) {
   const issues = [
     ...validation.errors.map((message) => ({ severity: "error", message })),
@@ -2633,6 +2663,15 @@ function validateAdventure(adventure, cleaned = cleanAdventure(adventure), optio
   if (!cleaned.title?.trim()) {
     pushWarning("L'avventura non ha ancora un titolo leggibile.", { alphaBlocking: true });
   }
+
+  if ((cleaned.tags || []).length > 3) {
+    errors.push("L'avventura puo avere massimo 3 tag grimorio.");
+  }
+  (cleaned.tags || []).forEach((tag) => {
+    if (/\s/.test(tag)) {
+      errors.push(`Il tag grimorio "${tag}" deve essere una sola parola.`);
+    }
+  });
 
   if (!cleaned.scenes.length) {
     errors.push("Aggiungi almeno un evento prima di esportare.");

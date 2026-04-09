@@ -41,6 +41,17 @@
         <label>Descrizione<textarea id="adventure-description" rows="4"></textarea></label>
         <div class="subsection">
           <div class="subsection-header">
+            <h4>Tag grimorio</h4>
+          </div>
+          <div class="three-col compact-tags-grid">
+            <label>Tag 1<input id="adventure-tag-1" type="text" placeholder="torbiera"></label>
+            <label>Tag 2<input id="adventure-tag-2" type="text" placeholder="abbazia"></label>
+            <label>Tag 3<input id="adventure-tag-3" type="text" placeholder="mistero"></label>
+          </div>
+          <p class="hint">Massimo 3 tag, una sola parola ciascuno.</p>
+        </div>
+        <div class="subsection">
+          <div class="subsection-header">
             <h4>Avventure preconfezionate</h4>
             <button id="load-example-btn" type="button">Apri esempio</button>
           </div>
@@ -82,35 +93,14 @@
           <ul id="validation-list" class="validation-list"></ul>
         </div>
       </div>
-
-      <details class="panel panel-collapsible" open>
-        <summary class="panel-summary">
-          <span>Bestiario</span>
-          <small>Preset + custom</small>
-        </summary>
-        <label>
-          Preset per nuovo mostro
-          <select id="monster-preset-select"></select>
-        </label>
-        <div class="button-row">
-          <button id="add-monster-from-preset-btn">Aggiungi preset</button>
-        </div>
-        <p class="hint">Hai 15 mostri gia pronti. Se ti serve una creatura personalizzata, la crei direttamente dentro la scena di combattimento.</p>
-        <ul id="monster-list" class="list"></ul>
-      </details>
-
-      <details class="panel panel-collapsible">
-        <summary class="panel-summary">
-          <span>Catalogo loot</span>
-          <small>Preset runtime</small>
-        </summary>
-        <label>
-          Preset loot
-          <select id="loot-preset-select"></select>
-        </label>
-        <p class="hint">Monete, pozioni, armi e oggetti chiave vengono scelti da menu guidati.</p>
-      </details>
     </aside>
+
+    <div class="visually-hidden" aria-hidden="true">
+      <select id="monster-preset-select"></select>
+      <button id="add-monster-from-preset-btn" type="button">Aggiungi preset</button>
+      <ul id="monster-list" class="list"></ul>
+      <select id="loot-preset-select"></select>
+    </div>
 
     <main class="workspace">
       <section class="panel">
