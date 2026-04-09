@@ -255,19 +255,6 @@ h2 {
   font-size: 0.95rem;
 }
 
-.tips {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.tip {
-  background: var(--panel-soft);
-  border: 1px solid rgba(124, 100, 71, 0.6);
-  border-radius: 18px;
-  padding: 18px;
-}
-
 .footer {
   color: var(--muted);
   padding-bottom: 28px;
@@ -289,7 +276,6 @@ code {
 @media (max-width: 900px) {
   .panel--intro,
   .split,
-  .tips,
   .section__head {
     grid-template-columns: 1fr;
     display: grid;

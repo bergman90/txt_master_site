@@ -12,13 +12,13 @@
   <header class="hero">
     <div class="hero__inner">
       <div class="eyebrow">.txt-Master</div>
-      <h1>Avventure testuali, librogame e strumenti per autori.</h1>
+      <h1>Librogame, avventure testuali e strumenti per chi scrive mondi.</h1>
       <p class="hero__copy">
-        Qui trovi <strong>Adventure Studio</strong>, l'archivio delle avventure gratuite scaricabili e il punto di raccolta per le nuove storie create dalla community.
+        Qui trovi <strong>Adventure Studio</strong>, il <strong>Grimorio delle Avventure</strong> e il varco da cui nuovi autori possono inviare le loro storie alla community.
       </p>
       <div class="hero__actions">
         <a class="button button--primary" href="./adventure-studio/index.html">Apri Adventure Studio</a>
-        <a class="button button--ghost" href="#catalogo">Scarica avventure</a>
+        <a class="button button--ghost" href="./grimorio.html">Apri il Grimorio</a>
       </div>
     </div>
   </header>
@@ -38,15 +38,19 @@
       </div>
     </section>
 
-    <section class="section" id="catalogo">
-      <div class="section__head">
-        <div>
-          <div class="eyebrow">Archivio</div>
-          <h2>Avventure gratuite disponibili</h2>
-        </div>
+    <section class="panel panel--intro">
+      <div>
+        <div class="eyebrow">Grimorio</div>
+        <h2>Grimorio delle Avventure</h2>
+        <p>
+          Entra nell'archivio pubblico delle avventure gratuite di <strong>.txt-Master</strong>.
+          Ogni titolo può essere scaricato, letto e importato nell'app.
+        </p>
+      </div>
+      <div class="card-actions">
+        <a class="button button--primary" href="./grimorio.html">Apri il Grimorio</a>
         <a class="button button--ghost" href="./adventures/catalog.json">Scarica catalogo JSON</a>
       </div>
-      <div id="adventure-grid" class="adventure-grid" aria-live="polite"></div>
     </section>
 
     <section class="split">
@@ -92,25 +96,6 @@
           Primo invio: FormSubmit ti chiederà di confermare l'attivazione del form via mail.
         </p>
       </article>
-    </section>
-
-    <section class="panel">
-      <div class="eyebrow">Telefono</div>
-      <h2>Come ricevere notifiche delle nuove avventure</h2>
-      <div class="tips">
-        <div class="tip">
-          <strong>Subito, senza backend</strong>
-          <p>Usa il feed <code>feed.xml</code> in un'app RSS con notifiche push sul telefono. È il modo più solido e leggero per iniziare.</p>
-        </div>
-        <div class="tip">
-          <strong>Sito installabile</strong>
-          <p>Il portale è pronto con manifest e service worker di base, così puoi aggiungerlo alla home come una piccola web app.</p>
-        </div>
-        <div class="tip">
-          <strong>Passo successivo</strong>
-          <p>Per vere notifiche browser native servirà collegare un provider push dedicato. Il sito è già organizzato per arrivarci senza rifare tutto.</p>
-        </div>
-      </div>
     </section>
   </main>
 

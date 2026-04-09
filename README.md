@@ -1,4 +1,4 @@
-# .txt-Master | Public Site
+﻿# .txt-Master | Public Site
 
 Repository pubblico del portale `.txt-Master`.
 

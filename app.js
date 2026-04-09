@@ -1,6 +1,9 @@
 const grid = document.querySelector("#adventure-grid");
 
 async function loadCatalog() {
+  if (!grid) {
+    return;
+  }
   try {
     const response = await fetch("./adventures/catalog.json");
     if (!response.ok) {
@@ -14,6 +17,7 @@ async function loadCatalog() {
 }
 
 function renderCatalog(entries) {
+  if (!grid) return;
   if (!entries.length) {
     grid.innerHTML = `<div class="empty-state">Nessuna avventura pubblicata al momento.</div>`;
     return;
@@ -47,6 +51,7 @@ function renderCatalog(entries) {
 }
 
 function renderError(error) {
+  if (!grid) return;
   grid.innerHTML = `
     <div class="empty-state">
       Impossibile caricare il catalogo delle avventure.<br>

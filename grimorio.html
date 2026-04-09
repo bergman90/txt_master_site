@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>.txt-Master | Grimorio delle Avventure</title>
+  <meta name="description" content="Grimorio delle Avventure di .txt-Master: archivio pubblico delle avventure gratuite scaricabili.">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="hero">
+    <div class="hero__inner">
+      <div class="eyebrow">Grimorio</div>
+      <h1>Il Grimorio delle Avventure</h1>
+      <p class="hero__copy">
+        Qui riposano le avventure gratuite pubblicate per <strong>.txt-Master</strong>.
+        Ogni tomo può essere scaricato e importato nell'app.
+      </p>
+      <div class="hero__actions">
+        <a class="button button--primary" href="./index.html">Torna al portale</a>
+        <a class="button button--ghost" href="./adventures/catalog.json">Scarica catalogo JSON</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="section">
+      <div class="section__head">
+        <div>
+          <div class="eyebrow">Archivio pubblico</div>
+          <h2>Avventure disponibili</h2>
+        </div>
+      </div>
+      <div id="adventure-grid" class="adventure-grid" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>.txt-Master | Grimorio pubblico delle avventure gratuite.</p>
+  </footer>
+
+  <script src="./app.js" type="module"></script>
+</body>
+</html>
