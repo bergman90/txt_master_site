@@ -1,0 +1,434 @@
+{
+  "id": "il-pozzo-nero",
+  "title": "Il Pozzo Nero",
+  "description": "Avventura di test per Adventure Studio con 12 eventi, prove, combattimenti, mostri multipli e loot distribuito.",
+  "startingSceneId": "scene_1",
+  "scenes": [
+    {
+      "id": "scene_1",
+      "kind": "description",
+      "title": "Porta del villaggio",
+      "openingText": "La sera cade su Valpietra. Il borgomastro ti ferma davanti al pozzo antico: tre persone sono scomparse e dalle grate sale un odore di ferro e cenere.",
+      "text": "La sera cade su Valpietra. Il borgomastro ti ferma davanti al pozzo antico: tre persone sono scomparse e dalle grate sale un odore di ferro e cenere.",
+      "position": {
+        "x": 32,
+        "y": 32
+      },
+      "sceneLoot": [
+        {
+          "itemName": "Torcia",
+          "quantity": 1
+        }
+      ],
+      "choices": [
+        {
+          "id": "choice_1",
+          "text": "Accetti l'incarico e ti avvicini al pozzo",
+          "endingText": "Stringi la torcia e attraversi la piazza ormai vuota.",
+          "nextSceneId": "scene_2"
+        },
+        {
+          "id": "choice_2",
+          "text": "Interroghi gli abitanti prima di scendere",
+          "endingText": "Raccogli voci confuse su occhi nel buio e passi nelle gallerie.",
+          "nextSceneId": "scene_3"
+        }
+      ]
+    },
+    {
+      "id": "scene_2",
+      "kind": "check",
+      "title": "Argano del pozzo",
+      "openingText": "La carrucola cigola e la corda e umida. Per scendere senza incidenti devi controllare l'argano e capire se reggera il peso.",
+      "text": "La carrucola cigola e la corda e umida. Per scendere senza incidenti devi controllare l'argano e capire se reggera il peso.",
+      "position": {
+        "x": 380,
+        "y": 32
+      },
+      "sceneLoot": [],
+      "choices": [
+        {
+          "id": "choice_1",
+          "text": "Metti alla prova la corda e scendi con attenzione",
+          "endingText": "Ti aggrappi al bordo e lasci che la discesa inizi.",
+          "skillCheck": {
+            "attribute": "dexterity",
+            "difficulty": 11,
+            "successSceneId": "scene_4",
+            "failureSceneId": "scene_5"
+          }
+        }
+      ],
+      "checkConfig": {
+        "skill": "dexterity",
+        "difficulty": 11
+      }
+    },
+    {
+      "id": "scene_3",
+      "kind": "description",
+      "title": "Dicerie in piazza",
+      "openingText": "Un mugnaio ti racconta di una setta che usava il pozzo come passaggio segreto. Una ragazza giura di aver visto piccoli predoni goblin trascinare casse verso il sottosuolo.",
+      "text": "Un mugnaio ti racconta di una setta che usava il pozzo come passaggio segreto. Una ragazza giura di aver visto piccoli predoni goblin trascinare casse verso il sottosuolo.",
+      "position": {
+        "x": 32,
+        "y": 280
+      },
+      "sceneLoot": [
+        {
+          "itemName": "Monete",
+          "quantity": 7
+        }
+      ],
+      "choices": [
+        {
+          "id": "choice_1",
+          "text": "Scendi nel pozzo con le informazioni raccolte",
+          "endingText": "Ora sai che potresti trovare sia cultisti sia predoni.",
+          "nextSceneId": "scene_4"
+        }
+      ]
+    },
+    {
+      "id": "scene_4",
+      "kind": "description",
+      "title": "Cunicolo inferiore",
+      "openingText": "Atterri su pietre bagnate. Davanti a te si apre un corridoio scavato nella roccia, con orme piccole dirette a est e una debole litania che arriva da ovest.",
+      "text": "Atterri su pietre bagnate. Davanti a te si apre un corridoio scavato nella roccia, con orme piccole dirette a est e una debole litania che arriva da ovest.",
+      "position": {
+        "x": 730,
+        "y": 48
+      },
+      "sceneLoot": [],
+      "choices": [
+        {
+          "id": "choice_1",
+          "text": "Segui le orme dei predoni",
+          "endingText": "Procedi verso un rumore di casse spostate e risate rauche.",
+          "nextSceneId": "scene_6"
+        },
+        {
+          "id": "choice_2",
+          "text": "Segui la litania nel buio",
+          "endingText": "Ogni passo rende piu forte il mormorio di un rito proibito.",
+          "nextSceneId": "scene_7"
+        }
+      ]
+    },
+    {
+      "id": "scene_5",
+      "kind": "description",
+      "title": "Caduta brusca",
+      "openingText": "La corda ti brucia le mani e cedi di colpo. Atterri male ma riesci a rialzarti tra schegge di legno e catene spezzate.",
+      "text": "La corda ti brucia le mani e cedi di colpo. Atterri male ma riesci a rialzarti tra schegge di legno e catene spezzate.",
+      "position": {
+        "x": 380,
+        "y": 290
+      },
+      "sceneLoot": [
+        {
+          "itemName": "Benda da campo",
+          "quantity": 1
+        }
+      ],
+      "choices": [
+        {
+          "id": "choice_1",
+          "text": "Ti ricomponi e avanzi nel cunicolo",
+          "endingText": "Il dolore resta, ma l'esplorazione continua.",
+          "nextSceneId": "scene_4"
+        }
+      ]
+    },
+    {
+      "id": "scene_6",
+      "kind": "combat",
+      "title": "Magazzino dei predoni",
+      "openingText": "Due goblin stanno dividendo il bottino vicino a una cassa rotta. Uno afferra un pugnale, l'altro corre a prendere un arco corto.",
+      "text": "Due goblin stanno dividendo il bottino vicino a una cassa rotta. Uno afferra un pugnale, l'altro corre a prendere un arco corto.",
+      "position": {
+        "x": 1090,
+        "y": 32
+      },
+      "sceneLoot": [
+        {
+          "itemName": "Monete",
+          "quantity": 9
+        }
+      ],
+      "choices": [
+        {
+          "id": "choice_1",
+          "text": "Dopo lo scontro ispezioni le casse",
+          "endingText": "Tra ferraglia e cenci trovi il simbolo di un antico culto.",
+          "nextSceneId": "scene_8"
+        }
+      ],
+      "combatGroups": [
+        {
+          "monsterId": "monster_1",
+          "count": 2,
+          "composition": "predoni in avanscoperta"
+        }
+      ],
+      "encounterId": "monster_1"
+    },
+    {
+      "id": "scene_7",
+      "kind": "check",
+      "title": "Cerchio di cenere",
+      "openingText": "Scorgi simboli tracciati a terra e una figura incappucciata che prega davanti a un altare nero. Potresti capire il rituale oppure attirare subito l'attenzione.",
+      "text": "Scorgi simboli tracciati a terra e una figura incappucciata che prega davanti a un altare nero. Potresti capire il rituale oppure attirare subito l'attenzione.",
+      "position": {
+        "x": 1090,
+        "y": 290
+      },
+      "sceneLoot": [],
+      "choices": [
+        {
+          "id": "choice_1",
+          "text": "Analizzi il simbolo e cerchi un punto debole nel rito",
+          "endingText": "Trattieni il respiro e osservi la geometria dell'altare.",
+          "skillCheck": {
+            "attribute": "lore",
+            "difficulty": 13,
+            "successSceneId": "scene_9",
+            "failureSceneId": "scene_10"
+          }
+        }
+      ],
+      "checkConfig": {
+        "skill": "lore",
+        "difficulty": 13
+      }
+    },
+    {
+      "id": "scene_8",
+      "kind": "description",
+      "title": "Cassa del contrabbandiere",
+      "openingText": "Tra attrezzi rubati e cibo marcio trovi una mappa incompleta del complesso. Segna una cappella sommersa oltre il cerchio rituale.",
+      "text": "Tra attrezzi rubati e cibo marcio trovi una mappa incompleta del complesso. Segna una cappella sommersa oltre il cerchio rituale.",
+      "position": {
+        "x": 1440,
+        "y": 32
+      },
+      "sceneLoot": [
+        {
+          "itemName": "Chiave antica",
+          "quantity": 1
+        },
+        {
+          "itemName": "Pozione curativa",
+          "quantity": 1
+        }
+      ],
+      "choices": [
+        {
+          "id": "choice_1",
+          "text": "Segui la mappa verso la cappella",
+          "endingText": "Le tue mani stringono la chiave trovata nella cassa.",
+          "nextSceneId": "scene_11"
+        },
+        {
+          "id": "choice_2",
+          "text": "Torni verso l'altare dei cultisti",
+          "endingText": "Il silenzio delle gallerie e spezzato da un canto distante.",
+          "nextSceneId": "scene_7"
+        }
+      ]
+    },
+    {
+      "id": "scene_9",
+      "kind": "combat",
+      "title": "Adepto scoperto",
+      "openingText": "Capisci quale sigillo spezzare e il cultista perde la protezione. Si volta ringhiando, ma il rito e ormai compromesso.",
+      "text": "Capisci quale sigillo spezzare e il cultista perde la protezione. Si volta ringhiando, ma il rito e ormai compromesso.",
+      "position": {
+        "x": 1440,
+        "y": 240
+      },
+      "sceneLoot": [],
+      "choices": [
+        {
+          "id": "choice_1",
+          "text": "Esamini l'altare dopo la vittoria",
+          "endingText": "Tra le ceneri restano un frammento di gemma e indicazioni sulla cappella.",
+          "nextSceneId": "scene_11"
+        }
+      ],
+      "combatGroups": [
+        {
+          "monsterId": "monster_2",
+          "count": 1,
+          "composition": "officiante protetto dal rituale"
+        }
+      ],
+      "encounterId": "monster_2"
+    },
+    {
+      "id": "scene_10",
+      "kind": "combat",
+      "title": "Rito interrotto male",
+      "openingText": "Il simbolo si illumina e dall'ombra emerge un guardiano di ossa, chiamato a difendere il cerchio. Il cultista arretra e ti lascia al mostro.",
+      "text": "Il simbolo si illumina e dall'ombra emerge un guardiano di ossa, chiamato a difendere il cerchio. Il cultista arretra e ti lascia al mostro.",
+      "position": {
+        "x": 1440,
+        "y": 430
+      },
+      "sceneLoot": [],
+      "choices": [
+        {
+          "id": "choice_1",
+          "text": "Superato il guardiano, raggiungi la cappella",
+          "endingText": "Le ceneri si disperdono e il passaggio verso il cuore del complesso si apre.",
+          "nextSceneId": "scene_11"
+        }
+      ],
+      "combatGroups": [
+        {
+          "monsterId": "monster_3",
+          "count": 1,
+          "composition": "guardiano evocato"
+        }
+      ],
+      "encounterId": "monster_3"
+    },
+    {
+      "id": "scene_11",
+      "kind": "combat",
+      "title": "Cappella sommersa",
+      "openingText": "La sala finale e mezza allagata. Un lupo delle grotte sorveglia il cadavere del capo minatori, mentre una cassa sigillata galleggia contro l'altare.",
+      "text": "La sala finale e mezza allagata. Un lupo delle grotte sorveglia il cadavere del capo minatori, mentre una cassa sigillata galleggia contro l'altare.",
+      "position": {
+        "x": 1810,
+        "y": 220
+      },
+      "sceneLoot": [
+        {
+          "itemName": "Monete",
+          "quantity": 18
+        }
+      ],
+      "choices": [
+        {
+          "id": "choice_1",
+          "text": "Apri la cassa e concludi la spedizione",
+          "endingText": "Con il mostro abbattuto, il silenzio del pozzo torna finalmente sopportabile.",
+          "nextSceneId": "scene_12"
+        }
+      ],
+      "combatGroups": [
+        {
+          "monsterId": "monster_4",
+          "count": 1,
+          "composition": "predatore finale della cappella"
+        }
+      ],
+      "encounterId": "monster_4"
+    },
+    {
+      "id": "scene_12",
+      "kind": "description",
+      "title": "Ritorno a Valpietra",
+      "openingText": "Risalendo dal pozzo porti con te prove, bottino e il racconto di cio che viveva sotto il villaggio. Il borgomastro ti paga e la gente torna a respirare.",
+      "text": "Risalendo dal pozzo porti con te prove, bottino e il racconto di cio che viveva sotto il villaggio. Il borgomastro ti paga e la gente torna a respirare.",
+      "position": {
+        "x": 2170,
+        "y": 220
+      },
+      "sceneLoot": [
+        {
+          "itemName": "Monete",
+          "quantity": 25
+        },
+        {
+          "itemName": "Gemma rituale",
+          "quantity": 1
+        }
+      ],
+      "choices": []
+    }
+  ],
+  "encounters": [
+    {
+      "id": "monster_1",
+      "name": "Goblin Predone",
+      "description": "Rapido, sporco e opportunista, attacca in piccoli branchi.",
+      "hitPoints": 9,
+      "attackBonus": 2,
+      "defense": 11,
+      "damageMin": 1,
+      "damageMax": 4,
+      "goldReward": 6,
+      "loot": [
+        {
+          "itemName": "Pugnale",
+          "quantity": 1
+        },
+        {
+          "itemName": "Monete",
+          "quantity": 6
+        }
+      ]
+    },
+    {
+      "id": "monster_2",
+      "name": "Adepto del Culto",
+      "description": "Fanatico ritualista protetto da simboli e formule proibite.",
+      "hitPoints": 12,
+      "attackBonus": 4,
+      "defense": 10,
+      "damageMin": 2,
+      "damageMax": 5,
+      "goldReward": 14,
+      "loot": [
+        {
+          "itemName": "Pergamena arcana",
+          "quantity": 1
+        },
+        {
+          "itemName": "Monete",
+          "quantity": 14
+        }
+      ]
+    },
+    {
+      "id": "monster_3",
+      "name": "Scheletro Guardiano",
+      "description": "Un antico guerriero rianimato che difende tombe e reliquie.",
+      "hitPoints": 14,
+      "attackBonus": 3,
+      "defense": 12,
+      "damageMin": 2,
+      "damageMax": 6,
+      "goldReward": 11,
+      "loot": [
+        {
+          "itemName": "Spada corrosa",
+          "quantity": 1
+        },
+        {
+          "itemName": "Monete",
+          "quantity": 11
+        }
+      ]
+    },
+    {
+      "id": "monster_4",
+      "name": "Lupo delle Grotte",
+      "description": "Predatore nervoso e feroce, ottimo in imboscata.",
+      "hitPoints": 11,
+      "attackBonus": 3,
+      "defense": 12,
+      "damageMin": 2,
+      "damageMax": 5,
+      "goldReward": 3,
+      "loot": [
+        {
+          "itemName": "Pelle di lupo",
+          "quantity": 1
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>.txt-Master | Avventure e Adventure Studio</title>
+  <meta name="description" content="Portale ufficiale di .txt-Master: Adventure Studio, archivio avventure scaricabili, invio nuove storie e iscrizione newsletter.">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="hero">
+    <div class="hero__inner">
+      <div class="eyebrow">.txt-Master</div>
+      <h1>Avventure testuali, librogame e strumenti per autori.</h1>
+      <p class="hero__copy">
+        Qui trovi <strong>Adventure Studio</strong>, l'archivio delle avventure gratuite scaricabili e il punto di raccolta per le nuove storie create dalla community.
+      </p>
+      <div class="hero__actions">
+        <a class="button button--primary" href="./adventure-studio/index.html">Apri Adventure Studio</a>
+        <a class="button button--ghost" href="#catalogo">Scarica avventure</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="panel panel--intro">
+      <div>
+        <h2>Adventure Studio</h2>
+        <p>
+          L'editor web per creare avventure compatibili con l'app Android `.txt-Master`.
+          Puoi progettare scene, prove, combattimenti, mostri, loot, esiti e immagini evento in un flusso visuale.
+        </p>
+      </div>
+      <div class="card-actions">
+        <a class="button button--primary" href="./adventure-studio/index.html">Entra nell'editor</a>
+        <a class="button button--ghost" href="./adventure-studio/README.md">Leggi la guida</a>
+      </div>
+    </section>
+
+    <section class="section" id="catalogo">
+      <div class="section__head">
+        <div>
+          <div class="eyebrow">Archivio</div>
+          <h2>Avventure gratuite disponibili</h2>
+        </div>
+        <a class="button button--ghost" href="./adventures/catalog.json">Scarica catalogo JSON</a>
+      </div>
+      <div id="adventure-grid" class="adventure-grid" aria-live="polite"></div>
+    </section>
+
+    <section class="split">
+      <article class="panel">
+        <div class="eyebrow">Community</div>
+        <h2>Invia la tua avventura</h2>
+        <p>
+          Quando un autore completa un'avventura esportata da Adventure Studio, può inviarla per la pubblicazione nell'archivio ufficiale.
+        </p>
+        <p class="meta-label">Mail placeholder attuale</p>
+        <a class="contact-link" href="mailto:txtmaster@yahoo.com?subject=Invio%20avventura%20.txt-Master">txtmaster@yahoo.com</a>
+        <p class="note">
+          Invia il JSON esportato da Adventure Studio e, se vuoi, una breve nota con tono, durata e obiettivo dell'avventura.
+        </p>
+      </article>
+
+      <article class="panel">
+        <div class="eyebrow">Aggiornamenti</div>
+        <h2>Newsletter e nuove uscite</h2>
+        <p>
+          Gli utenti possono lasciare la loro mail tramite un form statico che inoltra l'iscrizione direttamente a te. In questo modo non pubblichi nessun elenco iscritti nel repository e non esponi dati personali nel sito.
+        </p>
+        <form class="newsletter-form" action="https://formsubmit.co/txtmaster@yahoo.com" method="POST">
+          <input type="hidden" name="_subject" value="Nuova iscrizione newsletter .txt-Master">
+          <input type="hidden" name="_template" value="table">
+          <input type="hidden" name="_captcha" value="false">
+          <input type="hidden" name="_next" value="https://bergman90.github.io/txt_master_site/">
+          <input type="text" name="_honey" class="hp-field" tabindex="-1" autocomplete="off">
+          <label class="field">
+            <span>La tua mail</span>
+            <input type="email" name="email" placeholder="tuamail@example.com" required>
+          </label>
+          <label class="field field--checkbox">
+            <input type="checkbox" name="privacy_consent" required>
+            <span>Accetto di inviare il mio indirizzo mail a .txt-Master per ricevere aggiornamenti sulle nuove avventure gratuite.</span>
+          </label>
+          <div class="card-actions">
+            <button class="button button--primary" type="submit">Iscrivimi</button>
+            <a class="button button--ghost" href="./feed.xml">Segui il feed novità</a>
+          </div>
+        </form>
+        <p class="note">
+          Primo invio: FormSubmit ti chiederà di confermare l'attivazione del form via mail.
+        </p>
+      </article>
+    </section>
+
+    <section class="panel">
+      <div class="eyebrow">Telefono</div>
+      <h2>Come ricevere notifiche delle nuove avventure</h2>
+      <div class="tips">
+        <div class="tip">
+          <strong>Subito, senza backend</strong>
+          <p>Usa il feed <code>feed.xml</code> in un'app RSS con notifiche push sul telefono. È il modo più solido e leggero per iniziare.</p>
+        </div>
+        <div class="tip">
+          <strong>Sito installabile</strong>
+          <p>Il portale è pronto con manifest e service worker di base, così puoi aggiungerlo alla home come una piccola web app.</p>
+        </div>
+        <div class="tip">
+          <strong>Passo successivo</strong>
+          <p>Per vere notifiche browser native servirà collegare un provider push dedicato. Il sito è già organizzato per arrivarci senza rifare tutto.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>.txt-Master | portale alpha per avventure gratuite e strumenti per autori.</p>
+  </footer>
+
+  <script src="./app.js" type="module"></script>
+</body>
+</html>

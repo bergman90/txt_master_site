@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>.txt-Master | Nuove avventure gratuite</title>
+  <subtitle>Feed ufficiale per le pubblicazioni gratuite di .txt-Master.</subtitle>
+  <id>tag:txt-master,2026:free-adventures</id>
+  <updated>2026-04-09T12:00:00Z</updated>
+  <link rel="self" href="./feed.xml" />
+  <entry>
+    <title>La Campana Sepolta</title>
+    <id>tag:txt-master,2026:la-campana-sepolta</id>
+    <updated>2026-04-09T12:00:00Z</updated>
+    <summary>Prima avventura alpha-ready con struttura da librogame, finali multipli e ritirate significative.</summary>
+    <link href="./adventures/la_campana_sepolta.json" />
+  </entry>
+  <entry>
+    <title>Tutorial del Focolare</title>
+    <id>tag:txt-master,2026:tutorial-del-focolare</id>
+    <updated>2026-04-09T12:00:00Z</updated>
+    <summary>Tutorial ufficiale per imparare combattimento, prove e ritmo dell'app .txt-Master.</summary>
+    <link href="./adventures/tutorial_del_focolare.json" />
+  </entry>
+</feed>

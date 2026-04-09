@@ -1,0 +1,282 @@
+{
+  "id": "tutorial_del_focolare",
+  "title": "Tutorial del Focolare",
+  "description": "Una guida narrativa al combattimento, alle scelte, al loot, all'equipaggiamento e agli oggetti richiesti.",
+  "startingSceneId": "tut_00",
+  "scenes": [
+    {
+      "id": "tut_00",
+      "title": "Il focolare del maestro",
+      "text": "Il maestro ti accoglie davanti al fuoco senza sorridere. Sul tavolo ha lasciato una torcia e un avvertimento: qui non impari ascoltando, impari scegliendo. Ogni passo che fai da ora in poi ti apre o ti chiude una strada.",
+      "sceneLoot": [
+        { "itemName": "Torcia" }
+      ],
+      "choices": [
+        {
+          "id": "tut_00_a",
+          "text": "Inizia l'addestramento con il manichino",
+          "nextSceneId": "tut_01"
+        },
+        {
+          "id": "tut_00_b",
+          "text": "Controlla prima zaino ed equipaggiamento",
+          "nextSceneId": "tut_02"
+        }
+      ]
+    },
+    {
+      "id": "tut_01",
+      "title": "Il manichino di prova",
+      "text": "Davanti a te c'e un manichino imbottito. Il maestro vuole vedere se colpisci d'istinto o con controllo. Qui non conta solo la forza: conta il modo in cui scegli di usarla, e anche un errore puo insegnarti qualcosa.",
+      "choices": [
+        {
+          "id": "tut_01_a",
+          "text": "Colpisci il manichino con tutta la forza",
+          "skillCheck": {
+            "attribute": "strength",
+            "difficulty": 12,
+            "successSceneId": "tut_02",
+            "failureSceneId": "tut_03"
+          }
+        },
+        {
+          "id": "tut_01_b",
+          "text": "Osserva il bersaglio e correggi la postura",
+          "skillCheck": {
+            "attribute": "melee",
+            "difficulty": 11,
+            "successSceneId": "tut_02",
+            "failureSceneId": "tut_03"
+          }
+        }
+      ]
+    },
+    {
+      "id": "tut_02",
+      "title": "La ricompensa del maestro",
+      "text": "Il maestro annuisce e ti consegna strumenti utili per continuare. Non ti spiega niente: lascia che sia lo zaino a parlarti. Alcuni oggetti ti preparano, altri aprono passaggi che prima sembravano chiusi.",
+      "sceneLoot": [
+        { "itemName": "Chiave antica" },
+        { "itemName": "Buckler da campo" }
+      ],
+      "choices": [
+        {
+          "id": "tut_02_a",
+          "text": "Vai al deposito chiuso",
+          "nextSceneId": "tut_04"
+        },
+        {
+          "id": "tut_02_b",
+          "text": "Torna al manichino per fare pratica",
+          "nextSceneId": "tut_01"
+        }
+      ]
+    },
+    {
+      "id": "tut_03",
+      "title": "Errore controllato",
+      "text": "Il colpo scivola male e il maestro ti ferma con un gesto secco. Non ti umilia: ti porge una cura e ti rimette davanti al bersaglio. Qui il fallimento cambia il ritmo, non spezza il cammino.",
+      "sceneLoot": [
+        { "itemName": "Pozione curativa" }
+      ],
+      "choices": [
+        {
+          "id": "tut_03_a",
+          "text": "Riprova il manichino",
+          "nextSceneId": "tut_01"
+        },
+        {
+          "id": "tut_03_b",
+          "text": "Passa al deposito quando vuoi",
+          "nextSceneId": "tut_04"
+        }
+      ]
+    },
+    {
+      "id": "tut_04",
+      "title": "La porta chiusa",
+      "text": "Davanti al deposito c'e una porta di ferro con una toppa antica. Se hai preso la chiave giusta puoi entrare subito. Se no, puoi sempre provare a forzarla e vedere quanto sei disposto a rischiare.",
+      "choices": [
+        {
+          "id": "tut_04_a",
+          "text": "Usa la Chiave antica per aprire il deposito",
+          "nextSceneId": "tut_05",
+          "requiredItemId": "ancient_key",
+          "requiredItemName": "Chiave antica",
+          "consumeOnUse": true
+        },
+        {
+          "id": "tut_04_b",
+          "text": "Forza la serratura con la tua forza",
+          "skillCheck": {
+            "attribute": "strength",
+            "difficulty": 13,
+            "successSceneId": "tut_05",
+            "failureSceneId": "tut_06"
+          }
+        }
+      ]
+    },
+    {
+      "id": "tut_05",
+      "title": "Il deposito aperto",
+      "text": "Il deposito contiene equipaggiamento vero, non ferraglia da addestramento. Il maestro ti lascia scegliere quando indossarlo: un oggetto nello zaino non basta, devi decidere tu quando trasformarlo in vantaggio.",
+      "sceneLoot": [
+        { "itemName": "Stivali chiodati" },
+        { "itemName": "Elmo da minatore" }
+      ],
+      "choices": [
+        {
+          "id": "tut_05_a",
+          "text": "Metti ordine nello zaino e vai avanti",
+          "nextSceneId": "tut_07"
+        }
+      ]
+    },
+    {
+      "id": "tut_06",
+      "title": "La serratura resiste",
+      "text": "La porta non cede al primo tentativo. Il maestro ti ricorda che un fallimento puo solo cambiare strada, non spezzare l'avventura. Puoi riprovare o andare verso il corridoio per capire il combattimento sul campo.",
+      "choices": [
+        {
+          "id": "tut_06_a",
+          "text": "Torna alla porta e tenta di nuovo",
+          "nextSceneId": "tut_04"
+        },
+        {
+          "id": "tut_06_b",
+          "text": "Entra nel corridoio delle cisterne",
+          "nextSceneId": "tut_07"
+        }
+      ]
+    },
+    {
+      "id": "tut_07",
+      "title": "Il corridoio delle cisterne",
+      "text": "Nel corridoio senti un fruscio e poi il raschio di unghie su pietra. Il maestro non parla piu: adesso devi capire da solo quando colpire, quando reggere e quando prendere fiato. Se vuoi, puoi anche rompere il contatto e ritirarti.",
+      "encounterId": "tut_rat",
+      "victorySceneId": "tut_08",
+      "defeatSceneId": "tut_09",
+      "retreatSceneId": "tut_09"
+    },
+    {
+      "id": "tut_08",
+      "title": "Dopo il ratto corazzato",
+      "text": "La bestiola cade e il corridoio torna silenzioso. Il bottino entra nello zaino e per la prima volta senti che la vittoria non e solo sopravvivere: e uscire dallo scontro con piu opzioni di prima.",
+      "sceneLoot": [
+        { "itemName": "Spada corrosa" }
+      ],
+      "choices": [
+        {
+          "id": "tut_08_a",
+          "text": "Esamina il bottino e affronta l'ultima prova",
+          "nextSceneId": "tut_10"
+        }
+      ]
+    },
+    {
+      "id": "tut_09",
+      "title": "Ritirata didattica",
+      "text": "Se il combattimento ti mette alle strette, puoi ancora uscirne vivo. Il maestro ti rimette in carreggiata con una cura e ti fa capire che sconfitta e ritirata non sono la fine del viaggio, ma il prezzo di una lezione.",
+      "sceneLoot": [
+        { "itemName": "Pozione curativa" }
+      ],
+      "choices": [
+        {
+          "id": "tut_09_a",
+          "text": "Bevi una pozione e torna al corridoio",
+          "nextSceneId": "tut_07"
+        },
+        {
+          "id": "tut_09_b",
+          "text": "Ricomincia il tutorial dal manichino",
+          "nextSceneId": "tut_01"
+        }
+      ]
+    },
+    {
+      "id": "tut_10",
+      "title": "L'ultima prova",
+      "text": "Davanti a te c'e un piccolo ponte di assi, fradicio e instabile. Il maestro ti guarda dalla parte opposta senza dirti niente: adesso vuoi solo arrivare fino a lui senza sprecare la lezione appena guadagnata.",
+      "choices": [
+        {
+          "id": "tut_10_a",
+          "text": "Supera il ponte con passo sicuro",
+          "skillCheck": {
+            "attribute": "survival",
+            "difficulty": 11,
+            "successSceneId": "tut_11",
+            "failureSceneId": "tut_12"
+          }
+        },
+        {
+          "id": "tut_10_b",
+          "text": "Avanza con mente lucida e sguardo attento",
+          "skillCheck": {
+            "attribute": "lore",
+            "difficulty": 10,
+            "successSceneId": "tut_11",
+            "failureSceneId": "tut_12"
+          }
+        }
+      ]
+    },
+    {
+      "id": "tut_11",
+      "title": "Lezione completata",
+      "text": "Il maestro ti saluta con un cenno appena accennato. Hai visto cosa significa scegliere, fallire, prepararti, combattere e tornare in piedi. Adesso sei pronto a misurarti con qualcosa che non esiste solo per insegnarti.",
+      "sceneLoot": [
+        { "itemName": "Pugnale" }
+      ],
+      "choices": [
+        {
+          "id": "tut_11_a",
+          "text": "Concludi il tutorial e torna alla sala avventure",
+          "nextSceneId": "tut_13"
+        }
+      ]
+    },
+    {
+      "id": "tut_12",
+      "title": "Quasi alla fine",
+      "text": "Hai mancato la prova finale, ma il maestro ti rimette in piedi con pazienza. Il tutorial ti lascia riprovare o chiudere qui senza punirti eccessivamente.",
+      "sceneLoot": [
+        { "itemName": "Pozione curativa" }
+      ],
+      "choices": [
+        {
+          "id": "tut_12_a",
+          "text": "Rialzati e riprova l'ultima prova",
+          "nextSceneId": "tut_10"
+        },
+        {
+          "id": "tut_12_b",
+          "text": "Chiudi il tutorial per ora",
+          "nextSceneId": "tut_13"
+        }
+      ]
+    },
+    {
+      "id": "tut_13",
+      "title": "Fine del tutorial",
+      "text": "Hai completato il tutorial del focolare. Da qui puoi aprire una vera avventura o tornare in sala eroi con il tuo personaggio e il suo bottino.",
+      "choices": []
+    }
+  ],
+  "encounters": [
+    {
+      "id": "tut_rat",
+      "name": "Ratto corazzato",
+      "description": "Un ratto enorme con pezzi di latta e filo arrugginito addosso. E il primo combattimento ideale per imparare il ciclo attacca, difendi e recupera.",
+      "hitPoints": 10,
+      "attackBonus": 1,
+      "defense": 10,
+      "damageMin": 1,
+      "damageMax": 3,
+      "goldReward": 6,
+      "loot": [
+        { "itemName": "Pozione curativa" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Adventure Studio</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="app-shell flow-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">AS</div>
+        <div>
+          <h1>Adventure Studio</h1>
+          <p>Forge per avventure dark fantasy</p>
+        </div>
+      </div>
+
+      <div class="hero-banner">
+        <p class="eyebrow">Runtime-first authoring</p>
+        <h2>Costruisci scene, mostri e bivi senza perdere il controllo del flusso.</h2>
+        <p>Lavora per nodi, valida prima dell'export e componi combattimenti con preset pronti o creature create da zero.</p>
+      </div>
+
+      <div class="panel quickstart-panel">
+        <div class="subsection-header">
+          <h2>Primo flusso</h2>
+        </div>
+        <ol class="quickstart-list">
+          <li>Crea o apri un'avventura.</li>
+          <li>Aggiungi un evento iniziale e collega altri nodi dal pallino laterale.</li>
+          <li>Definisci prove, combattimenti, loot e requirement.</li>
+          <li>Valida il file e poi esporta il JSON runtime.</li>
+        </ol>
+      </div>
+
+      <div class="panel">
+        <h2>Avventura</h2>
+        <label>Titolo<input id="adventure-title" type="text" placeholder="La Cripta di Cenere"></label>
+        <label>Descrizione<textarea id="adventure-description" rows="4"></textarea></label>
+        <div class="subsection">
+          <div class="subsection-header">
+            <h4>Avventure preconfezionate</h4>
+            <button id="load-example-btn" type="button">Apri esempio</button>
+          </div>
+          <label>
+            Scegli un esempio
+            <select id="example-adventure-select"></select>
+          </label>
+          <div class="button-row">
+            <button id="import-json-btn" type="button">Importa JSON</button>
+            <input id="import-json-input" type="file" accept=".json,application/json" class="hidden-file-input">
+          </div>
+          <p class="hint">Se apri l'editor direttamente da file locale, usa `Importa JSON` e scegli un file dalla cartella `adventure-studio/examples`.</p>
+        </div>
+        <label class="checkbox-line"><input id="adventure-carry-over" type="checkbox" checked> Consenti equipaggiamento pregresso</label>
+        <label class="checkbox-line"><input id="adventure-fresh-start" type="checkbox" checked> Consenti fresh start</label>
+        <label class="checkbox-line"><input id="alpha-strict-validation" type="checkbox" checked> Modalita alpha severa</label>
+        <div class="button-row">
+          <button id="restore-local-btn" type="button">Ripristina ultimo progetto</button>
+          <button id="reset-project-btn" type="button" class="danger">Nuovo progetto pulito</button>
+        </div>
+        <p id="autosave-indicator" class="hint">Autosave locale inattivo.</p>
+        <details class="subsection panel-collapsible compact-section">
+          <summary class="panel-summary compact-summary">
+            <span>Starter kit</span>
+            <small>Opzionale</small>
+          </summary>
+          <div class="subsection-header">
+            <button id="add-starter-kit-btn" type="button">Aggiungi oggetto al kit</button>
+          </div>
+          <div id="starter-kit-list"></div>
+        </details>
+        <button id="validate-adventure-btn" type="button">Controlla avventura</button>
+        <button id="export-json-btn">Esporta JSON</button>
+        <div class="subsection">
+          <div class="subsection-header">
+            <h4>Validazione export</h4>
+          </div>
+          <div id="validation-summary" class="validation-summary"></div>
+          <ul id="validation-list" class="validation-list"></ul>
+        </div>
+      </div>
+
+      <details class="panel panel-collapsible" open>
+        <summary class="panel-summary">
+          <span>Bestiario</span>
+          <small>Preset + custom</small>
+        </summary>
+        <label>
+          Preset per nuovo mostro
+          <select id="monster-preset-select"></select>
+        </label>
+        <div class="button-row">
+          <button id="add-monster-from-preset-btn">Aggiungi preset</button>
+        </div>
+        <p class="hint">Hai 15 mostri gia pronti. Se ti serve una creatura personalizzata, la crei direttamente dentro la scena di combattimento.</p>
+        <ul id="monster-list" class="list"></ul>
+      </details>
+
+      <details class="panel panel-collapsible">
+        <summary class="panel-summary">
+          <span>Catalogo loot</span>
+          <small>Preset runtime</small>
+        </summary>
+        <label>
+          Preset loot
+          <select id="loot-preset-select"></select>
+        </label>
+        <p class="hint">Monete, pozioni, armi e oggetti chiave vengono scelti da menu guidati.</p>
+      </details>
+    </aside>
+
+    <main class="workspace">
+      <section class="panel">
+        <div class="panel-header">
+          <div class="panel-header-title">
+            <h2>Mappa del Flusso</h2>
+            <button id="add-scene-btn">Nuovo evento</button>
+          </div>
+        </div>
+        <div id="flow-board" class="flow-board">
+          <svg id="flow-links" class="flow-links"></svg>
+          <div id="flow-canvas" class="flow-canvas"></div>
+        </div>
+      </section>
+
+      <section class="editor-grid single-col">
+        <div class="panel editor-panel">
+          <div class="panel-header">
+            <h3>Evento selezionato</h3>
+            <div class="button-row">
+              <button id="add-scene-image-btn" type="button">Aggiungi immagine evento</button>
+              <button id="save-scene-btn" type="button">Salva evento</button>
+              <button id="delete-scene-btn" class="danger">Elimina evento</button>
+            </div>
+          </div>
+          <input id="scene-image-input" type="file" accept="image/*" class="hidden-file-input">
+          <p id="scene-save-status" class="hint">Le modifiche all'evento vengono confermate quando salvi o cambi evento.</p>
+
+          <div id="scene-empty" class="empty-state">
+            Crea o seleziona un evento dal flusso.
+          </div>
+
+          <div id="scene-editor" class="editor-form hidden">
+            <div class="scene-core-grid">
+              <label>
+                Tipo evento
+                <select id="scene-kind">
+                  <option value="description">Descrizione</option>
+                  <option value="check">Prova</option>
+                  <option value="combat">Combattimento</option>
+                </select>
+              </label>
+              <label>Titolo evento<input id="scene-title" type="text"></label>
+            </div>
+            <label>Testo iniziale<textarea id="scene-opening-text" rows="7"></textarea></label>
+            <div id="scene-image-preview" class="scene-image-preview hidden">
+              <img id="scene-image-thumb" alt="Anteprima immagine evento">
+              <div class="scene-image-meta">
+                <strong id="scene-image-name">Immagine evento</strong>
+                <p class="hint">L'immagine resta associata al progetto dentro i metadata dell'editor.</p>
+                <div class="button-row">
+                  <button id="replace-scene-image-btn" type="button" class="small">Sostituisci immagine</button>
+                  <button id="remove-scene-image-btn" type="button" class="danger small">Rimuovi immagine</button>
+                </div>
+              </div>
+            </div>
+
+            <details id="scene-check-config" class="subsection hidden compact-section" open>
+              <summary class="panel-summary compact-summary">
+                <span>Prova</span>
+                <small>Skill, difficolta ed esiti</small>
+              </summary>
+              <label>Abilita<select id="scene-check-skill"></select></label>
+              <label>Difficolta<input id="scene-check-difficulty" type="number" min="1" value="10"></label>
+            </details>
+
+            <details id="scene-combat-config" class="subsection hidden compact-section" open>
+              <summary class="panel-summary compact-summary">
+                <span>Mostri della scena</span>
+                <small>Esiti + roster</small>
+              </summary>
+              <p class="hint">Aggiungi qui i mostri realmente presenti nello scontro. Ogni voce resta comprimibile e modificabile quando serve.</p>
+              <div id="combat-group-list"></div>
+              <button id="add-combat-group-btn">Aggiungi mostro</button>
+            </details>
+
+            <details id="scene-outcomes-section" class="subsection hidden compact-section" open>
+              <summary class="panel-summary compact-summary">
+                <span>Esiti</span>
+                <small id="scene-outcomes-summary">Rami dell'evento</small>
+              </summary>
+              <p id="scene-outcomes-hint" class="hint">Ogni esito puo andare direttamente a un altro evento oppure aprire un piccolo bivio successivo.</p>
+              <div id="scene-outcomes-list"></div>
+            </details>
+
+            <details class="subsection compact-section">
+              <summary class="panel-summary compact-summary">
+                <span>Loot evento</span>
+                <small>Ricompense e oggetti</small>
+              </summary>
+              <div class="subsection-header">
+                <button id="add-scene-loot-btn">Aggiungi loot</button>
+              </div>
+              <div id="scene-loot-list"></div>
+            </details>
+
+            <details id="scene-choices-section" class="subsection compact-section" open>
+              <summary class="panel-summary compact-summary">
+                <span>Scelte</span>
+                <small id="scene-choices-summary">Esiti e collegamenti</small>
+              </summary>
+              <p id="scene-choices-hint" class="hint">Le scelte guidano il nodo e i suoi rami principali.</p>
+              <div class="subsection-header">
+                <button id="add-choice-btn">Aggiungi scelta</button>
+              </div>
+              <div id="choice-list"></div>
+            </details>
+          </div>
+        </div>
+
+        <div class="panel editor-panel hidden">
+          <div class="panel-header">
+            <h3>Mostro selezionato</h3>
+            <button id="delete-monster-btn" class="danger">Elimina mostro</button>
+          </div>
+          <div id="monster-empty" class="empty-state">Seleziona o crea un mostro.</div>
+          <div id="monster-editor" class="editor-form hidden">
+            <div class="subsection monster-preset-bar">
+              <div class="subsection-header">
+                <h4>Applica preset al mostro selezionato</h4>
+                <button id="apply-monster-preset-btn" type="button">Applica preset</button>
+              </div>
+              <label>Preset mostro<select id="monster-editor-preset-select"></select></label>
+            </div>
+            <label>Nome<input id="monster-name" type="text"></label>
+            <label>Descrizione<textarea id="monster-description" rows="4"></textarea></label>
+            <div class="two-col">
+              <label>HP<input id="monster-hp" type="number" min="1"></label>
+              <label>Attack Bonus<input id="monster-attack" type="number"></label>
+              <label>Defense<input id="monster-defense" type="number"></label>
+              <label>Gold Reward<input id="monster-gold" type="number" min="0"></label>
+              <label>Damage Min<input id="monster-damage-min" type="number" min="0"></label>
+              <label>Damage Max<input id="monster-damage-max" type="number" min="0"></label>
+            </div>
+            <div class="subsection">
+              <div class="subsection-header">
+                <h4>Loot mostro</h4>
+                <button id="add-monster-loot-btn">Aggiungi loot</button>
+              </div>
+              <div id="monster-loot-list"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel output-panel">
+        <div class="panel-header">
+          <h3>JSON Output</h3>
+          <button id="refresh-json-btn">Aggiorna preview</button>
+        </div>
+        <textarea id="json-output" rows="18" spellcheck="false"></textarea>
+      </section>
+    </main>
+  </div>
+
+  <template id="choice-template">
+    <div class="choice-card">
+      <label>Testo scelta<input data-field="text" type="text"></label>
+      <label>Testo finale della scelta<textarea data-field="endingText" rows="3"></textarea></label>
+      <label>Collega a evento<select data-field="targetSceneId"></select></label>
+      <details class="compact-section nested-section">
+        <summary class="panel-summary compact-summary">
+          <span>Requisiti</span>
+          <small>Oggetti, chiavi, effetti</small>
+        </summary>
+        <div class="choice-check-grid">
+          <label>Lock ID<input data-field="requiredLockId" type="text" placeholder="es. magister_archive"></label>
+          <label>Etichetta lock<input data-field="requiredLockLabel" type="text" placeholder="Chiave dell'archivio"></label>
+          <label>Richiede oggetto<select data-field="requiredItemId"></select></label>
+          <label>ItemId runtime<input data-field="requiredItemIdCustom" type="text" placeholder="es. ancient_seal"></label>
+          <label>Richiede categoria<select data-field="requiredItemCategory"></select></label>
+          <label>Richiede effetto<select data-field="requiredEffectId"></select></label>
+          <label class="checkbox-line"><input data-field="consumeOnUse" type="checkbox"> Consuma il requisito all'uso</label>
+        </div>
+      </details>
+      <details class="compact-section nested-section">
+        <summary class="panel-summary compact-summary">
+          <span>Skill check</span>
+          <small>Solo se serve</small>
+        </summary>
+        <div class="choice-check-grid">
+          <label>Abilita check<select data-field="checkAttribute"></select></label>
+          <label>Difficolta<input data-field="checkDifficulty" type="number"></label>
+          <label>Evento se successo<select data-field="checkSuccess"></select></label>
+          <label>Evento se fallisce<select data-field="checkFailure"></select></label>
+        </div>
+      </details>
+      <button data-action="remove-choice" class="danger small">Rimuovi scelta</button>
+    </div>
+  </template>
+
+  <template id="loot-template">
+    <details class="loot-card" open>
+      <summary class="panel-summary compact-summary loot-summary">
+        <span data-role="loot-title">Loot</span>
+        <div class="loot-summary-meta">
+          <small data-role="loot-meta">Quantita 1</small>
+          <small data-role="loot-tag">Comune</small>
+          <small data-role="loot-action">Approva loot</small>
+        </div>
+      </summary>
+      <label>Tipo loot<select data-field="itemName"></select></label>
+      <label>Nome personalizzato<input data-field="customName" type="text" placeholder="Solo se scegli Personalizzato"></label>
+      <label>ItemId runtime<input data-field="customItemId" type="text" placeholder="es. sigil_key_custom"></label>
+      <label>Lock ID<input data-field="lockId" type="text" placeholder="es. magister_archive"></label>
+      <label>Categoria<select data-field="category"></select></label>
+      <label>Rarita<select data-field="rarity"></select></label>
+      <label>Effetto principale<select data-field="effectId"></select></label>
+      <label>Famiglia effetto<input data-field="effectFamily" type="text" readonly></label>
+      <label>Trigger effetto<input data-field="effectTrigger" type="text" readonly></label>
+      <label>Quantita<input data-field="quantity" type="number" min="1" value="1"></label>
+      <div class="button-row loot-actions">
+        <button data-action="approve-loot" type="button" class="small">Approva loot</button>
+        <button data-action="remove-loot" class="danger small">Rimuovi loot</button>
+      </div>
+    </details>
+  </template>
+
+  <template id="combat-group-template">
+    <details class="choice-card combat-group-card" open>
+      <summary class="panel-summary compact-summary combat-group-summary">
+        <span data-role="group-title">Mostro della scena</span>
+        <div class="combat-group-summary-meta">
+          <small data-role="group-meta">Quantita 1</small>
+          <small data-role="group-tag">Custom</small>
+          <small data-role="group-mode">Modifica mostro</small>
+        </div>
+      </summary>
+      <p class="hint monster-card-hint">Scegli un mostro oppure creane uno nuovo. Dopo la selezione la card si compatta da sola.</p>
+      <label>Mostro<select data-field="monsterId"></select></label>
+      <label>Quantita<input data-field="count" type="number" min="1" value="1"></label>
+      <div class="monster-preview" data-role="preview"></div>
+      <div class="monster-inline-editor">
+        <div class="subsection-header monster-mode-header">
+          <h4>Modifica mostro</h4>
+          <button type="button" data-action="collapse-group" class="small">Vista compatta</button>
+        </div>
+        <label>Nome<input data-field="monsterName" type="text"></label>
+        <label>Descrizione<textarea data-field="monsterDescription" rows="3"></textarea></label>
+        <div class="two-col">
+          <label>HP<input data-field="monsterHp" type="number" min="1"></label>
+          <label>Attack Bonus<input data-field="monsterAttack" type="number"></label>
+          <label>Defense<input data-field="monsterDefense" type="number"></label>
+          <label>Gold Reward<input data-field="monsterGold" type="number" min="0"></label>
+          <label>Damage Min<input data-field="monsterDamageMin" type="number" min="0"></label>
+          <label>Damage Max<input data-field="monsterDamageMax" type="number" min="0"></label>
+        </div>
+        <div class="subsection">
+          <div class="subsection-header">
+            <h4>Loot mostro</h4>
+            <button type="button" data-action="add-monster-loot-inline">Aggiungi loot</button>
+          </div>
+          <div data-role="monster-loot-list"></div>
+        </div>
+      </div>
+      <button data-action="remove-group" class="danger small">Rimuovi mostro</button>
+    </details>
+  </template>
+
+  <template id="link-hint-template">
+    <div class="link-hint">
+      Trascina dal pallino a destra del nodo verso un altro nodo per creare un collegamento.
+    </div>
+  </template>
+
+  <script src="./app.js"></script>
+</body>
+</html>

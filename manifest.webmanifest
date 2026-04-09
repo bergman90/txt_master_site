@@ -1,0 +1,10 @@
+{
+  "name": ".txt-Master",
+  "short_name": ".txt-Master",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#110d0c",
+  "theme_color": "#241b17",
+  "description": "Portale di .txt-Master con Adventure Studio e archivio avventure gratuite.",
+  "icons": []
+}

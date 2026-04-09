@@ -1,0 +1,564 @@
+{
+  "id": "la-campana-sepolta",
+  "title": "La Campana Sepolta",
+  "description": "Avventura dark fantasy da librogame su un'abbazia sprofondata nella torbiera, con chiavi specifiche, ritirata significativa e finali multipli.",
+  "startingSceneId": "scene_1",
+  "allowCarryOverLoadout": true,
+  "allowFreshStart": true,
+  "starterKitItems": [
+    {
+      "itemId": "torch",
+      "itemName": "Torcia",
+      "quantity": 1,
+      "category": "utility",
+      "rarity": "common"
+    }
+  ],
+  "scenes": [
+    {
+      "id": "scene_1",
+      "title": "Argine nella tempesta",
+      "text": "L'acqua della torbiera schiaffeggia i pali dell'argine e ogni lampo rivela, in fondo alle canne, il campanile inclinato dell'abbazia sprofondata. Il villaggio ti ha mandato qui per una sola ragione: al terzo rintocco della campana sepolta i morti salgono dal fango.",
+      "_editor": {
+        "kind": "description",
+        "openingText": "L'acqua della torbiera schiaffeggia i pali dell'argine e ogni lampo rivela, in fondo alle canne, il campanile inclinato dell'abbazia sprofondata. Il villaggio ti ha mandato qui per una sola ragione: al terzo rintocco della campana sepolta i morti salgono dal fango.",
+        "position": { "x": 40, "y": 40 }
+      },
+      "choices": [
+        {
+          "id": "scene_1_choice_1",
+          "text": "Vai prima dalla vedova del sagrestano e cerchi preparazione",
+          "nextSceneId": "scene_2",
+          "_editor": {
+            "endingText": "Ti allontani dall'argine e segui la lanterna piu vicina alla casa di legno affondata nel fango."
+          }
+        },
+        {
+          "id": "scene_1_choice_2",
+          "text": "Marci subito verso l'abbazia prima che il suono torni",
+          "nextSceneId": "scene_3",
+          "_editor": {
+            "endingText": "Stringi il mantello al petto e imbocchi il sentiero nero verso il campanile storto."
+          }
+        }
+      ]
+    },
+    {
+      "id": "scene_2",
+      "title": "La vedova del sagrestano",
+      "text": "Nerita ti apre senza stupore. Sul tavolo ha disposto una ciotola di sale, un rosario rotto e il mazzo di chiavi di suo marito. Dice che l'abbazia non ama gli eroi: premia solo chi entra con rispetto o con avidita abbastanza fredda da non tremare.",
+      "_editor": {
+        "kind": "description",
+        "openingText": "Nerita ti apre senza stupore. Sul tavolo ha disposto una ciotola di sale, un rosario rotto e il mazzo di chiavi di suo marito. Dice che l'abbazia non ama gli eroi: premia solo chi entra con rispetto o con avidita abbastanza fredda da non tremare.",
+        "position": { "x": 360, "y": 40 }
+      },
+      "choices": [
+        {
+          "id": "scene_2_choice_1",
+          "text": "Le chiedi dove cercare le vecchie chiavi del complesso",
+          "nextSceneId": "scene_4",
+          "_editor": {
+            "endingText": "La vedova indica una cassa ferrata che il fango non e ancora riuscito a divorare."
+          }
+        },
+        {
+          "id": "scene_2_choice_2",
+          "text": "Ascolti il suo avvertimento e vai verso l'abbazia",
+          "nextSceneId": "scene_3",
+          "_editor": {
+            "endingText": "Porti via solo le sue parole: se il bronzo puo essere placato, sara per memoria e non per forza."
+          }
+        }
+      ]
+    },
+    {
+      "id": "scene_3",
+      "title": "Sentiero diviso",
+      "text": "Il percorso verso l'abbazia si spacca in due. A nord c'e il vecchio cancello del sagrestano, mezzo sommerso ma ancora in piedi. A est il terreno cala nel cimitero allagato, dove i cippi emergono dal fango come denti marci.",
+      "_editor": {
+        "kind": "description",
+        "openingText": "Il percorso verso l'abbazia si spacca in due. A nord c'e il vecchio cancello del sagrestano, mezzo sommerso ma ancora in piedi. A est il terreno cala nel cimitero allagato, dove i cippi emergono dal fango come denti marci.",
+        "position": { "x": 700, "y": 40 }
+      },
+      "choices": [
+        {
+          "id": "scene_3_choice_1",
+          "text": "Punti al cancello del sagrestano",
+          "nextSceneId": "scene_5",
+          "_editor": {
+            "endingText": "Cerchi il muro ancora intero e il varco piu asciutto verso la facciata laterale."
+          }
+        },
+        {
+          "id": "scene_3_choice_2",
+          "text": "Tagli attraverso il cimitero allagato",
+          "nextSceneId": "scene_6",
+          "_editor": {
+            "endingText": "Scendi tra i cippi scrostati, con l'acqua nera che ti lambisce gli stivali."
+          }
+        }
+      ]
+    },
+    {
+      "id": "scene_4",
+      "title": "Cassa del sagrestano",
+      "text": "Sotto stracci cerati e candele gonfie d'acqua trovi una chiave lunga, annerita dal fumo. Su un pezzo di legno qualcuno ha inciso: \"Sagrestia. Non per le mani del priore.\" Nerita ti lascia prendere tutto senza commentare.",
+      "_editor": {
+        "kind": "description",
+        "openingText": "Sotto stracci cerati e candele gonfie d'acqua trovi una chiave lunga, annerita dal fumo. Su un pezzo di legno qualcuno ha inciso: \"Sagrestia. Non per le mani del priore.\" Nerita ti lascia prendere tutto senza commentare.",
+        "position": { "x": 700, "y": 240 }
+      },
+      "sceneLoot": [
+        {
+          "itemId": "sacristan_key",
+          "itemName": "Chiave del sagrestano",
+          "quantity": 1,
+          "lockId": "abbey_sacristy",
+          "category": "key",
+          "rarity": "uncommon"
+        }
+      ],
+      "choices": [
+        {
+          "id": "scene_4_choice_1",
+          "text": "Raggiungi l'abbazia con la chiave stretta nel pugno",
+          "nextSceneId": "scene_3",
+          "_editor": {
+            "endingText": "La pioggia martella il tetto mentre esci di nuovo verso l'argine."
+          }
+        }
+      ]
+    },
+    {
+      "id": "scene_5",
+      "title": "Porta dell'abbazia",
+      "text": "Il portale maggiore e crollato da anni, ma la porta laterale del sagrestano resiste ancora sotto una lastra inclinata. Più in la, il chiostro spezzato offre un passaggio brutale tra archi crollati e detriti bagnati.",
+      "_editor": {
+        "kind": "description",
+        "openingText": "Il portale maggiore e crollato da anni, ma la porta laterale del sagrestano resiste ancora sotto una lastra inclinata. Più in la, il chiostro spezzato offre un passaggio brutale tra archi crollati e detriti bagnati.",
+        "position": { "x": 1040, "y": 40 }
+      },
+      "choices": [
+        {
+          "id": "scene_5_choice_1",
+          "text": "Usi la chiave del sagrestano sulla porta laterale",
+          "nextSceneId": "scene_7",
+          "requiredLockId": "abbey_sacristy",
+          "requiredLockLabel": "Chiave della sagrestia",
+          "consumeOnUse": true,
+          "_editor": {
+            "endingText": "Il metallo gira con un colpo secco e la vecchia serratura cede come se ti stesse aspettando."
+          }
+        },
+        {
+          "id": "scene_5_choice_2",
+          "text": "Forzi il passaggio nel chiostro spezzato",
+          "nextSceneId": "scene_8",
+          "_editor": {
+            "endingText": "Scavalchi marmo e travi fradice, scegliendo la via piu rapida e meno misericordiosa."
+          }
+        },
+        {
+          "id": "scene_5_choice_3",
+          "text": "Lasci perdere e torni al ramo del cimitero",
+          "nextSceneId": "scene_6",
+          "_editor": {
+            "endingText": "Il vento ti spinge di lato e ti ritrovi di nuovo tra le lapidi piegate."
+          }
+        }
+      ]
+    },
+    {
+      "id": "scene_6",
+      "title": "Cimitero allagato",
+      "text": "I nomi sui cippi sono stati lavati via e l'acqua copre fosse che non dovrebbero essere piu aperte. Per passare devi leggere il terreno e poggiare il peso dove il fango non nasconde un vuoto.",
+      "_editor": {
+        "kind": "check",
+        "openingText": "I nomi sui cippi sono stati lavati via e l'acqua copre fosse che non dovrebbero essere piu aperte. Per passare devi leggere il terreno e poggiare il peso dove il fango non nasconde un vuoto.",
+        "position": { "x": 1040, "y": 270 },
+        "checkConfig": {
+          "skill": "survival",
+          "difficulty": 12
+        }
+      },
+      "choices": [
+        {
+          "id": "scene_6_choice_1",
+          "text": "Attraversi il camposanto seguendo i ciuffi d'erba piu alti",
+          "skillCheck": {
+            "attribute": "survival",
+            "difficulty": 12,
+            "successSceneId": "scene_10",
+            "failureSceneId": "scene_9"
+          },
+          "_editor": {
+            "endingText": "Misuri il respiro e lasci che gli occhi lavorino prima dei piedi."
+          }
+        }
+      ]
+    },
+    {
+      "id": "scene_7",
+      "title": "Sagrestia asciutta",
+      "text": "Per un miracolo storto la sagrestia e rimasta quasi asciutta. Gli armadi sono marciti, ma un piccolo reliquiario di rame e ancora chiuso. Dentro trovi un'ampolla di olio benedetto e una fiala dimenticata dai monaci di guardia.",
+      "_editor": {
+        "kind": "description",
+        "openingText": "Per un miracolo storto la sagrestia e rimasta quasi asciutta. Gli armadi sono marciti, ma un piccolo reliquiario di rame e ancora chiuso. Dentro trovi un'ampolla di olio benedetto e una fiala dimenticata dai monaci di guardia.",
+        "position": { "x": 1400, "y": 40 }
+      },
+      "sceneLoot": [
+        {
+          "itemId": "holy_oil",
+          "itemName": "Olio benedetto",
+          "quantity": 1,
+          "category": "utility",
+          "rarity": "uncommon"
+        },
+        {
+          "itemId": "healing_potion",
+          "itemName": "Pozione curativa",
+          "quantity": 1,
+          "category": "consumable",
+          "rarity": "common",
+          "effectIds": ["restore_hp"]
+        }
+      ],
+      "choices": [
+        {
+          "id": "scene_7_choice_1",
+          "text": "Sali verso la scala del campanile",
+          "nextSceneId": "scene_11",
+          "_editor": {
+            "endingText": "Stringi l'ampolla contro il petto e imbocchi la rampa che porta verso il bronzo."
+          }
+        }
+      ]
+    },
+    {
+      "id": "scene_8",
+      "title": "Chiostro spezzato",
+      "text": "Nel chiostro crollato il fango si e mescolato a cera, ossa e schegge di vetro colorato. Qualcosa si raddrizza tra le colonne spezzate: un revenant infangato, legato al luogo da catene di bronzo annerito.",
+      "_editor": {
+        "kind": "combat",
+        "openingText": "Nel chiostro crollato il fango si e mescolato a cera, ossa e schegge di vetro colorato. Qualcosa si raddrizza tra le colonne spezzate: un revenant infangato, legato al luogo da catene di bronzo annerito.",
+        "position": { "x": 1400, "y": 270 },
+        "combatGroups": [
+          {
+            "monsterId": "mud_revenant",
+            "count": 1,
+            "composition": "guardiano del chiostro"
+          }
+        ]
+      },
+      "encounterId": "mud_revenant",
+      "victorySceneId": "scene_11",
+      "defeatSceneId": "scene_16",
+      "retreatSceneId": "scene_5"
+    },
+    {
+      "id": "scene_9",
+      "title": "Le mani fra i cippi",
+      "text": "Sotto la superficie ti afferrano polsi e caviglie. Dal fango emergono due devoti sepolti in piedi, ancora legati a campanelli di rame che suonano a ogni strappo.",
+      "_editor": {
+        "kind": "combat",
+        "openingText": "Sotto la superficie ti afferrano polsi e caviglie. Dal fango emergono due devoti sepolti in piedi, ancora legati a campanelli di rame che suonano a ogni strappo.",
+        "position": { "x": 1400, "y": 500 },
+        "combatGroups": [
+          {
+            "monsterId": "grave_devotee",
+            "count": 2,
+            "composition": "coppia di annegati rituali"
+          }
+        ]
+      },
+      "encounterId": "grave_devotee",
+      "victorySceneId": "scene_10",
+      "defeatSceneId": "scene_16",
+      "retreatSceneId": "scene_3"
+    },
+    {
+      "id": "scene_10",
+      "title": "Cripta dei nomi lavati",
+      "text": "Dietro il cimitero trovi una cripta bassa, gia invasa dall'acqua ma non ancora vinta. Sul pavimento, inchiodato con un pugnale al leggio, c'e il foglio finale dell'abate: una confessione in cui ammette che la campana risponde piu alla colpa che alla preghiera.",
+      "_editor": {
+        "kind": "description",
+        "openingText": "Dietro il cimitero trovi una cripta bassa, gia invasa dall'acqua ma non ancora vinta. Sul pavimento, inchiodato con un pugnale al leggio, c'e il foglio finale dell'abate: una confessione in cui ammette che la campana risponde piu alla colpa che alla preghiera.",
+        "position": { "x": 1760, "y": 500 }
+      },
+      "sceneLoot": [
+        {
+          "itemId": "abbot_note",
+          "itemName": "Confessione dell'abate",
+          "quantity": 1,
+          "category": "quest",
+          "rarity": "rare"
+        },
+        {
+          "itemId": "alchemic_fire",
+          "itemName": "Fuoco alchemico",
+          "quantity": 1,
+          "category": "consumable",
+          "rarity": "rare",
+          "effectIds": ["direct_damage"]
+        }
+      ],
+      "choices": [
+        {
+          "id": "scene_10_choice_1",
+          "text": "Torni verso l'interno dell'abbazia e cerchi la scala del campanile",
+          "nextSceneId": "scene_11",
+          "_editor": {
+            "endingText": "Ripieghi il foglio sotto l'armatura e lasci la cripta con il fiato corto ma le idee piu chiare."
+          }
+        }
+      ]
+    },
+    {
+      "id": "scene_11",
+      "title": "Scala del campanile",
+      "text": "La rampa che sale verso la camera della campana e stretta e ancora rigata dai segni delle funi. Qui il suono arriva come un battito nel petto: non senti solo il bronzo, ma qualcosa che aspetta te.",
+      "_editor": {
+        "kind": "description",
+        "openingText": "La rampa che sale verso la camera della campana e stretta e ancora rigata dai segni delle funi. Qui il suono arriva come un battito nel petto: non senti solo il bronzo, ma qualcosa che aspetta te.",
+        "position": { "x": 1760, "y": 220 }
+      },
+      "choices": [
+        {
+          "id": "scene_11_choice_1",
+          "text": "Entri nella camera della campana",
+          "nextSceneId": "scene_12",
+          "_editor": {
+            "endingText": "Superi l'ultima arcata e vedi il bronzo sepolto oscillare sopra l'acqua nera."
+          }
+        }
+      ]
+    },
+    {
+      "id": "scene_12",
+      "title": "Camera della campana",
+      "text": "La campana giace inclinata in una vasca di acqua nera, e ogni vibrazione mette in moto le catene che la trattengono. Davanti ad essa veglia il Custode del Bronzo, immobile come una statua finche non fai il primo passo. Qui finisce il viaggio e comincia la decisione.",
+      "_editor": {
+        "kind": "description",
+        "openingText": "La campana giace inclinata in una vasca di acqua nera, e ogni vibrazione mette in moto le catene che la trattengono. Davanti ad essa veglia il Custode del Bronzo, immobile come una statua finche non fai il primo passo. Qui finisce il viaggio e comincia la decisione.",
+        "position": { "x": 2120, "y": 220 }
+      },
+      "choices": [
+        {
+          "id": "scene_12_choice_1",
+          "text": "Versi l'olio benedetto sul giogo e soffochi il richiamo",
+          "nextSceneId": "scene_14",
+          "requiredItemId": "holy_oil",
+          "requiredItemName": "Olio benedetto",
+          "consumeOnUse": true,
+          "_editor": {
+            "endingText": "Il profumo acre dell'olio batte per un istante il puzzo del fango e il bronzo smette di chiedere sangue."
+          }
+        },
+        {
+          "id": "scene_12_choice_2",
+          "text": "Reciti la confessione dell'abate davanti al bronzo",
+          "nextSceneId": "scene_14",
+          "requiredItemId": "abbot_note",
+          "requiredItemName": "Confessione dell'abate",
+          "_editor": {
+            "endingText": "Leggi ad alta voce le parole del vecchio abate e il rintocco si incrina come se il bronzo si vergognasse."
+          }
+        },
+        {
+          "id": "scene_12_choice_3",
+          "text": "Strappi il cuore bronzeo e pensi solo al prezzo che vale",
+          "nextSceneId": "scene_15",
+          "_editor": {
+            "endingText": "Ti getti sulla campana non per salvarla o fermarla, ma per portar via cio che puo essere venduto."
+          }
+        },
+        {
+          "id": "scene_12_choice_4",
+          "text": "Sfidi apertamente il Custode del Bronzo",
+          "nextSceneId": "scene_13",
+          "_editor": {
+            "endingText": "Il custode si muove con il rumore di una catena che si tende per la prima volta da decenni."
+          }
+        }
+      ]
+    },
+    {
+      "id": "scene_13",
+      "title": "Custode del Bronzo",
+      "text": "Il guardiano ti affronta tra catene tese e acqua fino alle ginocchia. Ogni suo colpo non difende solo la campana: difende la menzogna che l'ha nutrita. Se vuoi decidere tu il destino dell'abbazia, devi strappargli il passo.",
+      "_editor": {
+        "kind": "combat",
+        "openingText": "Il guardiano ti affronta tra catene tese e acqua fino alle ginocchia. Ogni suo colpo non difende solo la campana: difende la menzogna che l'ha nutrita. Se vuoi decidere tu il destino dell'abbazia, devi strappargli il passo.",
+        "position": { "x": 2480, "y": 220 },
+        "combatGroups": [
+          {
+            "monsterId": "bell_warden",
+            "count": 1,
+            "composition": "boss finale"
+          }
+        ]
+      },
+      "encounterId": "bell_warden",
+      "victorySceneId": "scene_17",
+      "defeatSceneId": "scene_16",
+      "retreatSceneId": "scene_16"
+    },
+    {
+      "id": "scene_14",
+      "title": "Alba senza rintocco",
+      "text": "Quando il bronzo tace davvero, il silenzio non e vuoto: e un sollievo quasi violento. L'acqua nella camera della campana si fa immobile, il custode si piega come ferro svuotato e la tempesta inizia a spostarsi verso il largo. Torni al villaggio senza gloria facile, ma con una notte salvata.",
+      "_editor": {
+        "kind": "description",
+        "openingText": "Quando il bronzo tace davvero, il silenzio non e vuoto: e un sollievo quasi violento. L'acqua nella camera della campana si fa immobile, il custode si piega come ferro svuotato e la tempesta inizia a spostarsi verso il largo. Torni al villaggio senza gloria facile, ma con una notte salvata.",
+        "position": { "x": 2480, "y": 40 }
+      },
+      "sceneLoot": [
+        {
+          "itemId": "coins",
+          "itemName": "Monete",
+          "quantity": 35,
+          "category": "treasure",
+          "rarity": "common",
+          "effectIds": ["trade_value"]
+        }
+      ],
+      "choices": []
+    },
+    {
+      "id": "scene_15",
+      "title": "Cuore venduto",
+      "text": "Riesci a strappare il cuore bronzeo dalla campana e a fuggire con il peso gelido della reliquia sotto il mantello. Alle tue spalle il terzo rintocco arriva comunque, solo piu cupo. Sopravvivi e ti arricchirai, ma quando il villaggio chiamera il tuo nome non lo fara per ringraziarti.",
+      "_editor": {
+        "kind": "description",
+        "openingText": "Riesci a strappare il cuore bronzeo dalla campana e a fuggire con il peso gelido della reliquia sotto il mantello. Alle tue spalle il terzo rintocco arriva comunque, solo piu cupo. Sopravvivi e ti arricchirai, ma quando il villaggio chiamera il tuo nome non lo fara per ringraziarti.",
+        "position": { "x": 2840, "y": 220 }
+      },
+      "sceneLoot": [
+        {
+          "itemId": "bell_heart",
+          "itemName": "Cuore bronzeo",
+          "quantity": 1,
+          "category": "relic",
+          "rarity": "legendary",
+          "effectIds": ["trade_value"]
+        }
+      ],
+      "choices": []
+    },
+    {
+      "id": "scene_16",
+      "title": "Fuga nella torbiera",
+      "text": "Scappi dall'abbazia con l'acqua nera che ti schizza dietro gli stivali. Sopravvivi, e in certi luoghi questo basta. Ma mentre raggiungi l'argine senti il rintocco ripartire alle tue spalle, piu lontano e piu disperato, come se il bronzo avesse imparato il tuo nome.",
+      "_editor": {
+        "kind": "description",
+        "openingText": "Scappi dall'abbazia con l'acqua nera che ti schizza dietro gli stivali. Sopravvivi, e in certi luoghi questo basta. Ma mentre raggiungi l'argine senti il rintocco ripartire alle tue spalle, piu lontano e piu disperato, come se il bronzo avesse imparato il tuo nome.",
+        "position": { "x": 2480, "y": 460 }
+      },
+      "choices": []
+    },
+    {
+      "id": "scene_17",
+      "title": "Bronzo spezzato",
+      "text": "Il custode cade in acqua pesante e finalmente immobile. La campana resta davanti a te, incrinata ma non muta. Ora puoi decidere se distruggerla per sempre oppure portarti via il suo cuore e lasciare che altri paghino il resto.",
+      "_editor": {
+        "kind": "description",
+        "openingText": "Il custode cade in acqua pesante e finalmente immobile. La campana resta davanti a te, incrinata ma non muta. Ora puoi decidere se distruggerla per sempre oppure portarti via il suo cuore e lasciare che altri paghino il resto.",
+        "position": { "x": 2840, "y": 40 }
+      },
+      "choices": [
+        {
+          "id": "scene_17_choice_1",
+          "text": "Spezzi la campana e la lasci affondare nel fango",
+          "nextSceneId": "scene_18",
+          "_editor": {
+            "endingText": "Afferri le catene e usi il peso dell'intera stanza per trascinare il bronzo verso la vasca nera."
+          }
+        },
+        {
+          "id": "scene_17_choice_2",
+          "text": "Estrarre il cuore bronzeo e fuggire con il bottino",
+          "nextSceneId": "scene_15",
+          "_editor": {
+            "endingText": "Dopo tanta fatica scegli il premio e non la pace."
+          }
+        }
+      ]
+    },
+    {
+      "id": "scene_18",
+      "title": "Silenzio di cenere",
+      "text": "Quando il bronzo cede e affonda, l'acqua esplode in vapore caldo e ti lascia addosso una pioggia di fuliggine. Hai vinto nel modo piu duro: non hai salvato un tesoro, ma hai tolto al male il suo strumento. Il villaggio non cantera del tuo nome, ma potra ancora dormire.",
+      "_editor": {
+        "kind": "description",
+        "openingText": "Quando il bronzo cede e affonda, l'acqua esplode in vapore caldo e ti lascia addosso una pioggia di fuliggine. Hai vinto nel modo piu duro: non hai salvato un tesoro, ma hai tolto al male il suo strumento. Il villaggio non cantera del tuo nome, ma potra ancora dormire.",
+        "position": { "x": 3200, "y": 40 }
+      },
+      "choices": []
+    }
+  ],
+  "encounters": [
+    {
+      "id": "mud_revenant",
+      "name": "Revenant del Chiostro",
+      "description": "Un morto inondato di fango e tenuto insieme da catene bronzee e rancore liturgico.",
+      "hitPoints": 16,
+      "attackBonus": 4,
+      "defense": 12,
+      "damageMin": 3,
+      "damageMax": 6,
+      "goldReward": 9,
+      "loot": [
+        {
+          "itemId": "coins",
+          "itemName": "Monete",
+          "quantity": 9,
+          "category": "treasure",
+          "rarity": "common",
+          "effectIds": ["trade_value"]
+        }
+      ]
+    },
+    {
+      "id": "grave_devotee",
+      "name": "Devoto Annegato",
+      "description": "Cadavere rituale rialzato dal fango, ancora legato a campanelli votivi di rame.",
+      "hitPoints": 12,
+      "attackBonus": 3,
+      "defense": 11,
+      "damageMin": 2,
+      "damageMax": 5,
+      "goldReward": 7,
+      "loot": [
+        {
+          "itemId": "coins",
+          "itemName": "Monete",
+          "quantity": 7,
+          "category": "treasure",
+          "rarity": "common",
+          "effectIds": ["trade_value"]
+        }
+      ]
+    },
+    {
+      "id": "bell_warden",
+      "name": "Custode del Bronzo",
+      "description": "Guardiano finale dell'abbazia, lento ma implacabile, armato di catena e colpa.",
+      "hitPoints": 24,
+      "attackBonus": 5,
+      "defense": 13,
+      "damageMin": 4,
+      "damageMax": 8,
+      "goldReward": 20,
+      "loot": [
+        {
+          "itemId": "ritual_gem",
+          "itemName": "Gemma rituale",
+          "quantity": 1,
+          "category": "relic",
+          "rarity": "rare",
+          "effectIds": ["trade_value"]
+        }
+      ]
+    }
+  ]
+}

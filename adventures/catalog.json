@@ -1,0 +1,32 @@
+{
+  "projectName": ".txt-Master",
+  "updatedAt": "2026-04-09",
+  "submissionEmail": "txtmaster@yahoo.com",
+  "newsletterEmail": "txtmaster@yahoo.com",
+  "entries": [
+    {
+      "id": "tutorial_del_focolare",
+      "title": "Tutorial del Focolare",
+      "tagline": "Il tutorial ufficiale per imparare combattimento, prove e ritmo dell'app.",
+      "description": "Una mini-avventura guidata che insegna i sistemi base di .txt-Master con scelte semplici e primi check di regole.",
+      "difficulty": "Principiante",
+      "length": "10-15 minuti",
+      "fileName": "tutorial_del_focolare.json",
+      "filePath": "./tutorial_del_focolare.json",
+      "kind": "tutorial",
+      "free": true
+    },
+    {
+      "id": "la_campana_sepolta",
+      "title": "La Campana Sepolta",
+      "tagline": "Un cimitero allagato, un culto nascosto e una reliquia che richiama i morti.",
+      "description": "Prima avventura alpha-ready con struttura da librogame, ritirate significative, chiavi specifiche e finali multipli.",
+      "difficulty": "Normale",
+      "length": "20-35 minuti",
+      "fileName": "la_campana_sepolta.json",
+      "filePath": "./la_campana_sepolta.json",
+      "kind": "adventure",
+      "free": true
+    }
+  ]
+}
