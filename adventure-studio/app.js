@@ -630,11 +630,14 @@ async function onSceneImageSelected(event) {
   const file = event.target.files?.[0];
   if (!scene || !file) return;
   try {
-    const dataUrl = await readFileAsDataUrl(file);
+    const optimizedImage = await optimizeSceneImage(file);
     scene.eventImage = {
       name: file.name,
-      type: file.type || "image/*",
-      dataUrl
+      type: optimizedImage.type,
+      dataUrl: optimizedImage.dataUrl,
+      width: optimizedImage.width,
+      height: optimizedImage.height,
+      sizeKb: optimizedImage.sizeKb
     };
     markSceneDirty();
     renderSceneEditor();
@@ -644,6 +647,75 @@ async function onSceneImageSelected(event) {
   } finally {
     els.sceneImageInput.value = "";
   }
+}
+
+async function optimizeSceneImage(file) {
+  const sourceDataUrl = await readFileAsDataUrl(file);
+  const image = await loadImageElement(sourceDataUrl);
+  const maxWidth = 1080;
+  const maxHeight = 1920;
+  const scale = Math.min(1, maxWidth / image.naturalWidth, maxHeight / image.naturalHeight);
+  const width = Math.max(1, Math.round(image.naturalWidth * scale));
+  const height = Math.max(1, Math.round(image.naturalHeight * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d");
+  if (!context) {
+    return {
+      dataUrl: sourceDataUrl,
+      type: file.type || "image/*",
+      width: image.naturalWidth,
+      height: image.naturalHeight,
+      sizeKb: Math.round((sourceDataUrl.length * 3 / 4) / 1024)
+    };
+  }
+  context.drawImage(image, 0, 0, width, height);
+
+  const preferredType = canvasSupportsType("image/webp") ? "image/webp" : "image/jpeg";
+  const qualitySteps = [0.78, 0.68, 0.58, 0.48];
+  let dataUrl = sourceDataUrl;
+  let outputType = file.type || preferredType;
+
+  for (const quality of qualitySteps) {
+    const candidate = canvas.toDataURL(preferredType, quality);
+    if (candidate.length < dataUrl.length || dataUrl === sourceDataUrl) {
+      dataUrl = candidate;
+      outputType = preferredType;
+    }
+    if (estimateDataUrlSizeKb(candidate) <= 280) {
+      dataUrl = candidate;
+      outputType = preferredType;
+      break;
+    }
+  }
+
+  return {
+    dataUrl,
+    type: outputType,
+    width,
+    height,
+    sizeKb: estimateDataUrlSizeKb(dataUrl)
+  };
+}
+
+function loadImageElement(dataUrl) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Impossibile processare l'immagine scelta."));
+    image.src = dataUrl;
+  });
+}
+
+function canvasSupportsType(type) {
+  const canvas = document.createElement("canvas");
+  return canvas.toDataURL(type).startsWith(`data:${type}`);
+}
+
+function estimateDataUrlSizeKb(dataUrl) {
+  const payload = dataUrl.split(",")[1] || "";
+  return Math.max(1, Math.round((payload.length * 3 / 4) / 1024));
 }
 
 function removeSceneImage() {
@@ -1447,7 +1519,12 @@ function renderSceneEditor() {
   els.sceneImagePreview.classList.toggle("hidden", !hasSceneImage);
   if (hasSceneImage) {
     els.sceneImageThumb.src = scene.eventImage.dataUrl;
-    els.sceneImageName.textContent = scene.eventImage.name || "Immagine evento";
+    const imageMeta = [
+      scene.eventImage.name || "Immagine evento",
+      scene.eventImage.width && scene.eventImage.height ? `${scene.eventImage.width}x${scene.eventImage.height}` : "",
+      scene.eventImage.sizeKb ? `${scene.eventImage.sizeKb} KB` : ""
+    ].filter(Boolean).join(" | ");
+    els.sceneImageName.textContent = imageMeta || "Immagine evento";
   } else {
     els.sceneImageThumb.removeAttribute("src");
     els.sceneImageName.textContent = "Immagine evento";
@@ -2106,6 +2183,7 @@ function cleanAdventure(adventure) {
         id: scene.id,
         title: scene.title,
         text: scene.openingText,
+        image: scene.eventImage?.dataUrl || null,
         sceneLoot: scene.sceneLoot
           .filter((loot) => loot.itemName)
           .map(serializeLoot),
