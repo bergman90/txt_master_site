@@ -359,6 +359,9 @@ const EXAMPLE_ADVENTURES = [
 const NODE_WIDTH = 280;
 const NODE_HEIGHT = 170;
 const CREATE_MONSTER_OPTION = "__create_new__";
+const SCENE_IMAGE_ASPECT_RATIO = 2.48;
+const SCENE_IMAGE_TARGET_WIDTH = 1200;
+const SCENE_IMAGE_TARGET_HEIGHT = Math.round(SCENE_IMAGE_TARGET_WIDTH / SCENE_IMAGE_ASPECT_RATIO);
 
 const state = {
   adventure: {
@@ -385,7 +388,8 @@ const state = {
     sceneSavedAt: null,
     jsonRenderTimer: null,
     monsterListRenderTimer: null,
-    flowLinksFrame: null
+    flowLinksFrame: null,
+    sceneImageFrameTimer: null
   }
 };
 
@@ -429,6 +433,7 @@ const els = {
   addSceneBtn: document.getElementById("add-scene-btn"),
   validateAdventureBtn: document.getElementById("validate-adventure-btn"),
   exportJsonBtn: document.getElementById("export-json-btn"),
+  saveAdventureBtn: document.getElementById("save-adventure-btn"),
   validationSummary: document.getElementById("validation-summary"),
   validationList: document.getElementById("validation-list"),
   monsterPresetSelect: document.getElementById("monster-preset-select"),
@@ -453,6 +458,9 @@ const els = {
   sceneImagePreview: document.getElementById("scene-image-preview"),
   sceneImageThumb: document.getElementById("scene-image-thumb"),
   sceneImageName: document.getElementById("scene-image-name"),
+  sceneImageZoom: document.getElementById("scene-image-zoom"),
+  sceneImageFocusX: document.getElementById("scene-image-focus-x"),
+  sceneImageFocusY: document.getElementById("scene-image-focus-y"),
   replaceSceneImageBtn: document.getElementById("replace-scene-image-btn"),
   removeSceneImageBtn: document.getElementById("remove-scene-image-btn"),
   sceneCheckConfig: document.getElementById("scene-check-config"),
@@ -560,6 +568,9 @@ function bindActions() {
   els.replaceSceneImageBtn.addEventListener("click", () => els.sceneImageInput.click());
   els.sceneImageInput.addEventListener("change", onSceneImageSelected);
   els.removeSceneImageBtn.addEventListener("click", removeSceneImage);
+  [els.sceneImageZoom, els.sceneImageFocusX, els.sceneImageFocusY].forEach((input) => {
+    input.addEventListener("input", onSceneImageFrameInput);
+  });
   els.saveSceneBtn.addEventListener("click", () => saveCurrentScene({ announce: true }));
   els.deleteSceneBtn.addEventListener("click", deleteScene);
   els.deleteMonsterBtn.addEventListener("click", deleteMonster);
@@ -567,6 +578,7 @@ function bindActions() {
   els.addSceneLootBtn.addEventListener("click", addSceneLoot);
   els.addMonsterLootBtn.addEventListener("click", addMonsterLoot);
   els.addCombatGroupBtn.addEventListener("click", addCombatGroup);
+  els.saveAdventureBtn.addEventListener("click", saveAdventureProject);
   els.exportJsonBtn.addEventListener("click", exportJson);
   els.refreshJsonBtn.addEventListener("click", renderJson);
 }
@@ -630,15 +642,16 @@ async function onSceneImageSelected(event) {
   const file = event.target.files?.[0];
   if (!scene || !file) return;
   try {
-    const optimizedImage = await optimizeSceneImage(file);
-    scene.eventImage = {
+    const sourceDataUrl = await readFileAsDataUrl(file);
+    const framedImage = await buildFramedSceneImage({
       name: file.name,
-      type: optimizedImage.type,
-      dataUrl: optimizedImage.dataUrl,
-      width: optimizedImage.width,
-      height: optimizedImage.height,
-      sizeKb: optimizedImage.sizeKb
-    };
+      type: file.type || "image/*",
+      sourceDataUrl,
+      zoom: 1,
+      focusX: 50,
+      focusY: 50
+    });
+    scene.eventImage = framedImage;
     markSceneDirty();
     renderSceneEditor();
     renderJson();
@@ -649,33 +662,68 @@ async function onSceneImageSelected(event) {
   }
 }
 
-async function optimizeSceneImage(file) {
-  const sourceDataUrl = await readFileAsDataUrl(file);
+async function onSceneImageFrameInput() {
+  const scene = getSelectedScene();
+  if (!scene?.eventImage?.sourceDataUrl) return;
+  scene.eventImage.zoom = Number(els.sceneImageZoom.value || 1);
+  scene.eventImage.focusX = Number(els.sceneImageFocusX.value || 50);
+  scene.eventImage.focusY = Number(els.sceneImageFocusY.value || 50);
+  scheduleSceneImageFrameUpdate(scene);
+}
+
+function scheduleSceneImageFrameUpdate(scene) {
+  if (state.ui.sceneImageFrameTimer) {
+    window.clearTimeout(state.ui.sceneImageFrameTimer);
+  }
+  state.ui.sceneImageFrameTimer = window.setTimeout(async () => {
+    state.ui.sceneImageFrameTimer = null;
+    const updated = await buildFramedSceneImage(scene.eventImage);
+    scene.eventImage = updated;
+    renderSceneImagePreview(scene);
+    markSceneDirty();
+    scheduleJsonRender();
+  }, 90);
+}
+
+async function buildFramedSceneImage(imageConfig) {
+  const framing = normalizeSceneImage(imageConfig);
+  const {
+    sourceDataUrl,
+    zoom,
+    focusX,
+    focusY
+  } = framing;
   const image = await loadImageElement(sourceDataUrl);
-  const maxWidth = 1080;
-  const maxHeight = 1920;
-  const scale = Math.min(1, maxWidth / image.naturalWidth, maxHeight / image.naturalHeight);
-  const width = Math.max(1, Math.round(image.naturalWidth * scale));
-  const height = Math.max(1, Math.round(image.naturalHeight * scale));
   const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
+  canvas.width = SCENE_IMAGE_TARGET_WIDTH;
+  canvas.height = SCENE_IMAGE_TARGET_HEIGHT;
   const context = canvas.getContext("2d");
   if (!context) {
     return {
+      ...framing,
       dataUrl: sourceDataUrl,
-      type: file.type || "image/*",
       width: image.naturalWidth,
       height: image.naturalHeight,
       sizeKb: Math.round((sourceDataUrl.length * 3 / 4) / 1024)
     };
   }
-  context.drawImage(image, 0, 0, width, height);
+  const baseScale = Math.max(
+    SCENE_IMAGE_TARGET_WIDTH / image.naturalWidth,
+    SCENE_IMAGE_TARGET_HEIGHT / image.naturalHeight
+  );
+  const drawScale = baseScale * zoom;
+  const drawWidth = Math.round(image.naturalWidth * drawScale);
+  const drawHeight = Math.round(image.naturalHeight * drawScale);
+  const minOffsetX = Math.min(0, SCENE_IMAGE_TARGET_WIDTH - drawWidth);
+  const minOffsetY = Math.min(0, SCENE_IMAGE_TARGET_HEIGHT - drawHeight);
+  const offsetX = Math.round(minOffsetX * (focusX / 100));
+  const offsetY = Math.round(minOffsetY * (focusY / 100));
+  context.drawImage(image, offsetX, offsetY, drawWidth, drawHeight);
 
   const preferredType = canvasSupportsType("image/webp") ? "image/webp" : "image/jpeg";
   const qualitySteps = [0.78, 0.68, 0.58, 0.48];
   let dataUrl = sourceDataUrl;
-  let outputType = file.type || preferredType;
+  let outputType = preferredType;
 
   for (const quality of qualitySteps) {
     const candidate = canvas.toDataURL(preferredType, quality);
@@ -691,10 +739,11 @@ async function optimizeSceneImage(file) {
   }
 
   return {
+    ...framing,
     dataUrl,
     type: outputType,
-    width,
-    height,
+    width: canvas.width,
+    height: canvas.height,
     sizeKb: estimateDataUrlSizeKb(dataUrl)
   };
 }
@@ -716,6 +765,21 @@ function canvasSupportsType(type) {
 function estimateDataUrlSizeKb(dataUrl) {
   const payload = dataUrl.split(",")[1] || "";
   return Math.max(1, Math.round((payload.length * 3 / 4) / 1024));
+}
+
+function normalizeSceneImage(imageConfig) {
+  return {
+    name: imageConfig?.name || "Immagine evento",
+    type: imageConfig?.type || "image/webp",
+    sourceDataUrl: imageConfig?.sourceDataUrl || imageConfig?.dataUrl || "",
+    dataUrl: imageConfig?.dataUrl || "",
+    width: Number(imageConfig?.width || 0),
+    height: Number(imageConfig?.height || 0),
+    sizeKb: Number(imageConfig?.sizeKb || 0),
+    zoom: Math.min(2.5, Math.max(1, Number(imageConfig?.zoom || 1))),
+    focusX: Math.min(100, Math.max(0, Number(imageConfig?.focusX ?? 50))),
+    focusY: Math.min(100, Math.max(0, Number(imageConfig?.focusY ?? 50)))
+  };
 }
 
 function removeSceneImage() {
@@ -1260,6 +1324,16 @@ function saveCurrentScene({ announce = false, renderFlow = true } = {}) {
   renderJson();
 }
 
+function saveAdventureProject() {
+  saveCurrentScene({ announce: true, renderFlow: true });
+  persistLocalProject();
+  if (els.autosaveIndicator) {
+    const savedAt = new Date().toISOString();
+    state.ui.autosaveAt = savedAt;
+    els.autosaveIndicator.textContent = `Progetto salvato | ultimo salvataggio ${formatAutosaveTime(savedAt)}`;
+  }
+}
+
 function updateSceneSaveStatus() {
   if (!els.sceneSaveStatus) return;
   const scene = getSelectedScene();
@@ -1515,20 +1589,7 @@ function renderSceneEditor() {
   els.sceneKind.value = scene.kind;
   els.sceneTitle.value = scene.title;
   els.sceneOpeningText.value = scene.openingText;
-  const hasSceneImage = Boolean(scene.eventImage?.dataUrl);
-  els.sceneImagePreview.classList.toggle("hidden", !hasSceneImage);
-  if (hasSceneImage) {
-    els.sceneImageThumb.src = scene.eventImage.dataUrl;
-    const imageMeta = [
-      scene.eventImage.name || "Immagine evento",
-      scene.eventImage.width && scene.eventImage.height ? `${scene.eventImage.width}x${scene.eventImage.height}` : "",
-      scene.eventImage.sizeKb ? `${scene.eventImage.sizeKb} KB` : ""
-    ].filter(Boolean).join(" | ");
-    els.sceneImageName.textContent = imageMeta || "Immagine evento";
-  } else {
-    els.sceneImageThumb.removeAttribute("src");
-    els.sceneImageName.textContent = "Immagine evento";
-  }
+  renderSceneImagePreview(scene);
   els.sceneCheckConfig.classList.toggle("hidden", scene.kind !== "check");
   els.sceneCombatConfig.classList.toggle("hidden", scene.kind !== "combat");
   const useGenericChoices = scene.kind === "description";
@@ -1552,6 +1613,31 @@ function renderSceneEditor() {
   if (useGenericChoices) renderChoices(scene);
   else renderOutcomeEditor(scene);
   renderCombatGroups(scene);
+}
+
+function renderSceneImagePreview(scene) {
+  const normalizedImage = scene.eventImage ? normalizeSceneImage(scene.eventImage) : null;
+  if (normalizedImage) {
+    scene.eventImage = normalizedImage;
+  }
+  const hasSceneImage = Boolean(normalizedImage?.dataUrl);
+  els.sceneImagePreview.classList.toggle("hidden", !hasSceneImage);
+  if (!hasSceneImage) {
+    els.sceneImageThumb.removeAttribute("src");
+    els.sceneImageName.textContent = "Immagine evento";
+    return;
+  }
+  els.sceneImageThumb.src = normalizedImage.dataUrl;
+  els.sceneImageZoom.value = String(normalizedImage.zoom);
+  els.sceneImageFocusX.value = String(normalizedImage.focusX);
+  els.sceneImageFocusY.value = String(normalizedImage.focusY);
+  const imageMeta = [
+    normalizedImage.name || "Immagine evento",
+    normalizedImage.width && normalizedImage.height ? `${normalizedImage.width}x${normalizedImage.height}` : "",
+    normalizedImage.sizeKb ? `${normalizedImage.sizeKb} KB` : "",
+    `zoom ${normalizedImage.zoom.toFixed(2)}x`
+  ].filter(Boolean).join(" | ");
+  els.sceneImageName.textContent = imageMeta || "Immagine evento";
 }
 
 function renderChoices(scene) {
@@ -2261,6 +2347,7 @@ function normalizeScene(scene) {
   scene.choices = scene.choices || [];
   scene.outcomes = scene.outcomes || createEmptySceneOutcomes();
   scene.position = scene.position || { x: 40, y: 40 };
+  scene.eventImage = scene.eventImage ? normalizeSceneImage(scene.eventImage) : null;
   scene.sceneLoot = scene.sceneLoot.map((loot) => normalizeLoot(loot));
   scene.choices = scene.choices.map((choice) => ({
     ...createEmptyChoice(1),
@@ -2335,7 +2422,7 @@ function normalizeImportedScene(scene, index) {
     title: scene.title || `Evento ${index + 1}`,
     openingText: editor.openingText || scene.text || "",
     text: scene.text || editor.openingText || "",
-    eventImage: editor.eventImage || null,
+    eventImage: editor.eventImage || (scene.image ? { name: "Immagine evento", dataUrl: scene.image, sourceDataUrl: scene.image } : null),
     position,
     sceneLoot: (scene.sceneLoot || []).map((loot) => normalizeLoot(loot)),
     choices: (scene.choices || []).map((choice, choiceIndex) => normalizeImportedChoice(choice, choiceIndex)),
@@ -3094,7 +3181,11 @@ function buildSceneEditorMetadata(scene) {
     eventImage: scene.eventImage ? pruneEmpty({
       name: scene.eventImage.name,
       type: scene.eventImage.type,
-      dataUrl: scene.eventImage.dataUrl
+      dataUrl: scene.eventImage.dataUrl,
+      sourceDataUrl: scene.eventImage.sourceDataUrl,
+      zoom: scene.eventImage.zoom,
+      focusX: scene.eventImage.focusX,
+      focusY: scene.eventImage.focusY
     }) : null,
     position: scene.position,
     checkConfig: scene.kind === "check" ? pruneEmpty(scene.checkConfig || {}) : null,

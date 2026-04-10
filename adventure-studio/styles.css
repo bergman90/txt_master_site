@@ -73,7 +73,9 @@ select {
   display: flex;
   gap: 14px;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(209, 144, 82, 0.16);
 }
 
 .brand h1,
@@ -81,48 +83,15 @@ select {
 .panel h2,
 .panel h3,
 .subsection h4,
-.hero-banner h2 {
-  margin: 0;
-}
-
 .brand p,
 .workspace-header p {
   margin: 4px 0 0;
   color: var(--muted);
 }
 
-.hero-banner {
-  margin-bottom: 18px;
-  padding: 18px;
-  border: 1px solid rgba(209, 144, 82, 0.28);
-  border-radius: calc(var(--radius) + 2px);
-  background:
-    linear-gradient(135deg, rgba(209, 144, 82, 0.16), rgba(43, 58, 86, 0.2)),
-    linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0));
-  box-shadow: var(--shadow);
-}
-
-.hero-banner h2 {
-  margin: 8px 0;
-  font-size: 1.05rem;
-  line-height: 1.45;
-}
-
-.hero-banner p {
-  margin: 0;
+.sidebar-intro {
+  margin: 0 0 18px;
   color: var(--muted);
-}
-
-.quickstart-panel {
-  border-color: rgba(116, 164, 117, 0.26);
-}
-
-.quickstart-list {
-  margin: 0;
-  padding-left: 18px;
-  color: var(--muted);
-  display: grid;
-  gap: 8px;
   line-height: 1.45;
 }
 
@@ -257,9 +226,21 @@ select {
   background: rgba(209, 144, 82, 0.05);
 }
 
+.scene-image-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.scene-image-stage-label {
+  font-size: 0.82rem;
+  color: var(--accent);
+}
+
 .scene-image-preview img {
   width: 100%;
-  height: 140px;
+  aspect-ratio: 2.48 / 1;
+  height: auto;
   object-fit: cover;
   border-radius: 12px;
   border: 1px solid var(--border);
@@ -271,6 +252,19 @@ select {
   flex-direction: column;
   justify-content: space-between;
   gap: 8px;
+}
+
+.scene-image-controls {
+  display: grid;
+  gap: 8px;
+}
+
+.scene-image-controls label {
+  margin-bottom: 0;
+}
+
+.scene-image-controls input[type="range"] {
+  padding: 0;
 }
 
 .output-panel {
@@ -331,6 +325,30 @@ button:hover {
   gap: 10px;
   flex-wrap: wrap;
   margin-bottom: 8px;
+}
+
+.sidebar-primary-actions {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.sidebar-sticky-actions {
+  position: sticky;
+  bottom: 16px;
+  z-index: 4;
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid rgba(209, 144, 82, 0.24);
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, rgba(30, 38, 50, 0.95), rgba(21, 26, 35, 0.98)),
+    rgba(18, 13, 11, 0.94);
+  box-shadow: 0 16px 30px rgba(0, 0, 0, 0.28);
+}
+
+.save-project-btn {
+  width: 100%;
 }
 
 .hidden-file-input {

@@ -16,24 +16,7 @@
           <p>Forge per avventure dark fantasy</p>
         </div>
       </div>
-
-      <div class="hero-banner">
-        <p class="eyebrow">Runtime-first authoring</p>
-        <h2>Costruisci scene, mostri e bivi senza perdere il controllo del flusso.</h2>
-        <p>Lavora per nodi, valida prima dell'export e componi combattimenti con preset pronti o creature create da zero.</p>
-      </div>
-
-      <div class="panel quickstart-panel">
-        <div class="subsection-header">
-          <h2>Primo flusso</h2>
-        </div>
-        <ol class="quickstart-list">
-          <li>Crea o apri un'avventura.</li>
-          <li>Aggiungi un evento iniziale e collega altri nodi dal pallino laterale.</li>
-          <li>Definisci prove, combattimenti, loot e requirement.</li>
-          <li>Valida il file e poi esporta il JSON runtime.</li>
-        </ol>
-      </div>
+      <p class="sidebar-intro">Editor visuale per creare, salvare ed esportare avventure compatibili con .txt-Master.</p>
 
       <div class="panel">
         <h2>Avventura</h2>
@@ -85,8 +68,10 @@
           </div>
           <div id="starter-kit-list"></div>
         </details>
-        <button id="validate-adventure-btn" type="button">Controlla avventura</button>
-        <button id="export-json-btn">Esporta JSON</button>
+        <div class="sidebar-primary-actions">
+          <button id="validate-adventure-btn" type="button">Controlla avventura</button>
+          <button id="export-json-btn">Esporta JSON</button>
+        </div>
         <div class="subsection">
           <div class="subsection-header">
             <h4>Validazione export</h4>
@@ -94,6 +79,10 @@
           <div id="validation-summary" class="validation-summary"></div>
           <ul id="validation-list" class="validation-list"></ul>
         </div>
+      </div>
+      <div class="sidebar-sticky-actions">
+        <button id="save-adventure-btn" type="button" class="save-project-btn">Salva avventura</button>
+        <p class="hint">Salva il progetto locale completo, inclusi nodi, immagini e metadata dell'editor.</p>
       </div>
     </aside>
 
@@ -149,10 +138,24 @@
             </div>
             <label>Testo iniziale<textarea id="scene-opening-text" rows="7"></textarea></label>
             <div id="scene-image-preview" class="scene-image-preview hidden">
-              <img id="scene-image-thumb" alt="Anteprima immagine evento">
+              <div class="scene-image-stage">
+                <div class="scene-image-stage-label">Anteprima card app</div>
+                <img id="scene-image-thumb" alt="Anteprima immagine evento">
+              </div>
               <div class="scene-image-meta">
                 <strong id="scene-image-name">Immagine evento</strong>
-                <p class="hint">L'immagine resta associata al progetto dentro i metadata dell'editor.</p>
+                <p class="hint">Questa anteprima simula il taglio della card dentro l'app. Regola zoom e posizione prima dell'export.</p>
+                <div class="scene-image-controls">
+                  <label>Zoom
+                    <input id="scene-image-zoom" type="range" min="1" max="2.5" step="0.05" value="1">
+                  </label>
+                  <label>Spostamento orizzontale
+                    <input id="scene-image-focus-x" type="range" min="0" max="100" step="1" value="50">
+                  </label>
+                  <label>Spostamento verticale
+                    <input id="scene-image-focus-y" type="range" min="0" max="100" step="1" value="50">
+                  </label>
+                </div>
                 <div class="button-row">
                   <button id="replace-scene-image-btn" type="button" class="small">Sostituisci immagine</button>
                   <button id="remove-scene-image-btn" type="button" class="danger small">Rimuovi immagine</button>
