@@ -2803,7 +2803,7 @@ function validateAdventure(adventure, cleaned = cleanAdventure(adventure), optio
       ].filter(Boolean).length;
 
       if (!choice.text?.trim()) {
-        warnings.push(`${ownerLabel} nella scena ${sceneId} ha una scelta senza testo.`);
+        errors.push(`${ownerLabel} nella scena ${sceneId} ha una scelta senza testo.`);
       }
       if (requirementCount > 1) {
         errors.push(`${ownerLabel} nella scena ${sceneId} ha requirement multipli non supportati.`);
