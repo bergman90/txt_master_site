@@ -1172,23 +1172,30 @@ function formatSceneSaveTime(isoString) {
 
 function markSceneDirty() {
   state.ui.sceneDirty = true;
-  if (els.sceneSaveStatus) {
-    els.sceneSaveStatus.textContent = "Hai modifiche non salvate su questo evento.";
-  }
+  updateSceneSaveStatus();
 }
 
 function saveCurrentScene({ announce = false, renderFlow = true } = {}) {
   if (!state.selectedSceneId) return;
-  if (document.activeElement && els.sceneEditor.contains(document.activeElement) && typeof document.activeElement.blur === "function") {
-    document.activeElement.blur();
+  if (state.ui.jsonRenderTimer) {
+    window.clearTimeout(state.ui.jsonRenderTimer);
+    state.ui.jsonRenderTimer = null;
   }
   state.ui.sceneDirty = false;
   state.ui.sceneSavedAt = new Date().toISOString();
+  updateSceneSaveStatus();
   if (renderFlow) renderFlowBoard();
   renderJson();
-  if (announce) {
-    renderSceneEditor();
-  }
+}
+
+function updateSceneSaveStatus() {
+  if (!els.sceneSaveStatus) return;
+  const scene = getSelectedScene();
+  els.sceneSaveStatus.textContent = !scene
+    ? "Le modifiche all'evento vengono confermate quando salvi o cambi evento."
+    : state.ui.sceneDirty
+      ? "Hai modifiche non salvate su questo evento."
+      : `Evento salvato${state.ui.sceneSavedAt ? ` alle ${formatSceneSaveTime(state.ui.sceneSavedAt)}` : ""}.`;
 }
 
 function switchSelectedScene(nextSceneId) {
@@ -1429,11 +1436,7 @@ function renderSceneEditor() {
   const visible = Boolean(scene);
   els.sceneEmpty.classList.toggle("hidden", visible);
   els.sceneEditor.classList.toggle("hidden", !visible);
-  els.sceneSaveStatus.textContent = !visible
-    ? "Le modifiche all'evento vengono confermate quando salvi o cambi evento."
-    : state.ui.sceneDirty
-      ? "Hai modifiche non salvate su questo evento."
-      : `Evento salvato${state.ui.sceneSavedAt ? ` alle ${formatSceneSaveTime(state.ui.sceneSavedAt)}` : ""}.`;
+  updateSceneSaveStatus();
   if (!scene) return;
 
   normalizeScene(scene);
