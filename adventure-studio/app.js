@@ -1628,18 +1628,18 @@ function renderOutcomeEditor(scene) {
     hydrateSceneTargetSelect(targetSelect, branch.targetSceneId || "");
     targetSelect.addEventListener("change", (event) => {
       setOutcomeTarget(scene, definition.key, event.target.value);
+      renderOutcomeEditor(scene);
       refreshFlowCard(scene.id);
       scheduleFlowLinksRender();
-      renderSceneEditor();
-      renderJson();
+      scheduleJsonRender();
     });
 
     wrapper.querySelector('[data-action="add-outcome-choice"]').addEventListener("click", () => {
       branch.choices.push(createEmptyChoice(branch.choices.length + 1));
-      renderSceneEditor();
+      renderOutcomeEditor(scene);
       refreshFlowCard(scene.id);
       scheduleFlowLinksRender();
-      renderJson();
+      scheduleJsonRender();
     });
 
     renderChoiceCards(wrapper.querySelector('[data-role="outcome-choice-list"]'), branch.choices, {
@@ -1652,10 +1652,10 @@ function renderOutcomeEditor(scene) {
       onRemove: (index) => {
         branch.choices.splice(index, 1);
         markSceneDirty();
-        renderSceneEditor();
+        renderOutcomeEditor(scene);
         refreshFlowCard(scene.id);
         scheduleFlowLinksRender();
-        renderJson();
+        scheduleJsonRender();
       }
     });
 
@@ -1771,7 +1771,8 @@ function renderCombatGroups(scene) {
     node.querySelector('[data-action="remove-group"]').addEventListener("click", () => {
       scene.combatGroups.splice(index, 1);
       markSceneDirty();
-      render();
+      renderCombatGroups(scene);
+      scheduleJsonRender();
     });
 
     const monster = resolveMonster();
