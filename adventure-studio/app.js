@@ -384,7 +384,8 @@ const state = {
     sceneDirty: false,
     sceneSavedAt: null,
     jsonRenderTimer: null,
-    monsterListRenderTimer: null
+    monsterListRenderTimer: null,
+    flowLinksFrame: null
   }
 };
 
@@ -766,7 +767,8 @@ function onBoardPointerMove(event) {
     const y = event.clientY - boardRect.top - state.drag.offsetY;
     scene.position.x = Math.max(16, x);
     scene.position.y = Math.max(16, y);
-    renderFlowBoard();
+    updateFlowCardPosition(scene.id);
+    scheduleFlowLinksRender();
     scheduleJsonRender();
     return;
   }
@@ -776,13 +778,14 @@ function onBoardPointerMove(event) {
       x: event.clientX - boardRect.left,
       y: event.clientY - boardRect.top
     };
-    renderFlowBoard();
+    scheduleFlowLinksRender();
   }
 }
 
 function onBoardPointerUp(event) {
   if (state.drag) {
     state.drag = null;
+    renderFlowLinks();
     return;
   }
 
@@ -791,6 +794,7 @@ function onBoardPointerUp(event) {
   const targetNode = event.target.closest(".node-card");
   const targetSceneId = targetNode?.dataset.sceneId || null;
   const sourceSceneId = state.linkDraft.sceneId;
+  state.linkDraft = null;
 
   if (targetSceneId && targetSceneId !== sourceSceneId) {
     const sourceScene = state.adventure.scenes.find((scene) => scene.id === sourceSceneId);
@@ -800,10 +804,8 @@ function onBoardPointerUp(event) {
       render();
     }
   } else {
-    renderFlowBoard();
+    renderFlowLinks();
   }
-
-  state.linkDraft = null;
 }
 
 function createScene() {
@@ -1175,14 +1177,14 @@ function markSceneDirty() {
   }
 }
 
-function saveCurrentScene({ announce = false } = {}) {
+function saveCurrentScene({ announce = false, renderFlow = true } = {}) {
   if (!state.selectedSceneId) return;
   if (document.activeElement && els.sceneEditor.contains(document.activeElement) && typeof document.activeElement.blur === "function") {
     document.activeElement.blur();
   }
   state.ui.sceneDirty = false;
   state.ui.sceneSavedAt = new Date().toISOString();
-  renderFlowBoard();
+  if (renderFlow) renderFlowBoard();
   renderJson();
   if (announce) {
     renderSceneEditor();
@@ -1191,20 +1193,22 @@ function saveCurrentScene({ announce = false } = {}) {
 
 function switchSelectedScene(nextSceneId) {
   if (!nextSceneId || nextSceneId === state.selectedSceneId) return;
-  saveCurrentScene();
+  saveCurrentScene({ renderFlow: false });
   state.selectedSceneId = nextSceneId;
   renderFlowBoard();
   renderSceneEditor();
 }
 
 function renderFlowBoard() {
+  renderFlowCards();
+  renderFlowLinks();
+}
+
+function renderFlowCards() {
   els.flowCanvas.innerHTML = "";
   const bounds = computeBoardBounds();
   els.flowCanvas.style.height = `${bounds.height}px`;
-  els.flowLinks.setAttribute("width", bounds.width);
-  els.flowLinks.setAttribute("height", bounds.height);
-  els.flowLinks.setAttribute("viewBox", `0 0 ${bounds.width} ${bounds.height}`);
-  els.flowLinks.innerHTML = buildLinkMarkup();
+  const fragment = document.createDocumentFragment();
 
   state.adventure.scenes.forEach((scene, index) => {
     const card = document.createElement("div");
@@ -1259,8 +1263,19 @@ function renderFlowBoard() {
       };
     });
 
-    els.flowCanvas.appendChild(card);
+    fragment.appendChild(card);
   });
+
+  els.flowCanvas.appendChild(fragment);
+}
+
+function renderFlowLinks() {
+  const bounds = computeBoardBounds();
+  els.flowCanvas.style.height = `${bounds.height}px`;
+  els.flowLinks.setAttribute("width", bounds.width);
+  els.flowLinks.setAttribute("height", bounds.height);
+  els.flowLinks.setAttribute("viewBox", `0 0 ${bounds.width} ${bounds.height}`);
+  els.flowLinks.innerHTML = buildLinkMarkup();
 }
 
 function buildLinkMarkup() {
@@ -1348,6 +1363,26 @@ function computeBoardBounds() {
   const width = Math.max(1200, ...state.adventure.scenes.map((scene) => scene.position.x + NODE_WIDTH + 80), 1200);
   const height = Math.max(560, ...state.adventure.scenes.map((scene) => scene.position.y + NODE_HEIGHT + 80), 560);
   return { width, height };
+}
+
+function flowCardElement(sceneId) {
+  return els.flowCanvas.querySelector(`.node-card[data-scene-id="${sceneId}"]`);
+}
+
+function updateFlowCardPosition(sceneId) {
+  const scene = state.adventure.scenes.find((entry) => entry.id === sceneId);
+  const card = flowCardElement(sceneId);
+  if (!scene || !card) return;
+  card.style.left = `${scene.position.x}px`;
+  card.style.top = `${scene.position.y}px`;
+}
+
+function scheduleFlowLinksRender() {
+  if (state.ui.flowLinksFrame) return;
+  state.ui.flowLinksFrame = window.requestAnimationFrame(() => {
+    state.ui.flowLinksFrame = null;
+    renderFlowLinks();
+  });
 }
 
 function nodeAnchor(scene) {
