@@ -30,9 +30,11 @@ const ITEM_CATEGORIES = [
 const ITEM_RARITIES = [
   { value: "common", label: "Comune" },
   { value: "uncommon", label: "Non comune" },
-  { value: "rare", label: "Raro" },
-  { value: "epic", label: "Epico" },
-  { value: "legendary", label: "Leggendario" }
+  { value: "rare", label: "Rara" },
+  { value: "mythic", label: "Mitica" },
+  { value: "unique", label: "Unica" },
+  { value: "epic", label: "Mitica" },
+  { value: "legendary", label: "Mitica" }
 ];
 
 const EFFECT_FAMILIES = [
@@ -272,7 +274,7 @@ const MONSTER_PRESETS = [
     damageMin: 3,
     damageMax: 6,
     goldReward: 18,
-    loot: [{ itemId: "field_buckler", itemName: "Buckler da campo", quantity: 1, category: "shield", rarity: "common", effectIds: ["defense_surge"] }]
+    loot: [{ itemId: "camp_buckler", itemName: "Buckler da campo", quantity: 1, category: "shield", rarity: "common", effectIds: ["defense_surge"] }]
   },
   {
     id: "fen_hag",
@@ -320,7 +322,10 @@ const LOOT_PRESETS = [
   { id: "war_axe", name: "Ascia pesante", category: "weapon", rarity: "uncommon", effectIds: [] },
   { id: "hunter_bow", name: "Arco del cacciatore", category: "weapon", rarity: "uncommon", effectIds: [] },
   { id: "dagger", name: "Pugnale", category: "weapon", rarity: "common", effectIds: [] },
+  { id: "camp_buckler", name: "Buckler da campo", category: "shield", rarity: "common", effectIds: ["defense_surge"] },
+  { id: "miner_helm", name: "Elmo da minatore", category: "helm", rarity: "common", effectIds: ["crit_guard"] },
   { id: "torch", name: "Torcia", category: "utility", rarity: "common", effectIds: [] },
+  { id: "travel_rations", name: "Razioni da viaggio", category: "utility", rarity: "common", effectIds: [] },
   { id: "ancient_key", name: "Chiave antica", category: "key", rarity: "uncommon", effectIds: ["key_access"], lockId: "magister_archive" },
   { id: "arcane_scroll", name: "Pergamena arcana", category: "treasure", rarity: "rare", effectIds: ["check_bonus"] },
   { id: "ritual_gem", name: "Gemma rituale", category: "relic", rarity: "rare", effectIds: ["trade_value"] },
@@ -328,9 +333,9 @@ const LOOT_PRESETS = [
   { id: "wolf_pelt", name: "Pelle di lupo", category: "treasure", rarity: "common", effectIds: ["trade_value"] },
   { id: "alchemic_fire", name: "Fuoco alchemico", category: "consumable", rarity: "rare", effectIds: ["direct_damage"] },
   { id: "warding_dust", name: "Polvere di guardia", category: "consumable", rarity: "rare", effectIds: ["defense_surge"] },
-  { id: "phoenix_tear", name: "Lacrima della Fenice", category: "consumable", rarity: "legendary", effectIds: ["restore_all"] },
-  { id: "eclipse_blade", name: "Lama dell'Eclisse", category: "relic", rarity: "legendary", effectIds: ["bonus_damage", "guaranteed_crit"] },
-  { id: "crown_of_embers", name: "Corona delle Braci", category: "relic", rarity: "legendary", effectIds: ["ember_retaliation", "crit_guard"] },
+  { id: "phoenix_tear", name: "Lacrima della Fenice", category: "consumable", rarity: "mythic", effectIds: ["restore_all"] },
+  { id: "eclipse_blade", name: "Lama dell'Eclisse", category: "relic", rarity: "unique", effectIds: ["bonus_damage", "guaranteed_crit"] },
+  { id: "crown_of_embers", name: "Corona delle Braci", category: "relic", rarity: "mythic", effectIds: ["ember_retaliation", "crit_guard"] },
   { id: "custom", name: "Personalizzato", category: "", rarity: "common", effectIds: [] }
 ];
 
@@ -913,7 +918,7 @@ function createMonsterFromPresetData(preset, fallbackId) {
     damageMin: preset.damageMin,
     damageMax: preset.damageMax,
     goldReward: preset.goldReward,
-    loot: clonePresetLoot(preset.loot || []),
+    loot: buildMonsterLootFromPreset(preset),
     sourceType: "preset",
     presetId: preset.id
   };
@@ -932,6 +937,79 @@ function clonePresetLoot(lootList) {
   }));
 }
 
+function buildMonsterLootFromPreset(preset) {
+  const fixedLoot = clonePresetLoot(preset.loot || []);
+  const variableLoot = generateVariableLootForMonster(preset);
+  return mergeLootEntries([...fixedLoot, ...variableLoot]);
+}
+
+function generateVariableLootForMonster(preset) {
+  const profile = `${preset.id} ${preset.name} ${preset.description}`.toLowerCase();
+  const drops = [];
+
+  function addLootChance(chance, presetId, quantityMin = 1, quantityMax = quantityMin) {
+    if (Math.random() >= chance) return;
+    const loot = createLootFromPreset(presetId);
+    loot.quantity = randomInt(quantityMin, quantityMax);
+    loot.expanded = true;
+    drops.push(loot);
+  }
+
+  function addOneOfChance(chance, presetIds) {
+    if (!presetIds.length || Math.random() >= chance) return;
+    const selectedId = presetIds[randomInt(0, presetIds.length - 1)];
+    addLootChance(1, selectedId);
+  }
+
+  const isBeast = /(lupo|segugio|ragno|sanguisuga|beast|hound|wolf|spider|leech)/.test(profile);
+  const isUndead = /(scheletro|revenant|devoto|catacomba|crypt|grave|undead|custode del bronzo)/.test(profile);
+  const isHumanoid = /(cult|cultista|goblin|guard|guardia|band|capobanda|magister|knight|cavaliere)/.test(profile);
+
+  if (isBeast) {
+    addLootChance(0.30, "travel_rations");
+    addLootChance(0.18, "healing_potion");
+    addLootChance(0.12, "coins", 2, 6);
+    return drops;
+  }
+
+  if (isUndead) {
+    addLootChance(0.30, "coins", 4, 12);
+    addOneOfChance(0.30, ["rusted_blade", "miner_helm"]);
+    addLootChance(0.14, "healing_potion");
+    return drops;
+  }
+
+  if (isHumanoid) {
+    addLootChance(0.30, "coins", 5, 14);
+    addOneOfChance(0.30, ["dagger", "rusted_blade", "camp_buckler", "healing_potion"]);
+    addOneOfChance(0.16, ["chain_mail", "warding_dust", "arcane_scroll"]);
+    return drops;
+  }
+
+  addLootChance(0.20, "coins", 3, 8);
+  addOneOfChance(0.30, ["healing_potion", "torch"]);
+  return drops;
+}
+
+function mergeLootEntries(lootList) {
+  const merged = new Map();
+  lootList.forEach((loot) => {
+    const key = `${loot.itemId || loot.itemName}|${loot.lockId || ""}|${loot.category || ""}`;
+    if (!merged.has(key)) {
+      merged.set(key, { ...loot });
+      return;
+    }
+    const current = merged.get(key);
+    current.quantity = (current.quantity || 1) + (loot.quantity || 1);
+  });
+  return [...merged.values()];
+}
+
+function randomInt(min, max) {
+  if (max <= min) return min;
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
 function applyPresetToSelectedMonster() {
   const monster = getSelectedMonster();
   if (!monster) return;
@@ -948,7 +1026,7 @@ function applyPresetToSelectedMonster() {
   monster.damageMin = preset.damageMin;
   monster.damageMax = preset.damageMax;
   monster.goldReward = preset.goldReward;
-  monster.loot = clonePresetLoot(preset.loot || []);
+  monster.loot = buildMonsterLootFromPreset(preset);
   render();
 }
 
