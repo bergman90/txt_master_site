@@ -586,7 +586,7 @@ function bindSceneEditor() {
     if (!scene) return;
     scene.title = e.target.value;
     markSceneDirty();
-    renderFlowBoard();
+    refreshFlowCard(scene.id);
     scheduleJsonRender();
   });
 
@@ -595,7 +595,7 @@ function bindSceneEditor() {
     if (!scene) return;
     scene.openingText = e.target.value;
     markSceneDirty();
-    renderFlowBoard();
+    refreshFlowCard(scene.id);
     scheduleJsonRender();
   });
 
@@ -1193,9 +1193,10 @@ function saveCurrentScene({ announce = false, renderFlow = true } = {}) {
 
 function switchSelectedScene(nextSceneId) {
   if (!nextSceneId || nextSceneId === state.selectedSceneId) return;
+  const previousSceneId = state.selectedSceneId;
   saveCurrentScene({ renderFlow: false });
   state.selectedSceneId = nextSceneId;
-  renderFlowBoard();
+  updateFlowCardSelection(previousSceneId, nextSceneId);
   renderSceneEditor();
 }
 
@@ -1211,62 +1212,75 @@ function renderFlowCards() {
   const fragment = document.createDocumentFragment();
 
   state.adventure.scenes.forEach((scene, index) => {
-    const card = document.createElement("div");
-    card.className = `flow-card node-card ${scene.id === state.selectedSceneId ? "active" : ""}`;
-    card.dataset.sceneId = scene.id;
-    card.style.left = `${scene.position.x}px`;
-    card.style.top = `${scene.position.y}px`;
-    card.style.width = `${NODE_WIDTH}px`;
-    card.innerHTML = `
-      <button class="link-handle" title="Trascina per collegare"></button>
-      <div class="flow-card-head">
-        <strong>${index + 1}. [${sceneLabel(scene.kind)}] ${scene.title}</strong>
-        <span>${scene.id === state.adventure.startingSceneId ? "INIZIO" : ""}</span>
-      </div>
-      <p>${truncate(scene.openingText || "Nessun testo iniziale ancora.", 120)}</p>
-      <div class="flow-choices">
-        ${scene.kind === "description"
-          ? scene.choices.length ? scene.choices.map((choice, idx) =>
-          `<div class="flow-choice-row">${choiceLabel(idx)} ${choice.text || "(scelta senza testo)"} -> ${targetLabel(choice)}</div>`
-        ).join("") : '<div class="flow-empty">Nessuna scelta ancora.</div>'
-          : renderOutcomeSummary(scene)}
-      </div>
-    `;
-
-    card.addEventListener("click", (event) => {
-      if (event.target.closest(".link-handle")) return;
-      switchSelectedScene(scene.id);
-    });
-
-    card.addEventListener("dblclick", () => {
-      switchSelectedScene(scene.id);
-      els.sceneEditor.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-
-    card.addEventListener("pointerdown", (event) => {
-      if (event.button !== 0) return;
-      if (event.target.closest(".link-handle")) return;
-      state.drag = {
-        sceneId: scene.id,
-        offsetX: event.clientX - scene.position.x - els.flowCanvas.getBoundingClientRect().left,
-        offsetY: event.clientY - scene.position.y - els.flowCanvas.getBoundingClientRect().top
-      };
-    });
-
-    card.querySelector(".link-handle").addEventListener("pointerdown", (event) => {
-      event.stopPropagation();
-      const start = nodeAnchor(scene);
-      state.linkDraft = {
-        sceneId: scene.id,
-        start,
-        current: { ...start }
-      };
-    });
-
-    fragment.appendChild(card);
+    fragment.appendChild(createFlowCard(scene, index));
   });
 
   els.flowCanvas.appendChild(fragment);
+}
+
+function createFlowCard(scene, index) {
+  const card = document.createElement("div");
+  card.className = `flow-card node-card ${scene.id === state.selectedSceneId ? "active" : ""}`;
+  card.dataset.sceneId = scene.id;
+  card.style.left = `${scene.position.x}px`;
+  card.style.top = `${scene.position.y}px`;
+  card.style.width = `${NODE_WIDTH}px`;
+  card.innerHTML = buildFlowCardMarkup(scene, index);
+
+  card.addEventListener("click", (event) => {
+    if (event.target.closest(".link-handle")) return;
+    switchSelectedScene(scene.id);
+  });
+
+  card.addEventListener("dblclick", () => {
+    switchSelectedScene(scene.id);
+    els.sceneEditor.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+
+  card.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0) return;
+    if (event.target.closest(".link-handle")) return;
+    state.drag = {
+      sceneId: scene.id,
+      offsetX: event.clientX - scene.position.x - els.flowCanvas.getBoundingClientRect().left,
+      offsetY: event.clientY - scene.position.y - els.flowCanvas.getBoundingClientRect().top
+    };
+  });
+
+  card.querySelector(".link-handle").addEventListener("pointerdown", (event) => {
+    event.stopPropagation();
+    const start = nodeAnchor(scene);
+    state.linkDraft = {
+      sceneId: scene.id,
+      start,
+      current: { ...start }
+    };
+  });
+
+  return card;
+}
+
+function buildFlowCardMarkup(scene, index) {
+  return `
+    <button class="link-handle" title="Trascina per collegare"></button>
+    <div class="flow-card-head">
+      <strong>${index + 1}. [${sceneLabel(scene.kind)}] ${scene.title}</strong>
+      <span>${scene.id === state.adventure.startingSceneId ? "INIZIO" : ""}</span>
+    </div>
+    <p>${truncate(scene.openingText || "Nessun testo iniziale ancora.", 120)}</p>
+    <div class="flow-choices">
+      ${renderFlowChoiceSummary(scene)}
+    </div>
+  `;
+}
+
+function renderFlowChoiceSummary(scene) {
+  if (scene.kind !== "description") return renderOutcomeSummary(scene);
+  return scene.choices.length
+    ? scene.choices.map((choice, idx) =>
+      `<div class="flow-choice-row">${choiceLabel(idx)} ${choice.text || "(scelta senza testo)"} -> ${targetLabel(choice)}</div>`
+    ).join("")
+    : '<div class="flow-empty">Nessuna scelta ancora.</div>';
 }
 
 function renderFlowLinks() {
@@ -1377,6 +1391,23 @@ function updateFlowCardPosition(sceneId) {
   card.style.top = `${scene.position.y}px`;
 }
 
+function refreshFlowCard(sceneId) {
+  const sceneIndex = state.adventure.scenes.findIndex((entry) => entry.id === sceneId);
+  if (sceneIndex === -1) return;
+  const current = flowCardElement(sceneId);
+  const replacement = createFlowCard(state.adventure.scenes[sceneIndex], sceneIndex);
+  if (!current) {
+    els.flowCanvas.appendChild(replacement);
+    return;
+  }
+  current.replaceWith(replacement);
+}
+
+function updateFlowCardSelection(previousSceneId, nextSceneId) {
+  if (previousSceneId) flowCardElement(previousSceneId)?.classList.remove("active");
+  if (nextSceneId) flowCardElement(nextSceneId)?.classList.add("active");
+}
+
 function scheduleFlowLinksRender() {
   if (state.ui.flowLinksFrame) return;
   state.ui.flowLinksFrame = window.requestAnimationFrame(() => {
@@ -1447,7 +1478,8 @@ function renderChoices(scene) {
   renderChoiceCards(els.choiceList, scene.choices, {
     onChange: () => {
       markSceneDirty();
-      renderFlowBoard();
+      refreshFlowCard(scene.id);
+      scheduleFlowLinksRender();
       scheduleJsonRender();
     },
     onRemove: (index) => {
@@ -1596,7 +1628,8 @@ function renderOutcomeEditor(scene) {
     hydrateSceneTargetSelect(targetSelect, branch.targetSceneId || "");
     targetSelect.addEventListener("change", (event) => {
       setOutcomeTarget(scene, definition.key, event.target.value);
-      renderFlowBoard();
+      refreshFlowCard(scene.id);
+      scheduleFlowLinksRender();
       renderSceneEditor();
       renderJson();
     });
@@ -1604,21 +1637,24 @@ function renderOutcomeEditor(scene) {
     wrapper.querySelector('[data-action="add-outcome-choice"]').addEventListener("click", () => {
       branch.choices.push(createEmptyChoice(branch.choices.length + 1));
       renderSceneEditor();
-      renderFlowBoard();
+      refreshFlowCard(scene.id);
+      scheduleFlowLinksRender();
       renderJson();
     });
 
     renderChoiceCards(wrapper.querySelector('[data-role="outcome-choice-list"]'), branch.choices, {
       onChange: () => {
         markSceneDirty();
-        renderFlowBoard();
+        refreshFlowCard(scene.id);
+        scheduleFlowLinksRender();
         scheduleJsonRender();
       },
       onRemove: (index) => {
         branch.choices.splice(index, 1);
         markSceneDirty();
         renderSceneEditor();
-        renderFlowBoard();
+        refreshFlowCard(scene.id);
+        scheduleFlowLinksRender();
         renderJson();
       }
     });
