@@ -383,7 +383,8 @@ const state = {
     autosaveAt: null,
     sceneDirty: false,
     sceneSavedAt: null,
-    jsonRenderTimer: null
+    jsonRenderTimer: null,
+    monsterListRenderTimer: null
   }
 };
 
@@ -743,7 +744,7 @@ function bindMonsterEditor() {
       const monster = getSelectedMonster();
       if (!monster) return;
       monster[field] = numeric ? Number(e.target.value || 0) : e.target.value;
-      renderMonsterList();
+      scheduleMonsterListRender();
       scheduleJsonRender();
     });
   });
@@ -1689,13 +1690,12 @@ function renderCombatGroups(scene) {
       renderCombatGroups(scene);
       renderMonsterList();
       renderJson();
-      renderSceneEditor();
     });
     countField.addEventListener("input", (event) => {
       group.count = Number(event.target.value || 1);
       markSceneDirty();
       updateGroupHeader();
-      renderJson();
+      scheduleJsonRender();
     });
     node.querySelector('[data-action="remove-group"]').addEventListener("click", () => {
       scene.combatGroups.splice(index, 1);
@@ -1734,8 +1734,8 @@ function renderCombatGroups(scene) {
           monster[prop] = ["name", "description"].includes(prop) ? event.target.value : Number(event.target.value || 0);
           markSceneDirty();
           updateGroupHeader();
-          renderMonsterList();
-          renderJson();
+          scheduleMonsterListRender();
+          scheduleJsonRender();
         });
       });
 
@@ -1748,7 +1748,6 @@ function renderCombatGroups(scene) {
         markSceneDirty();
         renderCombatGroups(scene);
         renderJson();
-        renderSceneEditor();
       });
     }
 
@@ -1871,7 +1870,7 @@ function renderLootList(container, items, rerender) {
       }
       markSceneDirty();
       updateLootHeader();
-      renderJson();
+      scheduleJsonRender();
     });
     customInput.addEventListener("input", (event) => {
       if (select.value !== "custom") return;
@@ -1883,49 +1882,49 @@ function renderLootList(container, items, rerender) {
       }
       markSceneDirty();
       updateLootHeader();
-      renderJson();
+      scheduleJsonRender();
     });
     customItemIdInput.addEventListener("input", (event) => {
       if (select.value !== "custom") return;
       loot.itemId = normalizeString(event.target.value) || "";
       markSceneDirty();
       updateLootHeader();
-      renderJson();
+      scheduleJsonRender();
     });
     categorySelect.addEventListener("change", (event) => {
       loot.category = normalizeString(event.target.value) || "";
       markSceneDirty();
-      renderJson();
+      scheduleJsonRender();
     });
     lockIdInput.addEventListener("input", (event) => {
       loot.lockId = normalizeString(event.target.value) || "";
       markSceneDirty();
-      renderJson();
+      scheduleJsonRender();
     });
     questItemInput.addEventListener("change", (event) => {
       loot.questItem = Boolean(event.target.checked);
       markSceneDirty();
       updateLootHeader();
-      renderJson();
+      scheduleJsonRender();
     });
     raritySelect.addEventListener("change", (event) => {
       loot.rarity = normalizeString(event.target.value) || "common";
       markSceneDirty();
       updateLootHeader();
-      renderJson();
+      scheduleJsonRender();
     });
     effectSelect.addEventListener("change", (event) => {
       const effectId = normalizeString(event.target.value) || "";
       loot.effectIds = effectId ? [effectId] : [];
       syncLootEffectMeta(effectId, familyField, triggerField);
       markSceneDirty();
-      renderJson();
+      scheduleJsonRender();
     });
     quantityField.addEventListener("input", (event) => {
       loot.quantity = Number(event.target.value || 1);
       markSceneDirty();
       updateLootHeader();
-      renderJson();
+      scheduleJsonRender();
     });
     node.querySelector('[data-action="remove-loot"]').addEventListener("click", () => {
       items.splice(index, 1);
@@ -1952,6 +1951,16 @@ function scheduleJsonRender(delay = 140) {
   state.ui.jsonRenderTimer = window.setTimeout(() => {
     state.ui.jsonRenderTimer = null;
     renderJson();
+  }, delay);
+}
+
+function scheduleMonsterListRender(delay = 90) {
+  if (state.ui.monsterListRenderTimer) {
+    window.clearTimeout(state.ui.monsterListRenderTimer);
+  }
+  state.ui.monsterListRenderTimer = window.setTimeout(() => {
+    state.ui.monsterListRenderTimer = null;
+    renderMonsterList();
   }, delay);
 }
 
