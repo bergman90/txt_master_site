@@ -17,6 +17,10 @@
         </div>
       </div>
       <p class="sidebar-intro">Editor visuale per creare, salvare ed esportare avventure compatibili con .txt-Master.</p>
+      <div class="sidebar-sticky-actions sidebar-sticky-actions--top">
+        <button id="save-adventure-btn" type="button" class="save-project-btn">Salva avventura</button>
+        <p class="hint">Salva il progetto locale completo, inclusi nodi, immagini e metadata dell'editor.</p>
+      </div>
 
       <div class="panel">
         <h2>Avventura</h2>
@@ -35,20 +39,17 @@
         </div>
         <label>Moltiplicatore adattivo per livello<input id="adventure-adaptive-multiplier" type="number" min="0" max="0.35" step="0.01" value="0.12"></label>
         <p class="hint">Scala prove e combattimenti in base al livello del personaggio. `0.12` e un valore consigliato per una crescita morbida.</p>
-        <div class="subsection">
-          <div class="subsection-header">
-            <h4>Avventure preconfezionate</h4>
-            <button id="load-example-btn" type="button">Apri esempio</button>
-          </div>
-          <label>
-            Scegli un esempio
+        <div class="subsection compact-project-tools">
+          <label class="compact-inline-select">
+            <span>Esempio rapido</span>
             <select id="example-adventure-select"></select>
           </label>
-          <div class="button-row">
+          <div class="compact-project-actions">
+            <button id="load-example-btn" type="button">Apri esempio</button>
             <button id="import-json-btn" type="button">Importa JSON</button>
             <input id="import-json-input" type="file" accept=".json,application/json" class="hidden-file-input">
           </div>
-          <p class="hint">Se apri l'editor direttamente da file locale, usa `Importa JSON` e scegli un file dalla cartella `adventure-studio/examples`.</p>
+          <p class="hint">Apri un esempio o importa un JSON esistente senza occupare spazio extra nella sidebar.</p>
         </div>
         <label class="checkbox-line"><input id="adventure-carry-over" type="checkbox" checked> Consenti equipaggiamento pregresso</label>
         <label class="checkbox-line"><input id="adventure-fresh-start" type="checkbox" checked> Consenti fresh start</label>
@@ -79,10 +80,6 @@
           <div id="validation-summary" class="validation-summary"></div>
           <ul id="validation-list" class="validation-list"></ul>
         </div>
-      </div>
-      <div class="sidebar-sticky-actions">
-        <button id="save-adventure-btn" type="button" class="save-project-btn">Salva avventura</button>
-        <p class="hint">Salva il progetto locale completo, inclusi nodi, immagini e metadata dell'editor.</p>
       </div>
     </aside>
 

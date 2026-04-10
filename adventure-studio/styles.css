@@ -82,7 +82,10 @@ select {
 .workspace-header h2,
 .panel h2,
 .panel h3,
-.subsection h4,
+.subsection h4 {
+  margin: 0;
+}
+
 .brand p,
 .workspace-header p {
   margin: 4px 0 0;
@@ -123,6 +126,10 @@ select {
   box-shadow: var(--shadow);
   padding: 18px;
   margin-bottom: 18px;
+}
+
+.sidebar > .panel:first-of-type {
+  margin-top: 16px;
 }
 
 .panel-collapsible {
@@ -267,6 +274,30 @@ select {
   padding: 0;
 }
 
+.compact-project-tools {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid rgba(209, 144, 82, 0.18);
+  border-radius: 14px;
+  background: rgba(10, 14, 20, 0.36);
+}
+
+.compact-inline-select {
+  margin-bottom: 0;
+}
+
+.compact-inline-select span {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.compact-project-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
 .output-panel {
   margin-top: 20px;
 }
@@ -335,9 +366,8 @@ button:hover {
 
 .sidebar-sticky-actions {
   position: sticky;
-  bottom: 16px;
+  top: 16px;
   z-index: 4;
-  margin-top: 16px;
   padding: 14px;
   border: 1px solid rgba(209, 144, 82, 0.24);
   border-radius: 16px;
@@ -347,8 +377,22 @@ button:hover {
   box-shadow: 0 16px 30px rgba(0, 0, 0, 0.28);
 }
 
+.sidebar-sticky-actions--top {
+  margin-bottom: 18px;
+}
+
 .save-project-btn {
   width: 100%;
+  min-height: 54px;
+  font-size: 1rem;
+  letter-spacing: 0.02em;
+  border: 1px solid rgba(255, 243, 220, 0.15);
+  box-shadow: 0 14px 28px rgba(209, 144, 82, 0.22);
+}
+
+.save-project-btn.is-saved {
+  background: linear-gradient(180deg, var(--accent-2), #547a55);
+  color: #08110a;
 }
 
 .hidden-file-input {

@@ -389,7 +389,8 @@ const state = {
     jsonRenderTimer: null,
     monsterListRenderTimer: null,
     flowLinksFrame: null,
-    sceneImageFrameTimer: null
+    sceneImageFrameTimer: null,
+    saveAdventureFeedbackTimer: null
   }
 };
 
@@ -1332,6 +1333,22 @@ function saveAdventureProject() {
     state.ui.autosaveAt = savedAt;
     els.autosaveIndicator.textContent = `Progetto salvato | ultimo salvataggio ${formatAutosaveTime(savedAt)}`;
   }
+  flashSaveAdventureButton();
+}
+
+function flashSaveAdventureButton() {
+  if (!els.saveAdventureBtn) return;
+  if (state.ui.saveAdventureFeedbackTimer) {
+    window.clearTimeout(state.ui.saveAdventureFeedbackTimer);
+    state.ui.saveAdventureFeedbackTimer = null;
+  }
+  els.saveAdventureBtn.textContent = "Salvato";
+  els.saveAdventureBtn.classList.add("is-saved");
+  state.ui.saveAdventureFeedbackTimer = window.setTimeout(() => {
+    els.saveAdventureBtn.textContent = "Salva avventura";
+    els.saveAdventureBtn.classList.remove("is-saved");
+    state.ui.saveAdventureFeedbackTimer = null;
+  }, 1600);
 }
 
 function updateSceneSaveStatus() {
