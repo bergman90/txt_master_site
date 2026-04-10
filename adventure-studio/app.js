@@ -382,7 +382,8 @@ const state = {
     strictAlpha: true,
     autosaveAt: null,
     sceneDirty: false,
-    sceneSavedAt: null
+    sceneSavedAt: null,
+    jsonRenderTimer: null
   }
 };
 
@@ -584,7 +585,7 @@ function bindSceneEditor() {
     scene.title = e.target.value;
     markSceneDirty();
     renderFlowBoard();
-    renderJson();
+    scheduleJsonRender();
   });
 
   els.sceneOpeningText.addEventListener("input", (e) => {
@@ -593,7 +594,7 @@ function bindSceneEditor() {
     scene.openingText = e.target.value;
     markSceneDirty();
     renderFlowBoard();
-    renderJson();
+    scheduleJsonRender();
   });
 
   els.sceneCheckSkill.addEventListener("change", (e) => {
@@ -743,7 +744,7 @@ function bindMonsterEditor() {
       if (!monster) return;
       monster[field] = numeric ? Number(e.target.value || 0) : e.target.value;
       renderMonsterList();
-      renderJson();
+      scheduleJsonRender();
     });
   });
 }
@@ -765,7 +766,7 @@ function onBoardPointerMove(event) {
     scene.position.x = Math.max(16, x);
     scene.position.y = Math.max(16, y);
     renderFlowBoard();
-    renderJson();
+    scheduleJsonRender();
     return;
   }
 
@@ -1411,8 +1412,7 @@ function renderChoices(scene) {
     onChange: () => {
       markSceneDirty();
       renderFlowBoard();
-      renderJson();
-      renderSceneEditor();
+      scheduleJsonRender();
     },
     onRemove: (index) => {
       scene.choices.splice(index, 1);
@@ -1576,8 +1576,7 @@ function renderOutcomeEditor(scene) {
       onChange: () => {
         markSceneDirty();
         renderFlowBoard();
-        renderJson();
-        renderSceneEditor();
+        scheduleJsonRender();
       },
       onRemove: (index) => {
         branch.choices.splice(index, 1);
@@ -1944,6 +1943,16 @@ function renderJson() {
   els.jsonOutput.value = JSON.stringify(cleaned, null, 2);
   renderValidation(validation);
   persistLocalProject();
+}
+
+function scheduleJsonRender(delay = 140) {
+  if (state.ui.jsonRenderTimer) {
+    window.clearTimeout(state.ui.jsonRenderTimer);
+  }
+  state.ui.jsonRenderTimer = window.setTimeout(() => {
+    state.ui.jsonRenderTimer = null;
+    renderJson();
+  }, delay);
 }
 
 function exportJson() {
