@@ -50,6 +50,8 @@
           </div>
           <p class="hint">Massimo 3 tag, una sola parola ciascuno.</p>
         </div>
+        <label>Moltiplicatore adattivo per livello<input id="adventure-adaptive-multiplier" type="number" min="0" max="0.35" step="0.01" value="0.12"></label>
+        <p class="hint">Scala prove e combattimenti in base al livello del personaggio. `0.12` e un valore consigliato per una crescita morbida.</p>
         <div class="subsection">
           <div class="subsection-header">
             <h4>Avventure preconfezionate</h4>
@@ -306,6 +308,7 @@
       <label>Nome personalizzato<input data-field="customName" type="text" placeholder="Solo se scegli Personalizzato"></label>
       <label>ItemId runtime<input data-field="customItemId" type="text" placeholder="es. sigil_key_custom"></label>
       <label>Lock ID<input data-field="lockId" type="text" placeholder="es. magister_archive"></label>
+      <label class="checkbox-line"><input data-field="questItem" type="checkbox"> Quest item</label>
       <label>Categoria<select data-field="category"></select></label>
       <label>Rarita<select data-field="rarity"></select></label>
       <label>Effetto principale<select data-field="effectId"></select></label>

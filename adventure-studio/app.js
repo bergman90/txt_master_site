@@ -361,6 +361,7 @@ const state = {
     title: "Nuova Avventura",
     description: "",
     tags: [],
+    adaptivePowerMultiplier: 0.12,
     startingSceneId: "",
     allowCarryOverLoadout: true,
     allowFreshStart: true,
@@ -388,6 +389,7 @@ function createEmptyAdventure() {
     title: "Nuova Avventura",
     description: "",
     tags: [],
+    adaptivePowerMultiplier: 0.12,
     startingSceneId: "",
     allowCarryOverLoadout: true,
     allowFreshStart: true,
@@ -403,6 +405,7 @@ const els = {
   adventureTag1: document.getElementById("adventure-tag-1"),
   adventureTag2: document.getElementById("adventure-tag-2"),
   adventureTag3: document.getElementById("adventure-tag-3"),
+  adventureAdaptiveMultiplier: document.getElementById("adventure-adaptive-multiplier"),
   exampleAdventureSelect: document.getElementById("example-adventure-select"),
   loadExampleBtn: document.getElementById("load-example-btn"),
   importJsonBtn: document.getElementById("import-json-btn"),
@@ -513,6 +516,10 @@ function bindMeta() {
       ]);
       renderJson();
     });
+  });
+  els.adventureAdaptiveMultiplier.addEventListener("input", (e) => {
+    state.adventure.adaptivePowerMultiplier = normalizeAdaptiveMultiplier(e.target.value);
+    renderJson();
   });
   els.adventureCarryOver.addEventListener("change", (e) => {
     state.adventure.allowCarryOverLoadout = Boolean(e.target.checked);
@@ -1007,6 +1014,7 @@ function renderAdventureSetup() {
   els.adventureTag1.value = state.adventure.tags?.[0] || "";
   els.adventureTag2.value = state.adventure.tags?.[1] || "";
   els.adventureTag3.value = state.adventure.tags?.[2] || "";
+  els.adventureAdaptiveMultiplier.value = Number(state.adventure.adaptivePowerMultiplier ?? 0.12).toFixed(2);
   els.adventureCarryOver.checked = Boolean(state.adventure.allowCarryOverLoadout);
   els.adventureFreshStart.checked = Boolean(state.adventure.allowFreshStart);
   els.alphaStrictValidation.checked = Boolean(state.ui.strictAlpha);
@@ -1725,6 +1733,7 @@ function renderLootList(container, items, rerender) {
     const raritySelect = node.querySelector('[data-field="rarity"]');
     const effectSelect = node.querySelector('[data-field="effectId"]');
     const lockIdInput = node.querySelector('[data-field="lockId"]');
+    const questItemInput = node.querySelector('[data-field="questItem"]');
     const customItemIdInput = node.querySelector('[data-field="customItemId"]');
     const familyField = node.querySelector('[data-field="effectFamily"]');
     const triggerField = node.querySelector('[data-field="effectTrigger"]');
@@ -1738,13 +1747,15 @@ function renderLootList(container, items, rerender) {
     customItemIdInput.value = selectedPreset === "custom" ? (loot.itemId || slugify(loot.itemName || "custom_loot")) : (loot.itemId || "");
     customItemIdInput.disabled = selectedPreset !== "custom";
     lockIdInput.value = loot.lockId || "";
+    questItemInput.checked = Boolean(loot.questItem);
     syncLootEffectMeta(effectSelect.value, familyField, triggerField);
     quantityField.value = loot.quantity ?? 1;
 
     function updateLootHeader() {
       title.textContent = loot.itemName || "Loot personalizzato";
       meta.textContent = `Quantita ${loot.quantity ?? 1} | ${runtimeLootItemId(loot)}`;
-      tag.textContent = loot.rarity ? loot.rarity.charAt(0).toUpperCase() + loot.rarity.slice(1) : "Comune";
+      const rarityLabel = loot.rarity ? loot.rarity.charAt(0).toUpperCase() + loot.rarity.slice(1) : "Comune";
+      tag.textContent = loot.questItem ? `Quest item • ${rarityLabel}` : rarityLabel;
       action.textContent = node.open ? "Approva loot" : "Modifica loot";
     }
 
@@ -1814,6 +1825,12 @@ function renderLootList(container, items, rerender) {
       markSceneDirty();
       renderJson();
     });
+    questItemInput.addEventListener("change", (event) => {
+      loot.questItem = Boolean(event.target.checked);
+      markSceneDirty();
+      updateLootHeader();
+      renderJson();
+    });
     raritySelect.addEventListener("change", (event) => {
       loot.rarity = normalizeString(event.target.value) || "common";
       markSceneDirty();
@@ -1875,6 +1892,7 @@ function cleanAdventure(adventure) {
     itemName: loot.itemName,
     quantity: loot.quantity,
     lockId: normalizeString(loot.lockId),
+    questItem: Boolean(loot.questItem),
     category: normalizeString(loot.category),
     rarity: normalizeString(loot.rarity),
     effectIds: (loot.effectIds || []).filter(Boolean)
@@ -1904,6 +1922,7 @@ function cleanAdventure(adventure) {
     title: adventure.title,
     description: adventure.description,
     tags: normalizeAdventureTags(adventure.tags),
+    adaptivePowerMultiplier: normalizeAdaptiveMultiplier(adventure.adaptivePowerMultiplier),
     startingSceneId: adventure.startingSceneId,
     allowCarryOverLoadout: Boolean(adventure.allowCarryOverLoadout),
     allowFreshStart: Boolean(adventure.allowFreshStart),
@@ -2046,6 +2065,7 @@ function normalizeAdventureImport(adventure) {
     title: adventure.title || "Nuova Avventura",
     description: adventure.description || "",
     tags: normalizeAdventureTags(adventure.tags),
+    adaptivePowerMultiplier: normalizeAdaptiveMultiplier(adventure.adaptivePowerMultiplier),
     startingSceneId,
     allowCarryOverLoadout: adventure.allowCarryOverLoadout !== false,
     allowFreshStart: adventure.allowFreshStart !== false,
@@ -2511,11 +2531,18 @@ function normalizeLoot(loot) {
     itemName: loot.itemName || "",
     quantity: loot.quantity ?? 1,
     lockId: loot.lockId || "",
+    questItem: Boolean(loot.questItem),
     category: loot.category || "",
     rarity: loot.rarity || "common",
     effectIds: Array.isArray(loot.effectIds) ? loot.effectIds.filter(Boolean) : [],
     expanded: loot.expanded !== false
   };
+}
+
+function normalizeAdaptiveMultiplier(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return 0.12;
+  return Math.min(0.35, Math.max(0, parsed));
 }
 
 function normalizeAdventureTags(value) {
