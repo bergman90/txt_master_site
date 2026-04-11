@@ -362,13 +362,18 @@ const CREATE_MONSTER_OPTION = "__create_new__";
 const SCENE_IMAGE_ASPECT_RATIO = 2.48;
 const SCENE_IMAGE_TARGET_WIDTH = 1200;
 const SCENE_IMAGE_TARGET_HEIGHT = Math.round(SCENE_IMAGE_TARGET_WIDTH / SCENE_IMAGE_ASPECT_RATIO);
-const FLOW_ZOOM_MIN = 0.6;
+const FLOW_ZOOM_MIN = 0.2;
 const FLOW_ZOOM_MAX = 1.8;
 const FLOW_ZOOM_STEP = 0.1;
 const FLOW_LINK_VIEWPORT_MARGIN = 260;
 const FLOW_LINK_VIRTUALIZE_SCENE_THRESHOLD = 12;
 const FLOW_LINK_VIRTUALIZE_COUNT_THRESHOLD = 22;
 const FLOW_LINK_DRAG_THROTTLE_MS = 34;
+const FLOW_COMPACT_ZOOM_THRESHOLD = 0.38;
+const FLOW_WORKSPACE_MIN_WIDTH = 3200;
+const FLOW_WORKSPACE_MIN_HEIGHT = 2200;
+const FLOW_WORKSPACE_PADDING = 720;
+const FLOW_COORD_LIMIT = 200000;
 const LEGACY_LOCAL_PROJECT_KEY = "adventure_studio_project_v1";
 const LOCAL_PROJECT_INDEX_KEY = "adventure_studio_project_index_v2";
 const LOCAL_PROJECT_LAST_KEY = "adventure_studio_last_project_id_v2";
@@ -406,7 +411,8 @@ const state = {
     saveAdventureFeedbackTimer: null,
     flowZoom: 1,
     currentProjectId: null,
-    projectPickerOpen: false
+    projectPickerOpen: false,
+    flowBoardBounds: null
   }
 };
 
@@ -1175,10 +1181,11 @@ function bindBoardPointerSystem() {
 function flowBoardPointFromClient(event) {
   const boardRect = els.flowBoard.getBoundingClientRect();
   const zoom = state.ui.flowZoom || 1;
-  return {
+  const bounds = getCurrentFlowBoardBounds();
+  return boardToLogicalPoint({
     x: (event.clientX - boardRect.left + els.flowBoard.scrollLeft) / zoom,
     y: (event.clientY - boardRect.top + els.flowBoard.scrollTop) / zoom
-  };
+  }, bounds);
 }
 
 function onBoardPointerMove(event) {
@@ -1189,9 +1196,11 @@ function onBoardPointerMove(event) {
     if (!scene) return;
     const x = point.x - state.drag.offsetX;
     const y = point.y - state.drag.offsetY;
-    scene.position.x = Math.max(16, x);
-    scene.position.y = Math.max(16, y);
-    updateFlowCardPosition(scene.id);
+    scene.position.x = clamp(x, -FLOW_COORD_LIMIT, FLOW_COORD_LIMIT);
+    scene.position.y = clamp(y, -FLOW_COORD_LIMIT, FLOW_COORD_LIMIT);
+    const bounds = computeBoardBounds();
+    state.ui.flowBoardBounds = bounds;
+    updateFlowCardPosition(scene.id, bounds);
     scheduleFlowLinksRender("drag");
     return;
   }
@@ -1551,7 +1560,9 @@ function persistLocalProject({ syncScene = true } = {}) {
     state.ui.autosaveAt = payload.ui.autosaveAt;
     upsertProjectSummary(projectSummaryFromPayload(state.ui.currentProjectId, payload));
     setLastProjectId(state.ui.currentProjectId);
-    renderProjectPicker();
+    if (state.ui.projectPickerOpen) {
+      renderProjectPicker();
+    }
     if (els.autosaveIndicator) {
       els.autosaveIndicator.textContent = `Progetto locale attivo | ultimo salvataggio ${formatAutosaveTime(state.ui.autosaveAt)}`;
     }
@@ -1728,29 +1739,31 @@ function switchSelectedScene(nextSceneId) {
   renderSceneEditor();
 }
 
-function renderFlowBoard() {
-  renderFlowCards();
-  renderFlowLinks();
-  applyFlowZoom({ preserveCenter: false });
+function renderFlowBoard({ preserveCenter = false, logicalCenter = null } = {}) {
+  const bounds = computeBoardBounds();
+  state.ui.flowBoardBounds = bounds;
+  renderFlowCards(bounds);
+  renderFlowLinks(bounds);
+  applyFlowZoom({ preserveCenter, rerenderOnModeChange: false, bounds, logicalCenter });
 }
 
-function renderFlowCards() {
+function renderFlowCards(bounds = computeBoardBounds()) {
   els.flowCanvas.innerHTML = "";
-  const bounds = computeBoardBounds();
+  state.ui.flowBoardBounds = bounds;
   els.flowCanvas.style.width = `${bounds.width}px`;
   els.flowCanvas.style.height = `${bounds.height}px`;
   const fragment = document.createDocumentFragment();
 
   state.adventure.scenes.forEach((scene, index) => {
-    fragment.appendChild(createFlowCard(scene, index));
+    fragment.appendChild(createFlowCard(scene, index, bounds));
   });
 
   els.flowCanvas.appendChild(fragment);
 }
 
-function createFlowCard(scene, index) {
+function createFlowCard(scene, index, bounds = getCurrentFlowBoardBounds()) {
   const card = document.createElement("div");
-  syncFlowCard(card, scene, index);
+  syncFlowCard(card, scene, index, bounds);
 
   card.addEventListener("click", (event) => {
     if (event.target.closest(".link-handle")) return;
@@ -1779,12 +1792,17 @@ function createFlowCard(scene, index) {
   return card;
 }
 
-function syncFlowCard(card, scene, index) {
-  card.className = `flow-card node-card ${scene.id === state.selectedSceneId ? "active" : ""}`;
+function syncFlowCard(card, scene, index, bounds = getCurrentFlowBoardBounds()) {
+  const metrics = getFlowCardMetrics();
+  const boardPoint = logicalToBoardPoint(scene.position, bounds);
+  card.className = `flow-card node-card ${scene.id === state.selectedSceneId ? "active" : ""} ${metrics.compact ? "flow-card--compact" : ""}`;
   card.dataset.sceneId = scene.id;
-  card.style.left = `${scene.position.x}px`;
-  card.style.top = `${scene.position.y}px`;
-  card.style.width = `${NODE_WIDTH}px`;
+  card.style.left = `${boardPoint.x}px`;
+  card.style.top = `${boardPoint.y}px`;
+  card.style.width = `${metrics.width}px`;
+  card.style.height = metrics.compact ? `${metrics.height}px` : "";
+  card.style.minHeight = metrics.compact ? "" : `${metrics.height}px`;
+  card.title = `${index + 1}. ${scene.title || "Evento"} (${sceneLabel(scene.kind)})`;
   card.innerHTML = buildFlowCardMarkup(scene, index);
   card.querySelector(".link-handle")?.addEventListener("pointerdown", (event) => {
     event.stopPropagation();
@@ -1802,6 +1820,17 @@ function syncFlowCard(card, scene, index) {
 }
 
 function buildFlowCardMarkup(scene, index) {
+  const metrics = getFlowCardMetrics();
+  if (metrics.compact) {
+    return `
+      <button class="link-handle" title="Trascina per collegare"></button>
+      <div class="flow-card-mini-index">${index + 1}</div>
+      <div class="flow-card-mini-meta">
+        <span>${sceneKindShortLabel(scene.kind)}</span>
+        <span>${scene.id === state.adventure.startingSceneId ? "IN" : ""}</span>
+      </div>
+    `;
+  }
   return `
     <button class="link-handle" title="Trascina per collegare"></button>
     <div class="flow-card-head">
@@ -1824,34 +1853,34 @@ function renderFlowChoiceSummary(scene) {
     : '<div class="flow-empty">Nessuna scelta ancora.</div>';
 }
 
-function renderFlowLinks() {
-  const bounds = computeBoardBounds();
+function renderFlowLinks(bounds = computeBoardBounds()) {
+  state.ui.flowBoardBounds = bounds;
   els.flowCanvas.style.width = `${bounds.width}px`;
   els.flowCanvas.style.height = `${bounds.height}px`;
   els.flowLinks.setAttribute("width", bounds.width);
   els.flowLinks.setAttribute("height", bounds.height);
   els.flowLinks.setAttribute("viewBox", `0 0 ${bounds.width} ${bounds.height}`);
-  els.flowLinks.innerHTML = buildLinkMarkup();
+  els.flowLinks.innerHTML = buildLinkMarkup(bounds);
   updateFlowViewportMetrics(bounds);
 }
 
-function buildLinkMarkup() {
+function buildLinkMarkup(bounds = getCurrentFlowBoardBounds()) {
   const lines = [];
-  const visibleBounds = shouldVirtualizeFlowLinks() ? getVisibleFlowBounds() : null;
+  const visibleBounds = shouldVirtualizeFlowLinks() ? getVisibleFlowBounds(bounds) : null;
   state.adventure.scenes.forEach((scene) => {
-    const source = nodeAnchor(scene);
+    const source = nodeAnchor(scene, bounds);
     if (scene.kind === "description") {
-      scene.choices.forEach((choice) => appendChoiceLinks(lines, source, choice, "#b56d39", visibleBounds));
+      scene.choices.forEach((choice) => appendChoiceLinks(lines, source, choice, "#b56d39", visibleBounds, bounds));
     } else {
       outcomeDefinitionsForScene(scene).forEach((definition) => {
         const branch = getOutcomeBranch(scene, definition.key);
         const color = outcomeLinkColor(definition.key);
         if (branch.choices.length) {
-          branch.choices.forEach((choice) => appendChoiceLinks(lines, source, choice, color, visibleBounds));
+          branch.choices.forEach((choice) => appendChoiceLinks(lines, source, choice, color, visibleBounds, bounds));
         } else if (branch.targetSceneId) {
           const target = state.adventure.scenes.find((entry) => entry.id === branch.targetSceneId);
           if (target) {
-            const targetEntry = nodeEntry(target);
+            const targetEntry = nodeEntry(target, bounds);
             if (shouldRenderFlowLink(source, targetEntry, visibleBounds)) {
               lines.push(linkPath(source, targetEntry, color, definition.key === "retreat"));
             }
@@ -1888,18 +1917,18 @@ function renderOutcomeSummary(scene) {
   }).join("");
 }
 
-function appendChoiceLinks(lines, source, choice, defaultColor, visibleBounds = null) {
+function appendChoiceLinks(lines, source, choice, defaultColor, visibleBounds = null, bounds = getCurrentFlowBoardBounds()) {
   if (choice.skillCheck) {
     const success = state.adventure.scenes.find((entry) => entry.id === choice.skillCheck.successSceneId);
     const failure = state.adventure.scenes.find((entry) => entry.id === choice.skillCheck.failureSceneId);
     if (success) {
-      const successEntry = nodeEntry(success);
+      const successEntry = nodeEntry(success, bounds);
       if (shouldRenderFlowLink(source, successEntry, visibleBounds)) {
         lines.push(linkPath(source, successEntry, "#6f8a57"));
       }
     }
     if (failure) {
-      const failureEntry = nodeEntry(failure);
+      const failureEntry = nodeEntry(failure, bounds);
       if (shouldRenderFlowLink(source, failureEntry, visibleBounds)) {
         lines.push(linkPath(source, failureEntry, "#b94a48"));
       }
@@ -1907,7 +1936,7 @@ function appendChoiceLinks(lines, source, choice, defaultColor, visibleBounds = 
   } else if (choice.targetSceneId) {
     const target = state.adventure.scenes.find((entry) => entry.id === choice.targetSceneId);
     if (target) {
-      const targetEntry = nodeEntry(target);
+      const targetEntry = nodeEntry(target, bounds);
       if (shouldRenderFlowLink(source, targetEntry, visibleBounds)) {
         lines.push(linkPath(source, targetEntry, defaultColor));
       }
@@ -1938,9 +1967,48 @@ function linkPath(source, target, color, dashed = false) {
 }
 
 function computeBoardBounds() {
-  const width = Math.max(1200, ...state.adventure.scenes.map((scene) => scene.position.x + NODE_WIDTH + 80), 1200);
-  const height = Math.max(560, ...state.adventure.scenes.map((scene) => scene.position.y + NODE_HEIGHT + 80), 560);
-  return { width, height };
+  const metrics = getFlowCardMetrics();
+  const scenePositions = state.adventure.scenes.map((scene) => scene.position || { x: 0, y: 0 });
+  const minX = scenePositions.length ? Math.min(...scenePositions.map((point) => point.x), 0) : 0;
+  const minY = scenePositions.length ? Math.min(...scenePositions.map((point) => point.y), 0) : 0;
+  const maxX = scenePositions.length ? Math.max(...scenePositions.map((point) => point.x + metrics.width), metrics.width) : metrics.width;
+  const maxY = scenePositions.length ? Math.max(...scenePositions.map((point) => point.y + metrics.height), metrics.height) : metrics.height;
+  const contentWidth = Math.max(metrics.width, maxX - minX);
+  const contentHeight = Math.max(metrics.height, maxY - minY);
+  const width = Math.max(FLOW_WORKSPACE_MIN_WIDTH, Math.ceil(contentWidth + FLOW_WORKSPACE_PADDING * 2));
+  const height = Math.max(FLOW_WORKSPACE_MIN_HEIGHT, Math.ceil(contentHeight + FLOW_WORKSPACE_PADDING * 2));
+  const offsetX = Math.round((width - contentWidth) / 2) - minX;
+  const offsetY = Math.round((height - contentHeight) / 2) - minY;
+  return { width, height, minX, minY, maxX, maxY, offsetX, offsetY };
+}
+
+function getCurrentFlowBoardBounds() {
+  return state.ui.flowBoardBounds || computeBoardBounds();
+}
+
+function isCompactFlowZoom(zoom = state.ui.flowZoom || 1) {
+  return Number(zoom || 1) <= FLOW_COMPACT_ZOOM_THRESHOLD;
+}
+
+function getFlowCardMetrics(zoom = state.ui.flowZoom || 1) {
+  if (isCompactFlowZoom(zoom)) {
+    return { width: 88, height: 72, compact: true };
+  }
+  return { width: NODE_WIDTH, height: NODE_HEIGHT, compact: false };
+}
+
+function logicalToBoardPoint(point, bounds = getCurrentFlowBoardBounds()) {
+  return {
+    x: point.x + bounds.offsetX,
+    y: point.y + bounds.offsetY
+  };
+}
+
+function boardToLogicalPoint(point, bounds = getCurrentFlowBoardBounds()) {
+  return {
+    x: point.x - bounds.offsetX,
+    y: point.y - bounds.offsetY
+  };
 }
 
 function estimateFlowLinkCount() {
@@ -1960,13 +2028,22 @@ function shouldVirtualizeFlowLinks() {
     || estimateFlowLinkCount() >= FLOW_LINK_VIRTUALIZE_COUNT_THRESHOLD;
 }
 
-function getVisibleFlowBounds(margin = FLOW_LINK_VIEWPORT_MARGIN) {
+function getVisibleFlowBounds(bounds = getCurrentFlowBoardBounds(), margin = FLOW_LINK_VIEWPORT_MARGIN) {
   const zoom = state.ui.flowZoom || 1;
-  const left = Math.max(0, els.flowBoard.scrollLeft / zoom - margin);
-  const top = Math.max(0, els.flowBoard.scrollTop / zoom - margin);
-  const right = (els.flowBoard.scrollLeft + els.flowBoard.clientWidth) / zoom + margin;
-  const bottom = (els.flowBoard.scrollTop + els.flowBoard.clientHeight) / zoom + margin;
-  return { left, top, right, bottom };
+  const topLeft = boardToLogicalPoint({
+    x: els.flowBoard.scrollLeft / zoom,
+    y: els.flowBoard.scrollTop / zoom
+  }, bounds);
+  const bottomRight = boardToLogicalPoint({
+    x: (els.flowBoard.scrollLeft + els.flowBoard.clientWidth) / zoom,
+    y: (els.flowBoard.scrollTop + els.flowBoard.clientHeight) / zoom
+  }, bounds);
+  return {
+    left: topLeft.x - margin,
+    top: topLeft.y - margin,
+    right: bottomRight.x + margin,
+    bottom: bottomRight.y + margin
+  };
 }
 
 function shouldRenderFlowLink(source, target, visibleBounds) {
@@ -2003,24 +2080,44 @@ function updateFlowZoomLabel() {
   els.flowZoomLabel.textContent = `${Math.round((state.ui.flowZoom || 1) * 100)}%`;
 }
 
-function applyFlowZoom({ preserveCenter = true } = {}) {
+function applyFlowZoom({ preserveCenter = true, rerenderOnModeChange = true, bounds = null, logicalCenter = null } = {}) {
   const nextZoom = Math.min(FLOW_ZOOM_MAX, Math.max(FLOW_ZOOM_MIN, Number(state.ui.flowZoom || 1)));
   const previousZoom = Number(els.flowViewport?.dataset.zoom || 1);
   const board = els.flowBoard;
+  const previousCompact = isCompactFlowZoom(previousZoom);
+  const nextCompact = isCompactFlowZoom(nextZoom);
   let logicalCenterX = 0;
   let logicalCenterY = 0;
-  if (board && preserveCenter) {
-    logicalCenterX = (board.scrollLeft + board.clientWidth / 2) / previousZoom;
-    logicalCenterY = (board.scrollTop + board.clientHeight / 2) / previousZoom;
+  if (logicalCenter) {
+    logicalCenterX = logicalCenter.x;
+    logicalCenterY = logicalCenter.y;
+  } else if (board && preserveCenter) {
+    const previousBounds = getCurrentFlowBoardBounds();
+    const previousCenter = boardToLogicalPoint({
+      x: (board.scrollLeft + board.clientWidth / 2) / previousZoom,
+      y: (board.scrollTop + board.clientHeight / 2) / previousZoom
+    }, previousBounds);
+    logicalCenterX = previousCenter.x;
+    logicalCenterY = previousCenter.y;
   }
   state.ui.flowZoom = nextZoom;
-  updateFlowViewportMetrics();
+  if (rerenderOnModeChange && previousCompact !== nextCompact) {
+    renderFlowBoard({
+      preserveCenter,
+      logicalCenter: { x: logicalCenterX, y: logicalCenterY }
+    });
+    return;
+  }
+  const effectiveBounds = bounds || computeBoardBounds();
+  state.ui.flowBoardBounds = effectiveBounds;
+  updateFlowViewportMetrics(effectiveBounds);
   if (els.flowViewport) {
     els.flowViewport.dataset.zoom = String(nextZoom);
   }
   if (board && preserveCenter) {
-    board.scrollLeft = Math.max(0, logicalCenterX * nextZoom - board.clientWidth / 2);
-    board.scrollTop = Math.max(0, logicalCenterY * nextZoom - board.clientHeight / 2);
+    const nextCenter = logicalToBoardPoint({ x: logicalCenterX, y: logicalCenterY }, effectiveBounds);
+    board.scrollLeft = Math.max(0, nextCenter.x * nextZoom - board.clientWidth / 2);
+    board.scrollTop = Math.max(0, nextCenter.y * nextZoom - board.clientHeight / 2);
   }
   if (Math.abs(previousZoom - nextZoom) > 0.001) {
     scheduleFlowLinksRender("zoom");
@@ -2036,23 +2133,25 @@ function flowCardElement(sceneId) {
   return els.flowCanvas.querySelector(`.node-card[data-scene-id="${sceneId}"]`);
 }
 
-function updateFlowCardPosition(sceneId) {
+function updateFlowCardPosition(sceneId, bounds = getCurrentFlowBoardBounds()) {
   const scene = state.adventure.scenes.find((entry) => entry.id === sceneId);
   const card = flowCardElement(sceneId);
   if (!scene || !card) return;
-  card.style.left = `${scene.position.x}px`;
-  card.style.top = `${scene.position.y}px`;
+  const boardPoint = logicalToBoardPoint(scene.position, bounds);
+  card.style.left = `${boardPoint.x}px`;
+  card.style.top = `${boardPoint.y}px`;
 }
 
 function refreshFlowCard(sceneId) {
   const sceneIndex = state.adventure.scenes.findIndex((entry) => entry.id === sceneId);
   if (sceneIndex === -1) return;
   const current = flowCardElement(sceneId);
+  const bounds = getCurrentFlowBoardBounds();
   if (!current) {
-    els.flowCanvas.appendChild(createFlowCard(state.adventure.scenes[sceneIndex], sceneIndex));
+    els.flowCanvas.appendChild(createFlowCard(state.adventure.scenes[sceneIndex], sceneIndex, bounds));
     return;
   }
-  syncFlowCard(current, state.adventure.scenes[sceneIndex], sceneIndex);
+  syncFlowCard(current, state.adventure.scenes[sceneIndex], sceneIndex, bounds);
 }
 
 function updateFlowCardSelection(previousSceneId, nextSceneId) {
@@ -2073,12 +2172,16 @@ function scheduleFlowLinksRender(reason = "general") {
   });
 }
 
-function nodeAnchor(scene) {
-  return { x: scene.position.x + NODE_WIDTH, y: scene.position.y + NODE_HEIGHT / 2 };
+function nodeAnchor(scene, bounds = getCurrentFlowBoardBounds()) {
+  const metrics = getFlowCardMetrics();
+  const boardPoint = logicalToBoardPoint(scene.position, bounds);
+  return { x: boardPoint.x + metrics.width, y: boardPoint.y + metrics.height / 2 };
 }
 
-function nodeEntry(scene) {
-  return { x: scene.position.x, y: scene.position.y + NODE_HEIGHT / 2 };
+function nodeEntry(scene, bounds = getCurrentFlowBoardBounds()) {
+  const metrics = getFlowCardMetrics();
+  const boardPoint = logicalToBoardPoint(scene.position, bounds);
+  return { x: boardPoint.x, y: boardPoint.y + metrics.height / 2 };
 }
 
 function renderSceneEditor() {
@@ -3209,6 +3312,12 @@ function sceneLabel(kind) {
   return "descrizione";
 }
 
+function sceneKindShortLabel(kind) {
+  if (kind === "check") return "PR";
+  if (kind === "combat") return "CO";
+  return "DE";
+}
+
 function choiceLabel(index) {
   return String.fromCharCode(65 + index) + ".";
 }
@@ -3384,6 +3493,10 @@ function slugify(text) {
 function truncate(text, max) {
   if (!text || text.length <= max) return text || "";
   return text.slice(0, max).trimEnd() + "...";
+}
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
 }
 
 function normalizeString(value) {

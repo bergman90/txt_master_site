@@ -671,7 +671,7 @@ button.small {
 .flow-board {
   position: relative;
   overflow: auto;
-  min-height: 620px;
+  min-height: 720px;
   border-radius: 18px;
   border: 1px solid var(--border);
   background:
@@ -682,12 +682,13 @@ button.small {
   background-size: 32px 32px, 32px 32px, 32px 32px, auto;
   contain: layout paint style;
   overscroll-behavior: contain;
+  scrollbar-gutter: stable both-edges;
 }
 
 .flow-stage {
   position: relative;
-  min-width: 1200px;
-  min-height: 620px;
+  min-width: 3200px;
+  min-height: 2200px;
 }
 
 .flow-viewport {
@@ -706,8 +707,8 @@ button.small {
 
 .flow-canvas {
   position: relative;
-  min-width: 1200px;
-  min-height: 620px;
+  min-width: 3200px;
+  min-height: 2200px;
 }
 
 .flow-card {
@@ -724,6 +725,41 @@ button.small {
   position: absolute;
   box-shadow: var(--shadow);
   user-select: none;
+}
+
+.flow-card--compact {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.flow-card--compact .link-handle {
+  width: 16px;
+  height: 16px;
+  right: -8px;
+  box-shadow: 0 0 0 3px rgba(209, 144, 82, 0.18);
+}
+
+.flow-card-mini-index {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1;
+}
+
+.flow-card-mini-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+
+.flow-card--compact .flow-card-head,
+.flow-card--compact p,
+.flow-card--compact .flow-choices {
+  display: none;
 }
 
 .link-handle {
