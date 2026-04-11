@@ -671,8 +671,8 @@ button.small {
 .flow-board {
   position: relative;
   overflow: auto;
-  height: clamp(560px, 62vh, 860px);
-  min-height: 560px;
+  height: clamp(420px, 52vh, 720px);
+  min-height: 420px;
   border-radius: 18px;
   border: 1px solid var(--border);
   background:
