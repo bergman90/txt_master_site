@@ -684,6 +684,7 @@ button.small {
   max-width: 100%;
   min-width: 0;
   overflow: auto;
+  touch-action: none;
   height: clamp(420px, 52vh, 720px);
   min-height: 420px;
   border-radius: 18px;
@@ -740,6 +741,12 @@ button.small {
   position: absolute;
   box-shadow: var(--shadow);
   user-select: none;
+  touch-action: none;
+  cursor: grab;
+}
+
+.node-card:active {
+  cursor: grabbing;
 }
 
 .flow-card--compact {

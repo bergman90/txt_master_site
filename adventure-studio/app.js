@@ -372,8 +372,10 @@ const FLOW_LINK_DRAG_THROTTLE_MS = 34;
 const FLOW_COMPACT_ZOOM_THRESHOLD = 0.38;
 const FLOW_WORKSPACE_MIN_WIDTH = 760;
 const FLOW_WORKSPACE_MIN_HEIGHT = 480;
-const FLOW_WORKSPACE_PADDING = 120;
+const FLOW_WORKSPACE_PADDING = 32;
 const FLOW_COORD_LIMIT = 200000;
+const SCENE_SPAWN_STEP_X = 320;
+const SCENE_SPAWN_STEP_Y = 220;
 const LEGACY_LOCAL_PROJECT_KEY = "adventure_studio_project_v1";
 const LOCAL_PROJECT_INDEX_KEY = "adventure_studio_project_index_v2";
 const LOCAL_PROJECT_LAST_KEY = "adventure_studio_last_project_id_v2";
@@ -1308,8 +1310,7 @@ function onBoardPointerUp(event) {
 function createScene() {
   saveCurrentScene();
   const index = state.adventure.scenes.length + 1;
-  const column = (index - 1) % 3;
-  const row = Math.floor((index - 1) / 3);
+  const spawnPosition = findNextScenePosition();
   const scene = {
     id: createUniqueSceneId(),
     kind: "description",
@@ -1319,16 +1320,56 @@ function createScene() {
     choices: [],
     outcomes: createEmptySceneOutcomes(),
     sceneLoot: [],
-    position: {
-      x: 32 + column * 320,
-      y: 32 + row * 220
-    }
+    position: spawnPosition
   };
   state.adventure.scenes.push(scene);
   state.selectedSceneId = scene.id;
   if (!state.adventure.startingSceneId) state.adventure.startingSceneId = scene.id;
   state.ui.sceneDirty = true;
   render();
+}
+
+function findNextScenePosition() {
+  const anchor = getSelectedScene() || state.adventure.scenes[state.adventure.scenes.length - 1] || null;
+  if (!anchor) {
+    return { x: 32, y: 32 };
+  }
+
+  const candidateOffsets = [
+    [SCENE_SPAWN_STEP_X, 0],
+    [SCENE_SPAWN_STEP_X, SCENE_SPAWN_STEP_Y],
+    [0, SCENE_SPAWN_STEP_Y],
+    [SCENE_SPAWN_STEP_X, -SCENE_SPAWN_STEP_Y],
+    [-SCENE_SPAWN_STEP_X, SCENE_SPAWN_STEP_Y],
+    [-SCENE_SPAWN_STEP_X, 0],
+    [0, -SCENE_SPAWN_STEP_Y],
+    [-SCENE_SPAWN_STEP_X, -SCENE_SPAWN_STEP_Y]
+  ];
+
+  for (let ring = 1; ring <= 8; ring += 1) {
+    for (const [dx, dy] of candidateOffsets) {
+      const x = anchor.position.x + dx * ring;
+      const y = anchor.position.y + dy * ring;
+      if (!isScenePositionOccupied(x, y)) {
+        return {
+          x: clamp(x, -FLOW_COORD_LIMIT, FLOW_COORD_LIMIT),
+          y: clamp(y, -FLOW_COORD_LIMIT, FLOW_COORD_LIMIT)
+        };
+      }
+    }
+  }
+
+  return {
+    x: clamp(anchor.position.x + SCENE_SPAWN_STEP_X, -FLOW_COORD_LIMIT, FLOW_COORD_LIMIT),
+    y: clamp(anchor.position.y + SCENE_SPAWN_STEP_Y, -FLOW_COORD_LIMIT, FLOW_COORD_LIMIT)
+  };
+}
+
+function isScenePositionOccupied(x, y) {
+  return state.adventure.scenes.some((scene) =>
+    Math.abs((scene.position?.x || 0) - x) < 80
+    && Math.abs((scene.position?.y || 0) - y) < 80
+  );
 }
 
 function copySelectedSceneToClipboard() {
@@ -1909,15 +1950,18 @@ function createFlowCard(scene, index, bounds = getCurrentFlowBoardBounds()) {
   card.addEventListener("pointerdown", (event) => {
     if (event.button !== 0) return;
     if (event.target.closest(".link-handle")) return;
+    event.preventDefault();
     const sceneId = card.dataset.sceneId;
     const currentScene = state.adventure.scenes.find((entry) => entry.id === sceneId);
     if (!currentScene) return;
+    card.setPointerCapture?.(event.pointerId);
     const point = flowBoardPointFromClient(event);
     state.drag = {
       sceneId,
       offsetX: point.x - currentScene.position.x,
       offsetY: point.y - currentScene.position.y,
-      bounds: getCurrentFlowBoardBounds()
+      bounds: getCurrentFlowBoardBounds(),
+      pointerId: event.pointerId
     };
   });
 
