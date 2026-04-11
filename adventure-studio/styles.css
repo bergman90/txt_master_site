@@ -192,6 +192,20 @@ select {
   flex-wrap: wrap;
 }
 
+.flow-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.flow-zoom-label {
+  min-width: 52px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
 .editor-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -600,6 +614,22 @@ button.small {
     linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px),
     rgba(11, 15, 22, 0.82);
   background-size: 32px 32px, 32px 32px, 32px 32px, auto;
+  contain: layout paint style;
+  overscroll-behavior: contain;
+}
+
+.flow-stage {
+  position: relative;
+  min-width: 1200px;
+  min-height: 620px;
+}
+
+.flow-viewport {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: top left;
+  will-change: transform;
 }
 
 .flow-links {

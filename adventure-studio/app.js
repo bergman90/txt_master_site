@@ -362,6 +362,13 @@ const CREATE_MONSTER_OPTION = "__create_new__";
 const SCENE_IMAGE_ASPECT_RATIO = 2.48;
 const SCENE_IMAGE_TARGET_WIDTH = 1200;
 const SCENE_IMAGE_TARGET_HEIGHT = Math.round(SCENE_IMAGE_TARGET_WIDTH / SCENE_IMAGE_ASPECT_RATIO);
+const FLOW_ZOOM_MIN = 0.6;
+const FLOW_ZOOM_MAX = 1.8;
+const FLOW_ZOOM_STEP = 0.1;
+const FLOW_LINK_VIEWPORT_MARGIN = 260;
+const FLOW_LINK_VIRTUALIZE_SCENE_THRESHOLD = 12;
+const FLOW_LINK_VIRTUALIZE_COUNT_THRESHOLD = 22;
+const FLOW_LINK_DRAG_THROTTLE_MS = 34;
 
 const state = {
   adventure: {
@@ -387,10 +394,13 @@ const state = {
     sceneDirty: false,
     sceneSavedAt: null,
     jsonRenderTimer: null,
+    jsonRenderOptions: { syncScene: true },
     monsterListRenderTimer: null,
     flowLinksFrame: null,
+    lastFlowLinksDragRenderAt: 0,
     sceneImageFrameTimer: null,
-    saveAdventureFeedbackTimer: null
+    saveAdventureFeedbackTimer: null,
+    flowZoom: 1
   }
 };
 
@@ -444,8 +454,13 @@ const els = {
   monsterList: document.getElementById("monster-list"),
   lootPresetSelect: document.getElementById("loot-preset-select"),
   flowBoard: document.getElementById("flow-board"),
+  flowStage: document.getElementById("flow-stage"),
+  flowViewport: document.getElementById("flow-viewport"),
   flowCanvas: document.getElementById("flow-canvas"),
   flowLinks: document.getElementById("flow-links"),
+  flowZoomOutBtn: document.getElementById("flow-zoom-out-btn"),
+  flowZoomInBtn: document.getElementById("flow-zoom-in-btn"),
+  flowZoomLabel: document.getElementById("flow-zoom-label"),
   sceneEmpty: document.getElementById("scene-empty"),
   sceneEditor: document.getElementById("scene-editor"),
   addSceneImageBtn: document.getElementById("add-scene-image-btn"),
@@ -517,11 +532,11 @@ function bindMeta() {
   els.adventureTitle.addEventListener("input", (e) => {
     state.adventure.title = e.target.value;
     if (!state.adventure.id) state.adventure.id = slugify(e.target.value || "new-adventure");
-    renderJson();
+    scheduleJsonRender(280, { syncScene: false });
   });
   els.adventureDescription.addEventListener("input", (e) => {
     state.adventure.description = e.target.value;
-    renderJson();
+    scheduleJsonRender(320, { syncScene: false });
   });
   [els.adventureTag1, els.adventureTag2, els.adventureTag3].forEach((input) => {
     input.addEventListener("input", () => {
@@ -530,24 +545,24 @@ function bindMeta() {
         els.adventureTag2.value,
         els.adventureTag3.value
       ]);
-      renderJson();
+      scheduleJsonRender(280, { syncScene: false });
     });
   });
   els.adventureAdaptiveMultiplier.addEventListener("input", (e) => {
     state.adventure.adaptivePowerMultiplier = normalizeAdaptiveMultiplier(e.target.value);
-    renderJson();
+    scheduleJsonRender(220, { syncScene: false });
   });
   els.adventureCarryOver.addEventListener("change", (e) => {
     state.adventure.allowCarryOverLoadout = Boolean(e.target.checked);
-    renderJson();
+    scheduleJsonRender(90, { syncScene: false });
   });
   els.adventureFreshStart.addEventListener("change", (e) => {
     state.adventure.allowFreshStart = Boolean(e.target.checked);
-    renderJson();
+    scheduleJsonRender(90, { syncScene: false });
   });
   els.alphaStrictValidation.addEventListener("change", (e) => {
     state.ui.strictAlpha = Boolean(e.target.checked);
-    renderJson();
+    scheduleJsonRender(90, { syncScene: false });
   });
 }
 
@@ -580,6 +595,8 @@ function bindActions() {
   els.saveAdventureBtn.addEventListener("click", saveAdventureProject);
   els.exportJsonBtn.addEventListener("click", exportJson);
   els.refreshJsonBtn.addEventListener("click", renderJson);
+  els.flowZoomOutBtn?.addEventListener("click", () => changeFlowZoom(-FLOW_ZOOM_STEP));
+  els.flowZoomInBtn?.addEventListener("click", () => changeFlowZoom(FLOW_ZOOM_STEP));
 }
 
 function bindSceneEditor() {
@@ -887,31 +904,40 @@ function bindMonsterEditor() {
 }
 
 function bindBoardPointerSystem() {
-  els.flowCanvas.addEventListener("pointermove", onBoardPointerMove);
+  els.flowBoard.addEventListener("pointermove", onBoardPointerMove);
+  els.flowBoard.addEventListener("scroll", () => scheduleFlowLinksRender("scroll"), { passive: true });
   window.addEventListener("pointerup", onBoardPointerUp);
   window.addEventListener("pointercancel", onBoardPointerUp);
 }
 
+function flowBoardPointFromClient(event) {
+  const boardRect = els.flowBoard.getBoundingClientRect();
+  const zoom = state.ui.flowZoom || 1;
+  return {
+    x: (event.clientX - boardRect.left + els.flowBoard.scrollLeft) / zoom,
+    y: (event.clientY - boardRect.top + els.flowBoard.scrollTop) / zoom
+  };
+}
+
 function onBoardPointerMove(event) {
-  const boardRect = els.flowCanvas.getBoundingClientRect();
+  const point = flowBoardPointFromClient(event);
 
   if (state.drag) {
     const scene = state.adventure.scenes.find((entry) => entry.id === state.drag.sceneId);
     if (!scene) return;
-    const x = event.clientX - boardRect.left - state.drag.offsetX;
-    const y = event.clientY - boardRect.top - state.drag.offsetY;
+    const x = point.x - state.drag.offsetX;
+    const y = point.y - state.drag.offsetY;
     scene.position.x = Math.max(16, x);
     scene.position.y = Math.max(16, y);
     updateFlowCardPosition(scene.id);
-    scheduleFlowLinksRender();
-    scheduleJsonRender();
+    scheduleFlowLinksRender("drag");
     return;
   }
 
   if (state.linkDraft) {
     state.linkDraft.current = {
-      x: event.clientX - boardRect.left,
-      y: event.clientY - boardRect.top
+      x: point.x,
+      y: point.y
     };
     scheduleFlowLinksRender();
   }
@@ -921,6 +947,7 @@ function onBoardPointerUp(event) {
   if (state.drag) {
     state.drag = null;
     renderFlowLinks();
+    scheduleJsonRender(120);
     return;
   }
 
@@ -1235,22 +1262,24 @@ function renderAdventureSetup() {
   els.adventureCarryOver.checked = Boolean(state.adventure.allowCarryOverLoadout);
   els.adventureFreshStart.checked = Boolean(state.adventure.allowFreshStart);
   els.alphaStrictValidation.checked = Boolean(state.ui.strictAlpha);
+  updateFlowZoomLabel();
   els.autosaveIndicator.textContent = state.ui.autosaveAt
     ? `Autosave locale attivo | ultimo salvataggio ${formatAutosaveTime(state.ui.autosaveAt)}`
     : "Autosave locale attivo | in attesa del primo salvataggio.";
   renderLootList(els.starterKitList, state.adventure.starterKitItems, render);
 }
 
-function persistLocalProject() {
+function persistLocalProject({ syncScene = true } = {}) {
   try {
-    syncCurrentSceneEditorStateFromDom();
+    if (syncScene) syncCurrentSceneEditorStateFromDom();
     const payload = {
       adventure: state.adventure,
       selectedSceneId: state.selectedSceneId,
       selectedMonsterId: state.selectedMonsterId,
       ui: {
         strictAlpha: Boolean(state.ui.strictAlpha),
-        autosaveAt: new Date().toISOString()
+        autosaveAt: new Date().toISOString(),
+        flowZoom: state.ui.flowZoom || 1
       }
     };
     window.localStorage.setItem(LOCAL_PROJECT_KEY, JSON.stringify(payload));
@@ -1275,6 +1304,7 @@ function restoreLocalProject() {
     state.selectedMonsterId = payload.selectedMonsterId || state.adventure.encounters[0]?.id || null;
     state.ui.strictAlpha = payload.ui?.strictAlpha ?? true;
     state.ui.autosaveAt = payload.ui?.autosaveAt || null;
+    state.ui.flowZoom = Math.min(FLOW_ZOOM_MAX, Math.max(FLOW_ZOOM_MIN, Number(payload.ui?.flowZoom || 1)));
     return true;
   } catch (error) {
     return false;
@@ -1445,11 +1475,13 @@ function switchSelectedScene(nextSceneId) {
 function renderFlowBoard() {
   renderFlowCards();
   renderFlowLinks();
+  applyFlowZoom({ preserveCenter: false });
 }
 
 function renderFlowCards() {
   els.flowCanvas.innerHTML = "";
   const bounds = computeBoardBounds();
+  els.flowCanvas.style.width = `${bounds.width}px`;
   els.flowCanvas.style.height = `${bounds.height}px`;
   const fragment = document.createDocumentFragment();
 
@@ -1462,44 +1494,55 @@ function renderFlowCards() {
 
 function createFlowCard(scene, index) {
   const card = document.createElement("div");
-  card.className = `flow-card node-card ${scene.id === state.selectedSceneId ? "active" : ""}`;
-  card.dataset.sceneId = scene.id;
-  card.style.left = `${scene.position.x}px`;
-  card.style.top = `${scene.position.y}px`;
-  card.style.width = `${NODE_WIDTH}px`;
-  card.innerHTML = buildFlowCardMarkup(scene, index);
+  syncFlowCard(card, scene, index);
 
   card.addEventListener("click", (event) => {
     if (event.target.closest(".link-handle")) return;
-    switchSelectedScene(scene.id);
+    switchSelectedScene(card.dataset.sceneId);
   });
 
   card.addEventListener("dblclick", () => {
-    switchSelectedScene(scene.id);
+    switchSelectedScene(card.dataset.sceneId);
     els.sceneEditor.scrollIntoView({ behavior: "smooth", block: "start" });
   });
 
   card.addEventListener("pointerdown", (event) => {
     if (event.button !== 0) return;
     if (event.target.closest(".link-handle")) return;
+    const sceneId = card.dataset.sceneId;
+    const currentScene = state.adventure.scenes.find((entry) => entry.id === sceneId);
+    if (!currentScene) return;
+    const point = flowBoardPointFromClient(event);
     state.drag = {
-      sceneId: scene.id,
-      offsetX: event.clientX - scene.position.x - els.flowCanvas.getBoundingClientRect().left,
-      offsetY: event.clientY - scene.position.y - els.flowCanvas.getBoundingClientRect().top
-    };
-  });
-
-  card.querySelector(".link-handle").addEventListener("pointerdown", (event) => {
-    event.stopPropagation();
-    const start = nodeAnchor(scene);
-    state.linkDraft = {
-      sceneId: scene.id,
-      start,
-      current: { ...start }
+      sceneId,
+      offsetX: point.x - currentScene.position.x,
+      offsetY: point.y - currentScene.position.y
     };
   });
 
   return card;
+}
+
+function syncFlowCard(card, scene, index) {
+  card.className = `flow-card node-card ${scene.id === state.selectedSceneId ? "active" : ""}`;
+  card.dataset.sceneId = scene.id;
+  card.style.left = `${scene.position.x}px`;
+  card.style.top = `${scene.position.y}px`;
+  card.style.width = `${NODE_WIDTH}px`;
+  card.innerHTML = buildFlowCardMarkup(scene, index);
+  card.querySelector(".link-handle")?.addEventListener("pointerdown", (event) => {
+    event.stopPropagation();
+    const sceneId = card.dataset.sceneId;
+    const currentScene = state.adventure.scenes.find((entry) => entry.id === sceneId);
+    if (!currentScene) return;
+    const start = nodeAnchor(currentScene);
+    state.linkDraft = {
+      sceneId,
+      start,
+      current: { ...start }
+    };
+    scheduleFlowLinksRender("drag");
+  });
 }
 
 function buildFlowCardMarkup(scene, index) {
@@ -1527,28 +1570,36 @@ function renderFlowChoiceSummary(scene) {
 
 function renderFlowLinks() {
   const bounds = computeBoardBounds();
+  els.flowCanvas.style.width = `${bounds.width}px`;
   els.flowCanvas.style.height = `${bounds.height}px`;
   els.flowLinks.setAttribute("width", bounds.width);
   els.flowLinks.setAttribute("height", bounds.height);
   els.flowLinks.setAttribute("viewBox", `0 0 ${bounds.width} ${bounds.height}`);
   els.flowLinks.innerHTML = buildLinkMarkup();
+  updateFlowViewportMetrics(bounds);
 }
 
 function buildLinkMarkup() {
   const lines = [];
+  const visibleBounds = shouldVirtualizeFlowLinks() ? getVisibleFlowBounds() : null;
   state.adventure.scenes.forEach((scene) => {
     const source = nodeAnchor(scene);
     if (scene.kind === "description") {
-      scene.choices.forEach((choice) => appendChoiceLinks(lines, source, choice, "#b56d39"));
+      scene.choices.forEach((choice) => appendChoiceLinks(lines, source, choice, "#b56d39", visibleBounds));
     } else {
       outcomeDefinitionsForScene(scene).forEach((definition) => {
         const branch = getOutcomeBranch(scene, definition.key);
         const color = outcomeLinkColor(definition.key);
         if (branch.choices.length) {
-          branch.choices.forEach((choice) => appendChoiceLinks(lines, source, choice, color));
+          branch.choices.forEach((choice) => appendChoiceLinks(lines, source, choice, color, visibleBounds));
         } else if (branch.targetSceneId) {
           const target = state.adventure.scenes.find((entry) => entry.id === branch.targetSceneId);
-          if (target) lines.push(linkPath(source, nodeEntry(target), color, definition.key === "retreat"));
+          if (target) {
+            const targetEntry = nodeEntry(target);
+            if (shouldRenderFlowLink(source, targetEntry, visibleBounds)) {
+              lines.push(linkPath(source, targetEntry, color, definition.key === "retreat"));
+            }
+          }
         }
       });
     }
@@ -1581,15 +1632,30 @@ function renderOutcomeSummary(scene) {
   }).join("");
 }
 
-function appendChoiceLinks(lines, source, choice, defaultColor) {
+function appendChoiceLinks(lines, source, choice, defaultColor, visibleBounds = null) {
   if (choice.skillCheck) {
     const success = state.adventure.scenes.find((entry) => entry.id === choice.skillCheck.successSceneId);
     const failure = state.adventure.scenes.find((entry) => entry.id === choice.skillCheck.failureSceneId);
-    if (success) lines.push(linkPath(source, nodeEntry(success), "#6f8a57"));
-    if (failure) lines.push(linkPath(source, nodeEntry(failure), "#b94a48"));
+    if (success) {
+      const successEntry = nodeEntry(success);
+      if (shouldRenderFlowLink(source, successEntry, visibleBounds)) {
+        lines.push(linkPath(source, successEntry, "#6f8a57"));
+      }
+    }
+    if (failure) {
+      const failureEntry = nodeEntry(failure);
+      if (shouldRenderFlowLink(source, failureEntry, visibleBounds)) {
+        lines.push(linkPath(source, failureEntry, "#b94a48"));
+      }
+    }
   } else if (choice.targetSceneId) {
     const target = state.adventure.scenes.find((entry) => entry.id === choice.targetSceneId);
-    if (target) lines.push(linkPath(source, nodeEntry(target), defaultColor));
+    if (target) {
+      const targetEntry = nodeEntry(target);
+      if (shouldRenderFlowLink(source, targetEntry, visibleBounds)) {
+        lines.push(linkPath(source, targetEntry, defaultColor));
+      }
+    }
   }
 }
 
@@ -1621,6 +1687,95 @@ function computeBoardBounds() {
   return { width, height };
 }
 
+function estimateFlowLinkCount() {
+  return state.adventure.scenes.reduce((total, scene) => {
+    if (scene.kind === "description") {
+      return total + (scene.choices?.length || 0);
+    }
+    return total + outcomeDefinitionsForScene(scene).reduce((branchTotal, definition) => {
+      const branch = getOutcomeBranch(scene, definition.key);
+      return branchTotal + (branch.choices?.length || 0) + (branch.targetSceneId ? 1 : 0);
+    }, 0);
+  }, state.linkDraft ? 1 : 0);
+}
+
+function shouldVirtualizeFlowLinks() {
+  return state.adventure.scenes.length >= FLOW_LINK_VIRTUALIZE_SCENE_THRESHOLD
+    || estimateFlowLinkCount() >= FLOW_LINK_VIRTUALIZE_COUNT_THRESHOLD;
+}
+
+function getVisibleFlowBounds(margin = FLOW_LINK_VIEWPORT_MARGIN) {
+  const zoom = state.ui.flowZoom || 1;
+  const left = Math.max(0, els.flowBoard.scrollLeft / zoom - margin);
+  const top = Math.max(0, els.flowBoard.scrollTop / zoom - margin);
+  const right = (els.flowBoard.scrollLeft + els.flowBoard.clientWidth) / zoom + margin;
+  const bottom = (els.flowBoard.scrollTop + els.flowBoard.clientHeight) / zoom + margin;
+  return { left, top, right, bottom };
+}
+
+function shouldRenderFlowLink(source, target, visibleBounds) {
+  if (!visibleBounds) return true;
+  const dx = Math.max(80, Math.abs(target.x - source.x) * 0.4);
+  const minX = Math.min(source.x, target.x, source.x + dx, target.x - dx) - 48;
+  const maxX = Math.max(source.x, target.x, source.x + dx, target.x - dx) + 48;
+  const minY = Math.min(source.y, target.y) - 64;
+  const maxY = Math.max(source.y, target.y) + 64;
+  return !(
+    maxX < visibleBounds.left
+    || minX > visibleBounds.right
+    || maxY < visibleBounds.top
+    || minY > visibleBounds.bottom
+  );
+}
+
+function updateFlowViewportMetrics(bounds = computeBoardBounds()) {
+  const zoom = state.ui.flowZoom || 1;
+  if (els.flowViewport) {
+    els.flowViewport.style.width = `${bounds.width}px`;
+    els.flowViewport.style.height = `${bounds.height}px`;
+    els.flowViewport.style.transform = `scale(${zoom})`;
+  }
+  if (els.flowStage) {
+    els.flowStage.style.width = `${Math.ceil(bounds.width * zoom)}px`;
+    els.flowStage.style.height = `${Math.ceil(bounds.height * zoom)}px`;
+  }
+  updateFlowZoomLabel();
+}
+
+function updateFlowZoomLabel() {
+  if (!els.flowZoomLabel) return;
+  els.flowZoomLabel.textContent = `${Math.round((state.ui.flowZoom || 1) * 100)}%`;
+}
+
+function applyFlowZoom({ preserveCenter = true } = {}) {
+  const nextZoom = Math.min(FLOW_ZOOM_MAX, Math.max(FLOW_ZOOM_MIN, Number(state.ui.flowZoom || 1)));
+  const previousZoom = Number(els.flowViewport?.dataset.zoom || 1);
+  const board = els.flowBoard;
+  let logicalCenterX = 0;
+  let logicalCenterY = 0;
+  if (board && preserveCenter) {
+    logicalCenterX = (board.scrollLeft + board.clientWidth / 2) / previousZoom;
+    logicalCenterY = (board.scrollTop + board.clientHeight / 2) / previousZoom;
+  }
+  state.ui.flowZoom = nextZoom;
+  updateFlowViewportMetrics();
+  if (els.flowViewport) {
+    els.flowViewport.dataset.zoom = String(nextZoom);
+  }
+  if (board && preserveCenter) {
+    board.scrollLeft = Math.max(0, logicalCenterX * nextZoom - board.clientWidth / 2);
+    board.scrollTop = Math.max(0, logicalCenterY * nextZoom - board.clientHeight / 2);
+  }
+  if (Math.abs(previousZoom - nextZoom) > 0.001) {
+    scheduleFlowLinksRender("zoom");
+  }
+}
+
+function changeFlowZoom(delta) {
+  state.ui.flowZoom = Math.round((state.ui.flowZoom + delta) * 100) / 100;
+  applyFlowZoom({ preserveCenter: true });
+}
+
 function flowCardElement(sceneId) {
   return els.flowCanvas.querySelector(`.node-card[data-scene-id="${sceneId}"]`);
 }
@@ -1637,12 +1792,11 @@ function refreshFlowCard(sceneId) {
   const sceneIndex = state.adventure.scenes.findIndex((entry) => entry.id === sceneId);
   if (sceneIndex === -1) return;
   const current = flowCardElement(sceneId);
-  const replacement = createFlowCard(state.adventure.scenes[sceneIndex], sceneIndex);
   if (!current) {
-    els.flowCanvas.appendChild(replacement);
+    els.flowCanvas.appendChild(createFlowCard(state.adventure.scenes[sceneIndex], sceneIndex));
     return;
   }
-  current.replaceWith(replacement);
+  syncFlowCard(current, state.adventure.scenes[sceneIndex], sceneIndex);
 }
 
 function updateFlowCardSelection(previousSceneId, nextSceneId) {
@@ -1650,7 +1804,12 @@ function updateFlowCardSelection(previousSceneId, nextSceneId) {
   if (nextSceneId) flowCardElement(nextSceneId)?.classList.add("active");
 }
 
-function scheduleFlowLinksRender() {
+function scheduleFlowLinksRender(reason = "general") {
+  if (reason === "drag") {
+    const now = window.performance?.now?.() || Date.now();
+    if (now - state.ui.lastFlowLinksDragRenderAt < FLOW_LINK_DRAG_THROTTLE_MS) return;
+    state.ui.lastFlowLinksDragRenderAt = now;
+  }
   if (state.ui.flowLinksFrame) return;
   state.ui.flowLinksFrame = window.requestAnimationFrame(() => {
     state.ui.flowLinksFrame = null;
@@ -1740,7 +1899,10 @@ function renderChoices(scene) {
     onRemove: (index) => {
       scene.choices.splice(index, 1);
       markSceneDirty();
-      render();
+      renderChoices(scene);
+      refreshFlowCard(scene.id);
+      scheduleFlowLinksRender();
+      scheduleJsonRender();
     }
   });
 }
@@ -2263,22 +2425,26 @@ function renderLootList(container, items, rerender) {
   });
 }
 
-function renderJson() {
-  syncCurrentSceneEditorStateFromDom();
+function renderJson({ syncScene = true } = {}) {
+  if (syncScene) syncCurrentSceneEditorStateFromDom();
   const cleaned = cleanAdventure(state.adventure);
   const validation = validateAdventure(state.adventure, cleaned, { strictAlpha: state.ui.strictAlpha });
   els.jsonOutput.value = JSON.stringify(cleaned, null, 2);
   renderValidation(validation);
-  persistLocalProject();
+  persistLocalProject({ syncScene: false });
 }
 
-function scheduleJsonRender(delay = 140) {
+function scheduleJsonRender(delay = 140, options = {}) {
   if (state.ui.jsonRenderTimer) {
     window.clearTimeout(state.ui.jsonRenderTimer);
   }
+  state.ui.jsonRenderOptions = {
+    syncScene: true,
+    ...options
+  };
   state.ui.jsonRenderTimer = window.setTimeout(() => {
     state.ui.jsonRenderTimer = null;
-    renderJson();
+    renderJson(state.ui.jsonRenderOptions);
   }, delay);
 }
 

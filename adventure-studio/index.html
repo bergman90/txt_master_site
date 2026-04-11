@@ -97,10 +97,19 @@
             <h2>Mappa del Flusso</h2>
             <button id="add-scene-btn">Nuovo evento</button>
           </div>
+          <div class="flow-toolbar">
+            <button id="flow-zoom-out-btn" type="button" class="small" aria-label="Riduci mappa">-</button>
+            <span id="flow-zoom-label" class="flow-zoom-label">100%</span>
+            <button id="flow-zoom-in-btn" type="button" class="small" aria-label="Aumenta mappa">+</button>
+          </div>
         </div>
         <div id="flow-board" class="flow-board">
-          <svg id="flow-links" class="flow-links"></svg>
-          <div id="flow-canvas" class="flow-canvas"></div>
+          <div id="flow-stage" class="flow-stage">
+            <div id="flow-viewport" class="flow-viewport">
+              <svg id="flow-links" class="flow-links"></svg>
+              <div id="flow-canvas" class="flow-canvas"></div>
+            </div>
+          </div>
         </div>
       </section>
 
