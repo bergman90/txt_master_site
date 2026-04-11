@@ -378,7 +378,7 @@ button:hover {
 }
 
 .sidebar-sticky-actions--top {
-  margin-bottom: 18px;
+  margin: 0 0 18px;
 }
 
 .save-project-btn {

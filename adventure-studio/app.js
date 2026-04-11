@@ -450,7 +450,6 @@ const els = {
   sceneEditor: document.getElementById("scene-editor"),
   addSceneImageBtn: document.getElementById("add-scene-image-btn"),
   sceneImageInput: document.getElementById("scene-image-input"),
-  saveSceneBtn: document.getElementById("save-scene-btn"),
   sceneSaveStatus: document.getElementById("scene-save-status"),
   deleteSceneBtn: document.getElementById("delete-scene-btn"),
   sceneKind: document.getElementById("scene-kind"),
@@ -572,7 +571,6 @@ function bindActions() {
   [els.sceneImageZoom, els.sceneImageFocusX, els.sceneImageFocusY].forEach((input) => {
     input.addEventListener("input", onSceneImageFrameInput);
   });
-  els.saveSceneBtn.addEventListener("click", () => saveCurrentScene({ announce: true }));
   els.deleteSceneBtn.addEventListener("click", deleteScene);
   els.deleteMonsterBtn.addEventListener("click", deleteMonster);
   els.addChoiceBtn.addEventListener("click", addChoice);
@@ -1245,6 +1243,7 @@ function renderAdventureSetup() {
 
 function persistLocalProject() {
   try {
+    syncCurrentSceneEditorStateFromDom();
     const payload = {
       adventure: state.adventure,
       selectedSceneId: state.selectedSceneId,
@@ -1312,8 +1311,81 @@ function markSceneDirty() {
   updateSceneSaveStatus();
 }
 
+function syncChoiceCollectionFromContainer(container, choices) {
+  if (!container || !Array.isArray(choices)) return;
+  const choiceCards = Array.from(container.children).filter((node) =>
+    node.classList?.contains("choice-card") &&
+    !node.classList.contains("outcome-card") &&
+    !node.classList.contains("combat-group-card")
+  );
+
+  choiceCards.forEach((card, index) => {
+    const choice = choices[index];
+    if (!choice) return;
+
+    choice.text = card.querySelector('[data-field="text"]')?.value ?? choice.text;
+    choice.endingText = card.querySelector('[data-field="endingText"]')?.value ?? choice.endingText;
+    choice.requiredLockId = normalizeString(card.querySelector('[data-field="requiredLockId"]')?.value) || "";
+    choice.requiredLockLabel = card.querySelector('[data-field="requiredLockLabel"]')?.value ?? choice.requiredLockLabel;
+    choice.requiredItemId = normalizeString(card.querySelector('[data-field="requiredItemIdCustom"]')?.value)
+      || normalizeString(card.querySelector('[data-field="requiredItemId"]')?.value)
+      || "";
+    choice.requiredItemCategory = normalizeString(card.querySelector('[data-field="requiredItemCategory"]')?.value) || "";
+    choice.requiredEffectId = normalizeString(card.querySelector('[data-field="requiredEffectId"]')?.value) || "";
+    choice.consumeOnUse = Boolean(card.querySelector('[data-field="consumeOnUse"]')?.checked);
+
+    const attribute = normalizeString(card.querySelector('[data-field="checkAttribute"]')?.value);
+    const successSceneId = normalizeString(card.querySelector('[data-field="checkSuccess"]')?.value);
+    const failureSceneId = normalizeString(card.querySelector('[data-field="checkFailure"]')?.value);
+    const difficulty = Number(card.querySelector('[data-field="checkDifficulty"]')?.value || 0);
+
+    if (attribute && successSceneId && failureSceneId) {
+      choice.skillCheck = {
+        attribute,
+        difficulty,
+        successSceneId,
+        failureSceneId
+      };
+      choice.targetSceneId = "";
+    } else {
+      delete choice.skillCheck;
+      choice.targetSceneId = normalizeString(card.querySelector('[data-field="targetSceneId"]')?.value);
+    }
+  });
+}
+
+function syncCurrentSceneEditorStateFromDom() {
+  const scene = getSelectedScene();
+  if (!scene) return;
+
+  normalizeScene(scene);
+  scene.kind = normalizeString(els.sceneKind?.value) || scene.kind;
+  scene.title = els.sceneTitle?.value ?? scene.title;
+  scene.openingText = els.sceneOpeningText?.value ?? scene.openingText;
+
+  if (scene.kind === "check") {
+    scene.checkConfig = scene.checkConfig || { skill: "", difficulty: 10 };
+    scene.checkConfig.skill = normalizeString(els.sceneCheckSkill?.value);
+    scene.checkConfig.difficulty = Number(els.sceneCheckDifficulty?.value || 0);
+  }
+
+  if (scene.kind === "description") {
+    syncChoiceCollectionFromContainer(els.choiceList, scene.choices);
+    return;
+  }
+
+  outcomeDefinitionsForScene(scene).forEach((definition, index) => {
+    const branch = getOutcomeBranch(scene, definition.key);
+    const wrapper = els.sceneOutcomesList?.children[index];
+    if (!wrapper) return;
+    branch.targetSceneId = normalizeString(wrapper.querySelector('[data-role="outcome-target"]')?.value);
+    syncChoiceCollectionFromContainer(wrapper.querySelector('[data-role="outcome-choice-list"]'), branch.choices);
+  });
+}
+
 function saveCurrentScene({ announce = false, renderFlow = true } = {}) {
   if (!state.selectedSceneId) return;
+  syncCurrentSceneEditorStateFromDom();
   if (state.ui.jsonRenderTimer) {
     window.clearTimeout(state.ui.jsonRenderTimer);
     state.ui.jsonRenderTimer = null;
@@ -1355,10 +1427,10 @@ function updateSceneSaveStatus() {
   if (!els.sceneSaveStatus) return;
   const scene = getSelectedScene();
   els.sceneSaveStatus.textContent = !scene
-    ? "Le modifiche all'evento vengono confermate quando salvi o cambi evento."
+    ? "Le modifiche del nodo vengono confermate quando salvi l'avventura o cambi evento."
     : state.ui.sceneDirty
-      ? "Hai modifiche non salvate su questo evento."
-      : `Evento salvato${state.ui.sceneSavedAt ? ` alle ${formatSceneSaveTime(state.ui.sceneSavedAt)}` : ""}.`;
+      ? "Hai modifiche non salvate. Usa Salva avventura per confermarle."
+      : `Nodo salvato${state.ui.sceneSavedAt ? ` alle ${formatSceneSaveTime(state.ui.sceneSavedAt)}` : ""}.`;
 }
 
 function switchSelectedScene(nextSceneId) {
@@ -2192,6 +2264,7 @@ function renderLootList(container, items, rerender) {
 }
 
 function renderJson() {
+  syncCurrentSceneEditorStateFromDom();
   const cleaned = cleanAdventure(state.adventure);
   const validation = validateAdventure(state.adventure, cleaned, { strictAlpha: state.ui.strictAlpha });
   els.jsonOutput.value = JSON.stringify(cleaned, null, 2);
@@ -2366,16 +2439,10 @@ function normalizeScene(scene) {
   scene.position = scene.position || { x: 40, y: 40 };
   scene.eventImage = scene.eventImage ? normalizeSceneImage(scene.eventImage) : null;
   scene.sceneLoot = scene.sceneLoot.map((loot) => normalizeLoot(loot));
-  scene.choices = scene.choices.map((choice) => ({
-    ...createEmptyChoice(1),
-    ...choice
-  }));
+  scene.choices = scene.choices.map((choice, index) => normalizeChoice(choice, index + 1));
   Object.keys(createEmptySceneOutcomes()).forEach((key) => {
     const branch = getOutcomeBranch(scene, key);
-    branch.choices = (branch.choices || []).map((choice, index) => ({
-      ...createEmptyChoice(index + 1),
-      ...choice
-    }));
+    branch.choices = (branch.choices || []).map((choice, index) => normalizeChoice(choice, index + 1));
   });
   if (scene.kind === "check") {
     scene.checkConfig = scene.checkConfig || { skill: "", difficulty: 10 };
@@ -2430,22 +2497,23 @@ function normalizeAdventureImport(adventure) {
 
 function normalizeImportedScene(scene, index) {
   const editor = scene._editor || {};
-  const inferredKind = editor.kind
+  const inferredKind = scene.kind
+    || editor.kind
     || (scene.encounterId ? "combat" : inferCheckKind(scene) ? "check" : "description");
   const position = editor.position || { x: 40 + (index % 4) * 340, y: 40 + Math.floor(index / 4) * 240 };
   const normalized = {
     id: normalizeString(scene.id) || `scene_${index + 1}`,
     kind: inferredKind,
     title: scene.title || `Evento ${index + 1}`,
-    openingText: editor.openingText || scene.text || "",
-    text: scene.text || editor.openingText || "",
-    eventImage: editor.eventImage || (scene.image ? { name: "Immagine evento", dataUrl: scene.image, sourceDataUrl: scene.image } : null),
+    openingText: editor.openingText || scene.openingText || scene.text || "",
+    text: scene.text || scene.openingText || editor.openingText || "",
+    eventImage: editor.eventImage || scene.eventImage || (scene.image ? { name: "Immagine evento", dataUrl: scene.image, sourceDataUrl: scene.image } : null),
     position,
     sceneLoot: (scene.sceneLoot || []).map((loot) => normalizeLoot(loot)),
     choices: (scene.choices || []).map((choice, choiceIndex) => normalizeImportedChoice(choice, choiceIndex)),
-    combatGroups: editor.combatGroups || buildFallbackCombatGroups(scene),
-    checkConfig: editor.checkConfig || buildFallbackCheckConfig(scene),
-    outcomes: normalizeImportedOutcomes(editor.outcomes, scene)
+    combatGroups: editor.combatGroups || scene.combatGroups || buildFallbackCombatGroups(scene),
+    checkConfig: editor.checkConfig || scene.checkConfig || buildFallbackCheckConfig(scene),
+    outcomes: normalizeImportedOutcomes(editor.outcomes || scene.outcomes, scene)
   };
   normalizeScene(normalized);
   migrateLegacyCheckGate(normalized);
@@ -2456,8 +2524,8 @@ function normalizeImportedChoice(choice, index) {
   return {
     id: normalizeString(choice.id) || `choice_${index + 1}`,
     text: choice.text || "",
-    endingText: choice._editor?.endingText || "",
-    targetSceneId: normalizeString(choice.nextSceneId),
+    endingText: choice.endingText || choice._editor?.endingText || "",
+    targetSceneId: normalizeString(choice.targetSceneId || choice.nextSceneId),
     skillCheck: choice.skillCheck ? {
       attribute: normalizeString(choice.skillCheck.attribute),
       difficulty: Number(choice.skillCheck.difficulty || 0),
@@ -2470,7 +2538,7 @@ function normalizeImportedChoice(choice, index) {
     requiredItemCategory: normalizeString(choice.requiredItemCategory),
     requiredEffectId: normalizeString(choice.requiredEffectId),
     consumeOnUse: Boolean(choice.consumeOnUse),
-    generatedCheckGate: Boolean(choice._editor?.generatedCheckGate)
+    generatedCheckGate: Boolean(choice.generatedCheckGate || choice._editor?.generatedCheckGate)
   };
 }
 
@@ -2495,11 +2563,7 @@ function normalizeImportedOutcomes(outcomes, scene) {
     if (!normalized[key]) return;
     normalized[key] = {
       targetSceneId: normalizeString(branch?.targetSceneId),
-      choices: (branch?.choices || []).map((choice, index) => ({
-        ...createEmptyChoice(index + 1),
-        ...choice,
-        skillCheck: choice?.skillCheck ? pruneEmpty(choice.skillCheck) : null
-      }))
+      choices: (branch?.choices || []).map((choice, index) => normalizeImportedChoice(choice, index))
     };
   });
 
@@ -2879,17 +2943,45 @@ function normalizeString(value) {
 }
 
 function normalizeLoot(loot) {
-  return {
-    itemId: loot.itemId || "",
-    itemName: loot.itemName || "",
-    quantity: loot.quantity ?? 1,
-    lockId: loot.lockId || "",
-    questItem: Boolean(loot.questItem),
-    category: loot.category || "",
-    rarity: loot.rarity || "common",
-    effectIds: Array.isArray(loot.effectIds) ? loot.effectIds.filter(Boolean) : [],
-    expanded: loot.expanded !== false
-  };
+  const normalized = loot && typeof loot === "object" ? loot : {};
+  const snapshot = { ...normalized };
+  normalized.itemId = snapshot.itemId || "";
+  normalized.itemName = snapshot.itemName || "";
+  normalized.quantity = snapshot.quantity ?? 1;
+  normalized.lockId = snapshot.lockId || "";
+  normalized.questItem = Boolean(snapshot.questItem);
+  normalized.category = snapshot.category || "";
+  normalized.rarity = snapshot.rarity || "common";
+  normalized.effectIds = Array.isArray(snapshot.effectIds) ? snapshot.effectIds.filter(Boolean) : [];
+  normalized.expanded = snapshot.expanded !== false;
+  return normalized;
+}
+
+function normalizeChoice(choice, index = 1) {
+  const normalized = choice && typeof choice === "object" ? choice : {};
+  const snapshot = { ...normalized };
+  const defaults = createEmptyChoice(index);
+  normalized.id = normalizeString(snapshot.id) || defaults.id;
+  normalized.text = snapshot.text ?? defaults.text;
+  normalized.endingText = snapshot.endingText ?? defaults.endingText;
+  normalized.targetSceneId = normalizeString(snapshot.targetSceneId) || null;
+  normalized.requiredLockId = snapshot.requiredLockId || defaults.requiredLockId;
+  normalized.requiredLockLabel = snapshot.requiredLockLabel || defaults.requiredLockLabel;
+  normalized.requiredItemId = snapshot.requiredItemId || defaults.requiredItemId;
+  normalized.requiredItemCategory = snapshot.requiredItemCategory || defaults.requiredItemCategory;
+  normalized.requiredEffectId = snapshot.requiredEffectId || defaults.requiredEffectId;
+  normalized.consumeOnUse = Boolean(snapshot.consumeOnUse);
+  if (snapshot.skillCheck) {
+    normalized.skillCheck = {
+      attribute: normalizeString(snapshot.skillCheck.attribute),
+      difficulty: Number(snapshot.skillCheck.difficulty || 0),
+      successSceneId: normalizeString(snapshot.skillCheck.successSceneId),
+      failureSceneId: normalizeString(snapshot.skillCheck.failureSceneId)
+    };
+  } else {
+    delete normalized.skillCheck;
+  }
+  return normalized;
 }
 
 function normalizeAdaptiveMultiplier(value) {
