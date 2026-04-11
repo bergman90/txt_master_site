@@ -376,6 +376,8 @@ const FLOW_WORKSPACE_PADDING = 32;
 const FLOW_COORD_LIMIT = 200000;
 const SCENE_SPAWN_STEP_X = 320;
 const SCENE_SPAWN_STEP_Y = 220;
+const FLOW_AUTO_SCROLL_EDGE = 72;
+const FLOW_AUTO_SCROLL_MAX_SPEED = 18;
 const LEGACY_LOCAL_PROJECT_KEY = "adventure_studio_project_v1";
 const LOCAL_PROJECT_INDEX_KEY = "adventure_studio_project_index_v2";
 const LOCAL_PROJECT_LAST_KEY = "adventure_studio_last_project_id_v2";
@@ -409,6 +411,7 @@ const state = {
     monsterListRenderTimer: null,
     flowLinksFrame: null,
     lastFlowLinksDragRenderAt: 0,
+    flowAutoScrollFrame: null,
     sceneImageFrameTimer: null,
     saveAdventureFeedbackTimer: null,
     flowZoom: 1,
@@ -1260,16 +1263,10 @@ function flowBoardPointFromClient(event, bounds = getCurrentFlowBoardBounds()) {
 
 function onBoardPointerMove(event) {
   if (state.drag) {
-    const dragBounds = state.drag.bounds || getCurrentFlowBoardBounds();
-    const point = flowBoardPointFromClient(event, dragBounds);
-    const scene = state.adventure.scenes.find((entry) => entry.id === state.drag.sceneId);
-    if (!scene) return;
-    const x = point.x - state.drag.offsetX;
-    const y = point.y - state.drag.offsetY;
-    scene.position.x = clamp(x, -FLOW_COORD_LIMIT, FLOW_COORD_LIMIT);
-    scene.position.y = clamp(y, -FLOW_COORD_LIMIT, FLOW_COORD_LIMIT);
-    updateFlowCardPosition(scene.id, dragBounds);
-    scheduleFlowLinksRender("drag");
+    state.drag.pointerClientX = event.clientX;
+    state.drag.pointerClientY = event.clientY;
+    updateDraggedScenePosition(event.clientX, event.clientY);
+    ensureFlowAutoScrollLoop();
     return;
   }
 
@@ -1285,9 +1282,10 @@ function onBoardPointerMove(event) {
 
 function onBoardPointerUp(event) {
   if (state.drag) {
+    stopFlowAutoScrollLoop();
     state.drag = null;
-    renderFlowBoard({ preserveCenter: true });
-    scheduleJsonRender(120);
+    finalizeFlowDrag();
+    scheduleJsonRender(260, { syncScene: false });
     return;
   }
 
@@ -1310,6 +1308,81 @@ function onBoardPointerUp(event) {
   }
 }
 
+function updateDraggedScenePosition(clientX, clientY) {
+  const drag = state.drag;
+  if (!drag) return;
+  const dragBounds = drag.bounds || getCurrentFlowBoardBounds();
+  const point = flowBoardPointFromClient({ clientX, clientY }, dragBounds);
+  const scene = state.adventure.scenes.find((entry) => entry.id === drag.sceneId);
+  if (!scene) return;
+  scene.position.x = clamp(point.x - drag.offsetX, -FLOW_COORD_LIMIT, FLOW_COORD_LIMIT);
+  scene.position.y = clamp(point.y - drag.offsetY, -FLOW_COORD_LIMIT, FLOW_COORD_LIMIT);
+  updateFlowCardPosition(scene.id, dragBounds);
+  scheduleFlowLinksRender("drag");
+}
+
+function finalizeFlowDrag() {
+  const nextBounds = computeBoardBounds();
+  const previousBounds = state.ui.flowBoardBounds || nextBounds;
+  state.ui.flowBoardBounds = nextBounds;
+  if (
+    previousBounds.width !== nextBounds.width
+    || previousBounds.height !== nextBounds.height
+    || previousBounds.offsetX !== nextBounds.offsetX
+    || previousBounds.offsetY !== nextBounds.offsetY
+  ) {
+    updateAllFlowCardPositions(nextBounds);
+  }
+  renderFlowLinks(nextBounds);
+}
+
+function ensureFlowAutoScrollLoop() {
+  if (state.ui.flowAutoScrollFrame) return;
+  state.ui.flowAutoScrollFrame = window.requestAnimationFrame(stepFlowAutoScroll);
+}
+
+function stopFlowAutoScrollLoop() {
+  if (!state.ui.flowAutoScrollFrame) return;
+  window.cancelAnimationFrame(state.ui.flowAutoScrollFrame);
+  state.ui.flowAutoScrollFrame = null;
+}
+
+function stepFlowAutoScroll() {
+  state.ui.flowAutoScrollFrame = null;
+  if (!state.drag || !els.flowBoard) return;
+
+  const board = els.flowBoard;
+  const rect = board.getBoundingClientRect();
+  const clientX = state.drag.pointerClientX;
+  const clientY = state.drag.pointerClientY;
+  if (typeof clientX !== "number" || typeof clientY !== "number") return;
+
+  const deltaX = computeFlowAutoScrollDelta(clientX - rect.left, rect.width);
+  const deltaY = computeFlowAutoScrollDelta(clientY - rect.top, rect.height);
+
+  if (deltaX !== 0 || deltaY !== 0) {
+    board.scrollLeft += deltaX;
+    board.scrollTop += deltaY;
+    updateDraggedScenePosition(clientX, clientY);
+  }
+
+  if (state.drag) {
+    state.ui.flowAutoScrollFrame = window.requestAnimationFrame(stepFlowAutoScroll);
+  }
+}
+
+function computeFlowAutoScrollDelta(pointerOffset, size) {
+  if (pointerOffset < FLOW_AUTO_SCROLL_EDGE) {
+    const ratio = (FLOW_AUTO_SCROLL_EDGE - pointerOffset) / FLOW_AUTO_SCROLL_EDGE;
+    return -Math.ceil(FLOW_AUTO_SCROLL_MAX_SPEED * Math.min(1, Math.max(0, ratio)));
+  }
+  if (pointerOffset > size - FLOW_AUTO_SCROLL_EDGE) {
+    const ratio = (pointerOffset - (size - FLOW_AUTO_SCROLL_EDGE)) / FLOW_AUTO_SCROLL_EDGE;
+    return Math.ceil(FLOW_AUTO_SCROLL_MAX_SPEED * Math.min(1, Math.max(0, ratio)));
+  }
+  return 0;
+}
+
 function createScene() {
   saveCurrentScene();
   const index = state.adventure.scenes.length + 1;
@@ -1330,7 +1403,8 @@ function createScene() {
   state.ui.lastCreatedSceneId = scene.id;
   if (!state.adventure.startingSceneId) state.adventure.startingSceneId = scene.id;
   state.ui.sceneDirty = true;
-  render();
+  renderWorkspace({ skipJson: true });
+  scheduleJsonRender(320, { syncScene: false });
 }
 
 function findNextScenePosition() {
@@ -1381,8 +1455,10 @@ function pasteCopiedScene() {
   state.adventure.scenes.push(duplicated);
   const previousSceneId = state.selectedSceneId;
   state.selectedSceneId = duplicated.id;
+  state.ui.lastCreatedSceneId = duplicated.id;
   updateFlowCardSelection(previousSceneId, duplicated.id);
-  render();
+  renderWorkspace({ skipJson: true });
+  scheduleJsonRender(320, { syncScene: false });
 }
 
 function preparePastedScene(scene) {
@@ -1680,12 +1756,16 @@ function addCombatGroup() {
 }
 
 function render() {
+  return renderWorkspace();
+}
+
+function renderWorkspace({ skipJson = false } = {}) {
   renderAdventureSetup();
   renderFlowBoard();
   renderMonsterList();
   renderSceneEditor();
   renderMonsterEditor();
-  renderJson();
+  if (!skipJson) renderJson();
 }
 
 function renderAdventureSetup() {
@@ -2318,6 +2398,10 @@ function updateFlowCardPosition(sceneId, bounds = getCurrentFlowBoardBounds()) {
   const boardPoint = logicalToBoardPoint(scene.position, bounds);
   card.style.left = `${boardPoint.x}px`;
   card.style.top = `${boardPoint.y}px`;
+}
+
+function updateAllFlowCardPositions(bounds = getCurrentFlowBoardBounds()) {
+  state.adventure.scenes.forEach((scene) => updateFlowCardPosition(scene.id, bounds));
 }
 
 function refreshFlowCard(sceneId) {
