@@ -30,6 +30,72 @@ body {
   color: var(--text);
 }
 
+.project-picker-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 28px 18px;
+  background: rgba(7, 10, 16, 0.72);
+  backdrop-filter: blur(10px);
+}
+
+.project-picker {
+  width: min(960px, 100%);
+  max-height: calc(100vh - 56px);
+  overflow: auto;
+}
+
+.project-picker-header {
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.project-picker-actions {
+  margin-bottom: 18px;
+}
+
+.project-picker-list {
+  display: grid;
+  gap: 14px;
+}
+
+.project-picker-card {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.035);
+  display: grid;
+  gap: 12px;
+}
+
+.project-picker-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: baseline;
+}
+
+.project-picker-card-head strong {
+  font-size: 1.02rem;
+}
+
+.project-picker-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.project-picker-actions-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 button,
 input,
 textarea,

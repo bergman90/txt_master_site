@@ -7,6 +7,25 @@
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
+  <div id="project-picker-overlay" class="project-picker-overlay hidden">
+    <div class="project-picker panel">
+      <div class="panel-header project-picker-header">
+        <div>
+          <h2>Archivio progetti locali</h2>
+          <p class="hint">Ogni avventura vive in uno slot separato del browser, cosi puoi lavorare su piu file senza sovrascriverli.</p>
+        </div>
+        <button id="close-project-picker-btn" type="button" class="small">Chiudi</button>
+      </div>
+      <div class="button-row project-picker-actions">
+        <button id="create-project-btn" type="button">Nuovo progetto</button>
+        <button id="picker-import-json-btn" type="button">Importa JSON come nuovo progetto</button>
+      </div>
+      <div id="project-picker-empty" class="empty-state hidden">
+        Nessun progetto locale ancora salvato. Crea una nuova avventura oppure importa un JSON per iniziare.
+      </div>
+      <div id="project-picker-list" class="project-picker-list"></div>
+    </div>
+  </div>
   <div class="app-shell flow-shell">
     <aside class="sidebar">
       <div class="brand">
@@ -55,8 +74,8 @@
         <label class="checkbox-line"><input id="adventure-fresh-start" type="checkbox" checked> Consenti fresh start</label>
         <label class="checkbox-line"><input id="alpha-strict-validation" type="checkbox" checked> Modalita alpha severa</label>
         <div class="button-row">
-          <button id="restore-local-btn" type="button">Ripristina ultimo progetto</button>
-          <button id="reset-project-btn" type="button" class="danger">Nuovo progetto pulito</button>
+          <button id="restore-local-btn" type="button">Archivio progetti</button>
+          <button id="reset-project-btn" type="button" class="danger">Nuovo progetto</button>
         </div>
         <p id="autosave-indicator" class="hint">Autosave locale inattivo.</p>
         <details class="subsection panel-collapsible compact-section">

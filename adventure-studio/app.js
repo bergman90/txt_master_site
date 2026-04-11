@@ -369,6 +369,10 @@ const FLOW_LINK_VIEWPORT_MARGIN = 260;
 const FLOW_LINK_VIRTUALIZE_SCENE_THRESHOLD = 12;
 const FLOW_LINK_VIRTUALIZE_COUNT_THRESHOLD = 22;
 const FLOW_LINK_DRAG_THROTTLE_MS = 34;
+const LEGACY_LOCAL_PROJECT_KEY = "adventure_studio_project_v1";
+const LOCAL_PROJECT_INDEX_KEY = "adventure_studio_project_index_v2";
+const LOCAL_PROJECT_LAST_KEY = "adventure_studio_last_project_id_v2";
+const LOCAL_PROJECT_PREFIX = "adventure_studio_project_v2_";
 
 const state = {
   adventure: {
@@ -400,11 +404,11 @@ const state = {
     lastFlowLinksDragRenderAt: 0,
     sceneImageFrameTimer: null,
     saveAdventureFeedbackTimer: null,
-    flowZoom: 1
+    flowZoom: 1,
+    currentProjectId: null,
+    projectPickerOpen: false
   }
 };
-
-const LOCAL_PROJECT_KEY = "adventure_studio_project_v1";
 
 function createEmptyAdventure() {
   return {
@@ -420,6 +424,260 @@ function createEmptyAdventure() {
     scenes: [],
     encounters: []
   };
+}
+
+function createProjectId() {
+  return `project_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function projectStorageKey(projectId) {
+  return `${LOCAL_PROJECT_PREFIX}${projectId}`;
+}
+
+function readProjectIndex() {
+  try {
+    const raw = window.localStorage.getItem(LOCAL_PROJECT_INDEX_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+function writeProjectIndex(index) {
+  window.localStorage.setItem(LOCAL_PROJECT_INDEX_KEY, JSON.stringify(index));
+}
+
+function setLastProjectId(projectId) {
+  if (!projectId) return;
+  window.localStorage.setItem(LOCAL_PROJECT_LAST_KEY, projectId);
+}
+
+function getLastProjectId() {
+  try {
+    return window.localStorage.getItem(LOCAL_PROJECT_LAST_KEY);
+  } catch (error) {
+    return null;
+  }
+}
+
+function projectSummaryFromPayload(projectId, payload) {
+  const adventure = payload?.adventure || createEmptyAdventure();
+  return {
+    projectId,
+    title: normalizeString(adventure.title) || "Nuova Avventura",
+    description: normalizeString(adventure.description) || "",
+    sceneCount: Array.isArray(adventure.scenes) ? adventure.scenes.length : 0,
+    encounterCount: Array.isArray(adventure.encounters) ? adventure.encounters.length : 0,
+    updatedAt: payload?.ui?.autosaveAt || new Date().toISOString()
+  };
+}
+
+function upsertProjectSummary(summary) {
+  const index = readProjectIndex().filter((entry) => entry?.projectId !== summary.projectId);
+  index.push(summary);
+  index.sort((left, right) => String(right.updatedAt || "").localeCompare(String(left.updatedAt || "")));
+  writeProjectIndex(index);
+}
+
+function removeProjectSummary(projectId) {
+  const index = readProjectIndex().filter((entry) => entry?.projectId !== projectId);
+  writeProjectIndex(index);
+  if (getLastProjectId() === projectId) {
+    const nextProjectId = index[0]?.projectId || "";
+    window.localStorage.setItem(LOCAL_PROJECT_LAST_KEY, nextProjectId);
+  }
+}
+
+function initializeEmptyWorkspace() {
+  state.adventure = createEmptyAdventure();
+  state.selectedSceneId = null;
+  state.selectedMonsterId = null;
+  state.drag = null;
+  state.linkDraft = null;
+  state.ui.autosaveAt = null;
+  state.ui.sceneDirty = false;
+  state.ui.sceneSavedAt = null;
+  state.ui.flowZoom = 1;
+  state.ui.currentProjectId = null;
+}
+
+function openAdventureProject(payload, {
+  projectId = createProjectId(),
+  autosaveAt = null,
+  strictAlpha = true,
+  flowZoom = 1,
+  selectedSceneId = null,
+  selectedMonsterId = null,
+  persist = true
+} = {}) {
+  state.adventure = normalizeAdventureImport(payload);
+  state.selectedSceneId = selectedSceneId || state.adventure.startingSceneId || state.adventure.scenes[0]?.id || null;
+  state.selectedMonsterId = selectedMonsterId || state.adventure.encounters[0]?.id || null;
+  state.drag = null;
+  state.linkDraft = null;
+  state.ui.autosaveAt = autosaveAt;
+  state.ui.sceneDirty = false;
+  state.ui.sceneSavedAt = null;
+  state.ui.strictAlpha = strictAlpha;
+  state.ui.flowZoom = Math.min(FLOW_ZOOM_MAX, Math.max(FLOW_ZOOM_MIN, Number(flowZoom || 1)));
+  state.ui.currentProjectId = projectId;
+  if (persist) {
+    persistLocalProject({ syncScene: false });
+  }
+  render();
+  renderProjectPicker();
+  showProjectPicker(false);
+}
+
+function restoreProjectById(projectId) {
+  if (!projectId) return false;
+  try {
+    const raw = window.localStorage.getItem(projectStorageKey(projectId));
+    if (!raw) return false;
+    const payload = JSON.parse(raw);
+    if (!payload?.adventure) return false;
+    openAdventureProject(payload.adventure, {
+      projectId,
+      autosaveAt: payload.ui?.autosaveAt || null,
+      strictAlpha: payload.ui?.strictAlpha ?? true,
+      flowZoom: payload.ui?.flowZoom || 1,
+      selectedSceneId: payload.selectedSceneId || null,
+      selectedMonsterId: payload.selectedMonsterId || null,
+      persist: false
+    });
+    setLastProjectId(projectId);
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+function createFreshProjectFromScratch() {
+  const shouldCreate = state.ui.currentProjectId
+    ? window.confirm("Vuoi aprire un nuovo progetto separato? L'avventura corrente restera nell'archivio locale.")
+    : true;
+  if (!shouldCreate) return;
+  const projectId = createProjectId();
+  const baseAdventure = createEmptyAdventure();
+  baseAdventure.id = projectId;
+  baseAdventure.title = "Nuova Avventura";
+  baseAdventure.scenes = [];
+  openAdventureProject(baseAdventure, { projectId, persist: false });
+  createScene();
+  saveAdventureProject();
+}
+
+function duplicateProject(projectId) {
+  try {
+    const raw = window.localStorage.getItem(projectStorageKey(projectId));
+    if (!raw) return;
+    const payload = JSON.parse(raw);
+    if (!payload?.adventure) return;
+    const duplicatedAdventure = normalizeAdventureImport(payload.adventure);
+    duplicatedAdventure.title = `${duplicatedAdventure.title || "Nuova Avventura"} (Copia)`;
+    const nextProjectId = createProjectId();
+    duplicatedAdventure.id = nextProjectId;
+    openAdventureProject(duplicatedAdventure, {
+      projectId: nextProjectId,
+      strictAlpha: payload.ui?.strictAlpha ?? true,
+      flowZoom: payload.ui?.flowZoom || 1,
+      persist: true
+    });
+  } catch (error) {
+    window.alert("Impossibile duplicare il progetto locale.");
+  }
+}
+
+function deleteProject(projectId) {
+  const summary = readProjectIndex().find((entry) => entry.projectId === projectId);
+  const shouldDelete = window.confirm(`Vuoi davvero eliminare il progetto locale "${summary?.title || "senza titolo"}"?`);
+  if (!shouldDelete) return;
+  window.localStorage.removeItem(projectStorageKey(projectId));
+  removeProjectSummary(projectId);
+  if (state.ui.currentProjectId === projectId) {
+    initializeEmptyWorkspace();
+    render();
+  }
+  renderProjectPicker();
+  showProjectPicker(true);
+}
+
+function migrateLegacyLocalProjectIfNeeded() {
+  try {
+    const raw = window.localStorage.getItem(LEGACY_LOCAL_PROJECT_KEY);
+    if (!raw) return;
+    const payload = JSON.parse(raw);
+    if (!payload?.adventure) {
+      window.localStorage.removeItem(LEGACY_LOCAL_PROJECT_KEY);
+      return;
+    }
+    const projectId = createProjectId();
+    const nextPayload = {
+      adventure: normalizeAdventureImport(payload.adventure),
+      selectedSceneId: payload.selectedSceneId || null,
+      selectedMonsterId: payload.selectedMonsterId || null,
+      ui: {
+        strictAlpha: payload.ui?.strictAlpha ?? true,
+        autosaveAt: payload.ui?.autosaveAt || new Date().toISOString(),
+        flowZoom: payload.ui?.flowZoom || 1
+      }
+    };
+    nextPayload.adventure.id = projectId;
+    window.localStorage.setItem(projectStorageKey(projectId), JSON.stringify(nextPayload));
+    upsertProjectSummary(projectSummaryFromPayload(projectId, nextPayload));
+    setLastProjectId(projectId);
+    window.localStorage.removeItem(LEGACY_LOCAL_PROJECT_KEY);
+  } catch (error) {
+    window.localStorage.removeItem(LEGACY_LOCAL_PROJECT_KEY);
+  }
+}
+
+function renderProjectPicker() {
+  if (!els.projectPickerList || !els.projectPickerEmpty) return;
+  const index = readProjectIndex().sort((left, right) => String(right.updatedAt || "").localeCompare(String(left.updatedAt || "")));
+  const lastProjectId = getLastProjectId();
+  els.projectPickerList.innerHTML = "";
+  els.projectPickerEmpty.classList.toggle("hidden", index.length > 0);
+  if (!index.length) return;
+
+  const fragment = document.createDocumentFragment();
+  index.forEach((entry) => {
+    const article = document.createElement("article");
+    article.className = "project-picker-card";
+    const isCurrent = entry.projectId === state.ui.currentProjectId;
+    const isLast = entry.projectId === lastProjectId;
+    article.innerHTML = `
+      <div class="project-picker-card-head">
+        <strong>${entry.title || "Nuova Avventura"}</strong>
+        <small>${isCurrent ? "Aperto ora" : isLast ? "Ultimo aperto" : "Locale"}</small>
+      </div>
+      <p class="hint">${entry.description || "Nessuna descrizione ancora."}</p>
+      <div class="project-picker-meta">
+        <span>${entry.sceneCount || 0} nodi</span>
+        <span>${entry.encounterCount || 0} mostri</span>
+        <span>Aggiornato ${formatAutosaveTime(entry.updatedAt)}</span>
+      </div>
+      <div class="project-picker-actions-row">
+        <button type="button" data-action="open-project">Apri</button>
+        <button type="button" data-action="duplicate-project" class="small">Duplica</button>
+        <button type="button" data-action="delete-project" class="danger small">Elimina</button>
+      </div>
+    `;
+    article.querySelector('[data-action="open-project"]').addEventListener("click", () => restoreProjectById(entry.projectId));
+    article.querySelector('[data-action="duplicate-project"]').addEventListener("click", () => duplicateProject(entry.projectId));
+    article.querySelector('[data-action="delete-project"]').addEventListener("click", () => deleteProject(entry.projectId));
+    fragment.appendChild(article);
+  });
+  els.projectPickerList.appendChild(fragment);
+}
+
+function showProjectPicker(visible) {
+  state.ui.projectPickerOpen = Boolean(visible);
+  els.projectPickerOverlay?.classList.toggle("hidden", !visible);
+  if (els.closeProjectPickerBtn) {
+    els.closeProjectPickerBtn.disabled = !state.ui.currentProjectId;
+  }
 }
 
 const els = {
@@ -439,6 +697,12 @@ const els = {
   restoreLocalBtn: document.getElementById("restore-local-btn"),
   resetProjectBtn: document.getElementById("reset-project-btn"),
   autosaveIndicator: document.getElementById("autosave-indicator"),
+  projectPickerOverlay: document.getElementById("project-picker-overlay"),
+  projectPickerList: document.getElementById("project-picker-list"),
+  projectPickerEmpty: document.getElementById("project-picker-empty"),
+  createProjectBtn: document.getElementById("create-project-btn"),
+  pickerImportJsonBtn: document.getElementById("picker-import-json-btn"),
+  closeProjectPickerBtn: document.getElementById("close-project-picker-btn"),
   starterKitList: document.getElementById("starter-kit-list"),
   addStarterKitBtn: document.getElementById("add-starter-kit-btn"),
   addSceneBtn: document.getElementById("add-scene-btn"),
@@ -522,10 +786,11 @@ function bootstrap() {
   bindMonsterEditor();
   bindActions();
   bindBoardPointerSystem();
-  if (!restoreLocalProject()) {
-    createScene();
-  }
+  migrateLegacyLocalProjectIfNeeded();
+  initializeEmptyWorkspace();
   render();
+  renderProjectPicker();
+  showProjectPicker(true);
 }
 
 function bindMeta() {
@@ -574,9 +839,16 @@ function bindActions() {
   els.importJsonBtn.addEventListener("click", () => els.importJsonInput.click());
   els.importJsonInput.addEventListener("change", onImportJson);
   els.restoreLocalBtn.addEventListener("click", () => {
-    if (restoreLocalProject()) render();
+    renderProjectPicker();
+    showProjectPicker(true);
   });
-  els.resetProjectBtn.addEventListener("click", resetProjectWorkspace);
+  els.resetProjectBtn.addEventListener("click", createFreshProjectFromScratch);
+  els.createProjectBtn?.addEventListener("click", createFreshProjectFromScratch);
+  els.pickerImportJsonBtn?.addEventListener("click", () => els.importJsonInput.click());
+  els.closeProjectPickerBtn?.addEventListener("click", () => {
+    if (!state.ui.currentProjectId) return;
+    showProjectPicker(false);
+  });
   els.addMonsterFromPresetBtn.addEventListener("click", createMonsterFromPreset);
   els.applyMonsterPresetBtn.addEventListener("click", applyPresetToSelectedMonster);
   els.addSceneImageBtn.addEventListener("click", () => els.sceneImageInput.click());
@@ -828,7 +1100,9 @@ async function loadSelectedExampleAdventure() {
     const response = await fetch(preset.path);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const payload = await response.json();
-    loadAdventureIntoEditor(payload);
+    const projectId = createProjectId();
+    payload.id = projectId;
+    openAdventureProject(payload, { projectId, persist: true });
   } catch (error) {
     window.alert(
       `Questo browser non riesce ad aprire automaticamente l'esempio da file locale.\n\n` +
@@ -845,7 +1119,12 @@ function onImportJson(event) {
   reader.onload = () => {
     try {
       const payload = JSON.parse(String(reader.result || "{}"));
-      loadAdventureIntoEditor(payload);
+      const projectId = createProjectId();
+      payload.id = projectId;
+      if (!normalizeString(payload.title) && file.name) {
+        payload.title = file.name.replace(/\.json$/i, "");
+      }
+      openAdventureProject(payload, { projectId, persist: true });
     } catch (error) {
       window.alert("Il file scelto non contiene un JSON valido.");
     } finally {
@@ -856,30 +1135,13 @@ function onImportJson(event) {
 }
 
 function loadAdventureIntoEditor(payload) {
-  state.adventure = normalizeAdventureImport(payload);
-  state.selectedSceneId = state.adventure.startingSceneId || state.adventure.scenes[0]?.id || null;
-  state.selectedMonsterId = state.adventure.encounters[0]?.id || null;
-  state.drag = null;
-  state.linkDraft = null;
-  state.ui.autosaveAt = null;
-  state.ui.sceneDirty = false;
-  state.ui.sceneSavedAt = null;
-  render();
+  const projectId = createProjectId();
+  payload.id = projectId;
+  openAdventureProject(payload, { projectId, persist: true });
 }
 
 function resetProjectWorkspace() {
-  const shouldReset = window.confirm("Vuoi davvero partire da un progetto pulito? Il progetto corrente verra sostituito e l'autosave locale aggiornato.");
-  if (!shouldReset) return;
-
-  state.adventure = createEmptyAdventure();
-  state.selectedSceneId = null;
-  state.selectedMonsterId = null;
-  state.drag = null;
-  state.linkDraft = null;
-  state.ui.autosaveAt = null;
-  state.ui.sceneDirty = false;
-  state.ui.sceneSavedAt = null;
-  createScene();
+  createFreshProjectFromScratch();
 }
 
 function bindMonsterEditor() {
@@ -1263,14 +1525,17 @@ function renderAdventureSetup() {
   els.adventureFreshStart.checked = Boolean(state.adventure.allowFreshStart);
   els.alphaStrictValidation.checked = Boolean(state.ui.strictAlpha);
   updateFlowZoomLabel();
-  els.autosaveIndicator.textContent = state.ui.autosaveAt
-    ? `Autosave locale attivo | ultimo salvataggio ${formatAutosaveTime(state.ui.autosaveAt)}`
-    : "Autosave locale attivo | in attesa del primo salvataggio.";
+  els.autosaveIndicator.textContent = state.ui.currentProjectId
+    ? state.ui.autosaveAt
+      ? `Progetto locale attivo | ultimo salvataggio ${formatAutosaveTime(state.ui.autosaveAt)}`
+      : "Progetto locale attivo | in attesa del primo salvataggio."
+    : "Nessun progetto aperto. Scegli o crea un progetto dall'archivio locale.";
   renderLootList(els.starterKitList, state.adventure.starterKitItems, render);
 }
 
 function persistLocalProject({ syncScene = true } = {}) {
   try {
+    if (!state.ui.currentProjectId) return;
     if (syncScene) syncCurrentSceneEditorStateFromDom();
     const payload = {
       adventure: state.adventure,
@@ -1282,10 +1547,13 @@ function persistLocalProject({ syncScene = true } = {}) {
         flowZoom: state.ui.flowZoom || 1
       }
     };
-    window.localStorage.setItem(LOCAL_PROJECT_KEY, JSON.stringify(payload));
+    window.localStorage.setItem(projectStorageKey(state.ui.currentProjectId), JSON.stringify(payload));
     state.ui.autosaveAt = payload.ui.autosaveAt;
+    upsertProjectSummary(projectSummaryFromPayload(state.ui.currentProjectId, payload));
+    setLastProjectId(state.ui.currentProjectId);
+    renderProjectPicker();
     if (els.autosaveIndicator) {
-      els.autosaveIndicator.textContent = `Autosave locale attivo | ultimo salvataggio ${formatAutosaveTime(state.ui.autosaveAt)}`;
+      els.autosaveIndicator.textContent = `Progetto locale attivo | ultimo salvataggio ${formatAutosaveTime(state.ui.autosaveAt)}`;
     }
   } catch (error) {
     state.ui.autosaveAt = null;
@@ -1293,22 +1561,10 @@ function persistLocalProject({ syncScene = true } = {}) {
 }
 
 function restoreLocalProject() {
-  try {
-    const raw = window.localStorage.getItem(LOCAL_PROJECT_KEY);
-    if (!raw) return false;
-    const payload = JSON.parse(raw);
-    if (!payload?.adventure) return false;
-
-    state.adventure = normalizeAdventureImport(payload.adventure);
-    state.selectedSceneId = payload.selectedSceneId || state.adventure.startingSceneId || state.adventure.scenes[0]?.id || null;
-    state.selectedMonsterId = payload.selectedMonsterId || state.adventure.encounters[0]?.id || null;
-    state.ui.strictAlpha = payload.ui?.strictAlpha ?? true;
-    state.ui.autosaveAt = payload.ui?.autosaveAt || null;
-    state.ui.flowZoom = Math.min(FLOW_ZOOM_MAX, Math.max(FLOW_ZOOM_MIN, Number(payload.ui?.flowZoom || 1)));
-    return true;
-  } catch (error) {
-    return false;
-  }
+  const lastProjectId = getLastProjectId();
+  if (lastProjectId && restoreProjectById(lastProjectId)) return true;
+  const firstProjectId = readProjectIndex()[0]?.projectId || null;
+  return restoreProjectById(firstProjectId);
 }
 
 function formatAutosaveTime(isoString) {
