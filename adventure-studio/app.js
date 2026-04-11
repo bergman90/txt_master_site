@@ -66,21 +66,21 @@ const EFFECT_TRIGGERS = [
 ];
 
 const EFFECT_PRESETS = [
-  { value: "", label: "Nessun effetto", family: "", trigger: "" },
-  { value: "restore_hp", label: "Cura", family: "survival_recovery", trigger: "consumable" },
-  { value: "restore_all", label: "Rigenerazione totale", family: "survival_recovery", trigger: "consumable" },
-  { value: "direct_damage", label: "Danno diretto", family: "combat_offense", trigger: "consumable" },
-  { value: "defense_surge", label: "Impulso difensivo", family: "combat_defense", trigger: "consumable" },
-  { value: "bonus_damage", label: "Bonus danno", family: "combat_offense", trigger: "on_hit" },
-  { value: "fatigue_relief", label: "Sollievo fatica", family: "combat_tempo", trigger: "passive" },
-  { value: "recover_boost", label: "Recupero potenziato", family: "survival_recovery", trigger: "on_recover" },
-  { value: "crit_guard", label: "Guardia anti-critico", family: "combat_defense", trigger: "passive" },
-  { value: "ember_retaliation", label: "Ritorsione ardente", family: "combat_defense", trigger: "on_defend" },
-  { value: "escape", label: "Ritirata rapida", family: "combat_tempo", trigger: "active_combat" },
-  { value: "guaranteed_crit", label: "Critico assicurato", family: "combat_offense", trigger: "on_crit" },
-  { value: "key_access", label: "Accesso narrativo", family: "narrative_key", trigger: "on_choice" },
-  { value: "trade_value", label: "Valore commerciale", family: "economy_loot", trigger: "passive" },
-  { value: "check_bonus", label: "Bonus alle prove", family: "skill_check", trigger: "passive" }
+  { value: "", label: "Nessun effetto", family: "", trigger: "", description: "Oggetto senza effetto speciale runtime.", categories: [] },
+  { value: "restore_hp", label: "Cura", family: "survival_recovery", trigger: "consumable", description: "Recupera una parte degli HP quando l'oggetto viene usato.", categories: ["consumable"] },
+  { value: "restore_all", label: "Rigenerazione totale", family: "survival_recovery", trigger: "consumable", description: "Ripristina completamente vita e stamina. Pensato per consumabili rari o reliquie attivabili.", categories: ["consumable", "relic"] },
+  { value: "direct_damage", label: "Danno diretto", family: "combat_offense", trigger: "consumable", description: "Infligge danno immediato quando l'oggetto viene usato in combattimento.", categories: ["consumable", "utility"] },
+  { value: "defense_surge", label: "Impulso difensivo", family: "combat_defense", trigger: "consumable", description: "Aumenta la difesa o offre una protezione temporanea. Funziona bene su scudi, armature, reliquie o consumabili tattici.", categories: ["consumable", "shield", "armor", "helm", "cloak", "relic"] },
+  { value: "bonus_damage", label: "Bonus danno", family: "combat_offense", trigger: "on_hit", description: "Aggiunge danno bonus ai colpi andati a segno. Ideale per armi o reliquie offensive.", categories: ["weapon", "relic", "ring"] },
+  { value: "fatigue_relief", label: "Sollievo fatica", family: "combat_tempo", trigger: "passive", description: "Riduce il peso della fatica o migliora la gestione della stamina in modo passivo.", categories: ["utility", "consumable", "ring", "cloak", "boots", "relic"] },
+  { value: "recover_boost", label: "Recupero potenziato", family: "survival_recovery", trigger: "on_recover", description: "Rende piu efficace l'azione di recupero fiato o rigenera qualcosa nel tempo.", categories: ["consumable", "utility", "ring", "cloak", "relic"] },
+  { value: "crit_guard", label: "Guardia anti-critico", family: "combat_defense", trigger: "passive", description: "Riduce il rischio o l'impatto dei colpi critici subiti. Adatto a equipaggiamento difensivo.", categories: ["shield", "armor", "helm", "cloak", "relic"] },
+  { value: "ember_retaliation", label: "Ritorsione ardente", family: "combat_defense", trigger: "on_defend", description: "Restituisce una risposta offensiva o un contraccolpo quando difendi.", categories: ["shield", "armor", "relic"] },
+  { value: "escape", label: "Ritirata rapida", family: "combat_tempo", trigger: "active_combat", description: "Aiuta la fuga o migliora la ritirata tattica in combattimento.", categories: ["boots", "cloak", "consumable", "utility", "relic"] },
+  { value: "guaranteed_crit", label: "Critico assicurato", family: "combat_offense", trigger: "on_crit", description: "Garantisce o prepara un colpo critico. Molto adatto ad armi uniche o reliquie d'assalto.", categories: ["weapon", "relic"] },
+  { value: "key_access", label: "Accesso narrativo", family: "narrative_key", trigger: "on_choice", description: "Sblocca passaggi, porte o rami narrativi specifici. Va usato su chiavi, sigilli o reliquie narrative.", categories: ["key", "relic", "quest"] },
+  { value: "trade_value", label: "Valore commerciale", family: "economy_loot", trigger: "passive", description: "Aumenta il valore economico percepito dell'oggetto o il suo peso commerciale.", categories: ["treasure", "relic", "utility", "key", "quest"] },
+  { value: "check_bonus", label: "Bonus alle prove", family: "skill_check", trigger: "passive", description: "Concede un bonus alle prove o ai check. Perfetto per pergamene, talismani e strumenti speciali.", categories: ["treasure", "relic", "ring", "cloak", "utility", "consumable"] }
 ];
 
 const MONSTER_PRESETS = [
@@ -2981,6 +2981,7 @@ function renderLootList(container, items, options = {}) {
     const categorySelect = node.querySelector('[data-field="category"]');
     const raritySelect = node.querySelector('[data-field="rarity"]');
     const effectSelect = node.querySelector('[data-field="effectId"]');
+    const effectHelp = node.querySelector('[data-role="effect-help"]');
     const lockIdInput = node.querySelector('[data-field="lockId"]');
     const questItemInput = node.querySelector('[data-field="questItem"]');
     const customItemIdInput = node.querySelector('[data-field="customItemId"]');
@@ -2990,7 +2991,7 @@ function renderLootList(container, items, options = {}) {
     hydrateLootSelect(select, selectedPreset);
     hydrateCategorySelect(categorySelect, loot.category || "");
     hydrateRaritySelect(raritySelect, loot.rarity || "common");
-    hydrateEffectSelect(effectSelect, loot.effectIds?.[0] || "");
+    hydrateEffectSelect(effectSelect, loot.effectIds?.[0] || "", loot.category || "");
     customInput.value = selectedPreset === "custom" ? loot.itemName || "" : "";
     customInput.disabled = selectedPreset !== "custom";
     customItemIdInput.value = selectedPreset === "custom" ? (loot.itemId || slugify(loot.itemName || "custom_loot")) : (loot.itemId || "");
@@ -2999,6 +3000,15 @@ function renderLootList(container, items, options = {}) {
     questItemInput.checked = Boolean(loot.questItem);
     syncLootEffectMeta(effectSelect.value, familyField, triggerField);
     quantityField.value = loot.quantity ?? 1;
+
+    function syncLootEffectUi() {
+      if (!effectAllowedForCategory(loot.effectIds?.[0] || "", loot.category || "")) {
+        loot.effectIds = [];
+      }
+      hydrateEffectSelect(effectSelect, loot.effectIds?.[0] || "", loot.category || "");
+      syncLootEffectMeta(effectSelect.value, familyField, triggerField);
+      effectHelp.textContent = effectHelpText(effectSelect.value, loot.category || "");
+    }
 
     function updateLootHeader() {
       title.textContent = loot.itemName || "Loot personalizzato";
@@ -3032,8 +3042,7 @@ function renderLootList(container, items, options = {}) {
       loot.effectIds = [...(preset?.effectIds || [])];
       hydrateCategorySelect(categorySelect, loot.category || "");
       hydrateRaritySelect(raritySelect, loot.rarity || "common");
-      hydrateEffectSelect(effectSelect, loot.effectIds?.[0] || "");
-      syncLootEffectMeta(effectSelect.value, familyField, triggerField);
+      syncLootEffectUi();
       customInput.disabled = nextPreset !== "custom";
       customItemIdInput.disabled = nextPreset !== "custom";
       if (nextPreset !== "custom") {
@@ -3065,6 +3074,7 @@ function renderLootList(container, items, options = {}) {
     });
     categorySelect.addEventListener("change", (event) => {
       loot.category = normalizeString(event.target.value) || "";
+      syncLootEffectUi();
       onChange();
     });
     lockIdInput.addEventListener("input", (event) => {
@@ -3085,6 +3095,7 @@ function renderLootList(container, items, options = {}) {
       const effectId = normalizeString(event.target.value) || "";
       loot.effectIds = effectId ? [effectId] : [];
       syncLootEffectMeta(effectId, familyField, triggerField);
+      effectHelp.textContent = effectHelpText(effectId, loot.category || "");
       onChange();
     });
     quantityField.addEventListener("input", (event) => {
@@ -3099,6 +3110,8 @@ function renderLootList(container, items, options = {}) {
       onChange();
       rerender();
     });
+
+    syncLootEffectUi();
 
     container.appendChild(node);
   });
@@ -3537,21 +3550,67 @@ function hydrateRaritySelect(select, value = "common") {
   });
 }
 
-function hydrateEffectSelect(select, value = "") {
+function hydrateEffectSelect(select, value = "", category = "") {
   select.innerHTML = "";
-  EFFECT_PRESETS.forEach((effect) => {
+  effectPresetsForCategory(category).forEach((effect) => {
     const option = document.createElement("option");
     option.value = effect.value;
     option.textContent = effect.label;
     if (effect.value === value) option.selected = true;
     select.appendChild(option);
   });
+  if (!select.value && select.options.length > 0) {
+    select.value = "";
+  }
 }
 
 function syncLootEffectMeta(effectId, familyField, triggerField) {
   const preset = EFFECT_PRESETS.find((entry) => entry.value === effectId);
   familyField.value = preset?.family ? effectFamilyLabel(preset.family) : "Nessuna";
   triggerField.value = preset?.trigger ? effectTriggerLabel(preset.trigger) : "Nessuno";
+}
+
+function effectPresetById(effectId) {
+  return EFFECT_PRESETS.find((entry) => entry.value === effectId) || null;
+}
+
+function effectPresetsForCategory(category = "") {
+  const normalizedCategory = normalizeString(category) || "";
+  return EFFECT_PRESETS.filter((effect) => {
+    if (!effect.value) return true;
+    const categories = Array.isArray(effect.categories) ? effect.categories : [];
+    if (!categories.length) return true;
+    return normalizedCategory ? categories.includes(normalizedCategory) : true;
+  });
+}
+
+function effectCategoryLabelList(effect) {
+  const categories = Array.isArray(effect?.categories) ? effect.categories : [];
+  if (!categories.length) return "qualsiasi tipo";
+  return categories
+    .map((value) => ITEM_CATEGORIES.find((entry) => entry.value === value)?.label || value)
+    .join(", ");
+}
+
+function effectHelpText(effectId, category = "") {
+  const normalizedCategory = normalizeString(category) || "";
+  const effect = effectPresetById(effectId);
+  if (!effect?.value) {
+    return normalizedCategory
+      ? `Nessun effetto speciale. Per la categoria ${effectCategoryLabelList({ categories: [normalizedCategory] })} puoi scegliere solo effetti davvero compatibili.`
+      : "Nessun effetto speciale. Scegli prima una categoria per vedere gli effetti sensati per quel tipo di loot.";
+  }
+  return `${effect.description} Tipi compatibili: ${effectCategoryLabelList(effect)}.`;
+}
+
+function effectAllowedForCategory(effectId, category = "") {
+  if (!effectId) return true;
+  const effect = effectPresetById(effectId);
+  if (!effect) return false;
+  const categories = Array.isArray(effect.categories) ? effect.categories : [];
+  if (!categories.length) return true;
+  const normalizedCategory = normalizeString(category) || "";
+  return normalizedCategory ? categories.includes(normalizedCategory) : true;
 }
 
 function hydrateMonsterPresetSelect(select = els.monsterPresetSelect) {
@@ -3979,6 +4038,13 @@ function validateAdventure(adventure, cleaned = cleanAdventure(adventure), optio
     (loot.effectIds || []).forEach((effectId) => {
       if (!validEffects.has(effectId)) {
         errors.push(`${ownerLabel}: il loot ${loot.itemName || itemId} usa un effectId non valido (${effectId}).`);
+        return;
+      }
+      if (!effectAllowedForCategory(effectId, loot.category)) {
+        errors.push(
+          `${ownerLabel}: il loot ${loot.itemName || itemId} usa l'effetto ${effectPresetLabel(effectId)} ` +
+          `ma non e compatibile con la categoria ${loot.category || "non impostata"}.`
+        );
       }
     });
     if (loot.category === "key" && !normalizeString(loot.lockId)) {

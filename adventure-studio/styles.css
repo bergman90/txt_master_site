@@ -656,6 +656,14 @@ button.small {
   margin-top: 8px;
 }
 
+.effect-help {
+  margin: 6px 0 2px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(209, 144, 82, 0.2);
+  background: rgba(209, 144, 82, 0.08);
+}
+
 .outcome-card {
   padding-top: 12px;
   border-color: rgba(116, 164, 117, 0.24);
