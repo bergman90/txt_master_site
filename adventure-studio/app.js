@@ -1232,7 +1232,7 @@ function bindMonsterEditor() {
 }
 
 function bindBoardPointerSystem() {
-  els.flowBoard.addEventListener("pointermove", onBoardPointerMove);
+  window.addEventListener("pointermove", onBoardPointerMove);
   els.flowBoard.addEventListener("scroll", () => scheduleFlowLinksRender("scroll"), { passive: true });
   window.addEventListener("resize", onFlowBoardResize, { passive: true });
   window.addEventListener("pointerup", onBoardPointerUp);
@@ -1244,10 +1244,9 @@ function onFlowBoardResize() {
   renderFlowBoard({ preserveCenter: true });
 }
 
-function flowBoardPointFromClient(event) {
+function flowBoardPointFromClient(event, bounds = getCurrentFlowBoardBounds()) {
   const boardRect = els.flowBoard.getBoundingClientRect();
   const zoom = state.ui.flowZoom || 1;
-  const bounds = getCurrentFlowBoardBounds();
   return boardToLogicalPoint({
     x: (event.clientX - boardRect.left + els.flowBoard.scrollLeft) / zoom,
     y: (event.clientY - boardRect.top + els.flowBoard.scrollTop) / zoom
@@ -1255,23 +1254,22 @@ function flowBoardPointFromClient(event) {
 }
 
 function onBoardPointerMove(event) {
-  const point = flowBoardPointFromClient(event);
-
   if (state.drag) {
+    const dragBounds = state.drag.bounds || getCurrentFlowBoardBounds();
+    const point = flowBoardPointFromClient(event, dragBounds);
     const scene = state.adventure.scenes.find((entry) => entry.id === state.drag.sceneId);
     if (!scene) return;
     const x = point.x - state.drag.offsetX;
     const y = point.y - state.drag.offsetY;
     scene.position.x = clamp(x, -FLOW_COORD_LIMIT, FLOW_COORD_LIMIT);
     scene.position.y = clamp(y, -FLOW_COORD_LIMIT, FLOW_COORD_LIMIT);
-    const bounds = computeBoardBounds();
-    state.ui.flowBoardBounds = bounds;
-    updateFlowCardPosition(scene.id, bounds);
+    updateFlowCardPosition(scene.id, dragBounds);
     scheduleFlowLinksRender("drag");
     return;
   }
 
   if (state.linkDraft) {
+    const point = flowBoardPointFromClient(event);
     state.linkDraft.current = {
       x: point.x,
       y: point.y
@@ -1283,7 +1281,7 @@ function onBoardPointerMove(event) {
 function onBoardPointerUp(event) {
   if (state.drag) {
     state.drag = null;
-    renderFlowLinks();
+    renderFlowBoard({ preserveCenter: true });
     scheduleJsonRender(120);
     return;
   }
@@ -1918,7 +1916,8 @@ function createFlowCard(scene, index, bounds = getCurrentFlowBoardBounds()) {
     state.drag = {
       sceneId,
       offsetX: point.x - currentScene.position.x,
-      offsetY: point.y - currentScene.position.y
+      offsetY: point.y - currentScene.position.y,
+      bounds: getCurrentFlowBoardBounds()
     };
   });
 
@@ -2310,7 +2309,8 @@ function scheduleFlowLinksRender(reason = "general") {
   if (state.ui.flowLinksFrame) return;
   state.ui.flowLinksFrame = window.requestAnimationFrame(() => {
     state.ui.flowLinksFrame = null;
-    renderFlowLinks();
+    const bounds = state.drag?.bounds || state.ui.flowBoardBounds || computeBoardBounds();
+    renderFlowLinks(bounds);
   });
 }
 
