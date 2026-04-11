@@ -368,7 +368,7 @@ const FLOW_ZOOM_STEP = 0.1;
 const FLOW_LINK_VIEWPORT_MARGIN = 260;
 const FLOW_LINK_VIRTUALIZE_SCENE_THRESHOLD = 12;
 const FLOW_LINK_VIRTUALIZE_COUNT_THRESHOLD = 22;
-const FLOW_LINK_DRAG_THROTTLE_MS = 34;
+const FLOW_LINK_DRAG_THROTTLE_MS = 16;
 const FLOW_COMPACT_ZOOM_THRESHOLD = 0.38;
 const FLOW_WORKSPACE_MIN_WIDTH = 760;
 const FLOW_WORKSPACE_MIN_HEIGHT = 480;
@@ -415,7 +415,8 @@ const state = {
     currentProjectId: null,
     projectPickerOpen: false,
     flowBoardBounds: null,
-    copiedScenePayload: null
+    copiedScenePayload: null,
+    lastCreatedSceneId: null
   }
 };
 
@@ -509,6 +510,7 @@ function initializeEmptyWorkspace() {
   state.ui.sceneSavedAt = null;
   state.ui.flowZoom = 1;
   state.ui.currentProjectId = null;
+  state.ui.lastCreatedSceneId = null;
 }
 
 function openAdventureProject(payload, {
@@ -531,6 +533,7 @@ function openAdventureProject(payload, {
   state.ui.strictAlpha = strictAlpha;
   state.ui.flowZoom = Math.min(FLOW_ZOOM_MAX, Math.max(FLOW_ZOOM_MIN, Number(flowZoom || 1)));
   state.ui.currentProjectId = projectId;
+  state.ui.lastCreatedSceneId = state.adventure.scenes[state.adventure.scenes.length - 1]?.id || null;
   if (persist) {
     persistLocalProject({ syncScene: false });
   }
@@ -1324,44 +1327,34 @@ function createScene() {
   };
   state.adventure.scenes.push(scene);
   state.selectedSceneId = scene.id;
+  state.ui.lastCreatedSceneId = scene.id;
   if (!state.adventure.startingSceneId) state.adventure.startingSceneId = scene.id;
   state.ui.sceneDirty = true;
   render();
 }
 
 function findNextScenePosition() {
-  const anchor = getSelectedScene() || state.adventure.scenes[state.adventure.scenes.length - 1] || null;
+  const anchor = state.adventure.scenes.find((scene) => scene.id === state.ui.lastCreatedSceneId)
+    || state.adventure.scenes[state.adventure.scenes.length - 1]
+    || null;
   if (!anchor) {
     return { x: 32, y: 32 };
   }
 
-  const candidateOffsets = [
-    [SCENE_SPAWN_STEP_X, 0],
-    [SCENE_SPAWN_STEP_X, SCENE_SPAWN_STEP_Y],
-    [0, SCENE_SPAWN_STEP_Y],
-    [SCENE_SPAWN_STEP_X, -SCENE_SPAWN_STEP_Y],
-    [-SCENE_SPAWN_STEP_X, SCENE_SPAWN_STEP_Y],
-    [-SCENE_SPAWN_STEP_X, 0],
-    [0, -SCENE_SPAWN_STEP_Y],
-    [-SCENE_SPAWN_STEP_X, -SCENE_SPAWN_STEP_Y]
-  ];
-
-  for (let ring = 1; ring <= 8; ring += 1) {
-    for (const [dx, dy] of candidateOffsets) {
-      const x = anchor.position.x + dx * ring;
-      const y = anchor.position.y + dy * ring;
-      if (!isScenePositionOccupied(x, y)) {
-        return {
-          x: clamp(x, -FLOW_COORD_LIMIT, FLOW_COORD_LIMIT),
-          y: clamp(y, -FLOW_COORD_LIMIT, FLOW_COORD_LIMIT)
-        };
-      }
+  for (let step = 1; step <= 64; step += 1) {
+    const x = anchor.position.x + SCENE_SPAWN_STEP_X * step;
+    const y = anchor.position.y;
+    if (!isScenePositionOccupied(x, y)) {
+      return {
+        x: clamp(x, -FLOW_COORD_LIMIT, FLOW_COORD_LIMIT),
+        y: clamp(y, -FLOW_COORD_LIMIT, FLOW_COORD_LIMIT)
+      };
     }
   }
 
   return {
     x: clamp(anchor.position.x + SCENE_SPAWN_STEP_X, -FLOW_COORD_LIMIT, FLOW_COORD_LIMIT),
-    y: clamp(anchor.position.y + SCENE_SPAWN_STEP_Y, -FLOW_COORD_LIMIT, FLOW_COORD_LIMIT)
+    y: clamp(anchor.position.y, -FLOW_COORD_LIMIT, FLOW_COORD_LIMIT)
   };
 }
 
