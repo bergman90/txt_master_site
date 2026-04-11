@@ -671,7 +671,8 @@ button.small {
 .flow-board {
   position: relative;
   overflow: auto;
-  min-height: 720px;
+  height: clamp(560px, 62vh, 860px);
+  min-height: 560px;
   border-radius: 18px;
   border: 1px solid var(--border);
   background:
@@ -687,8 +688,8 @@ button.small {
 
 .flow-stage {
   position: relative;
-  min-width: 3200px;
-  min-height: 2200px;
+  min-width: 100%;
+  min-height: 100%;
 }
 
 .flow-viewport {
@@ -707,8 +708,8 @@ button.small {
 
 .flow-canvas {
   position: relative;
-  min-width: 3200px;
-  min-height: 2200px;
+  min-width: 100%;
+  min-height: 100%;
 }
 
 .flow-card {

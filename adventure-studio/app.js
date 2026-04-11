@@ -370,9 +370,9 @@ const FLOW_LINK_VIRTUALIZE_SCENE_THRESHOLD = 12;
 const FLOW_LINK_VIRTUALIZE_COUNT_THRESHOLD = 22;
 const FLOW_LINK_DRAG_THROTTLE_MS = 34;
 const FLOW_COMPACT_ZOOM_THRESHOLD = 0.38;
-const FLOW_WORKSPACE_MIN_WIDTH = 3200;
-const FLOW_WORKSPACE_MIN_HEIGHT = 2200;
-const FLOW_WORKSPACE_PADDING = 720;
+const FLOW_WORKSPACE_MIN_WIDTH = 1200;
+const FLOW_WORKSPACE_MIN_HEIGHT = 720;
+const FLOW_WORKSPACE_PADDING = 260;
 const FLOW_COORD_LIMIT = 200000;
 const LEGACY_LOCAL_PROJECT_KEY = "adventure_studio_project_v1";
 const LOCAL_PROJECT_INDEX_KEY = "adventure_studio_project_index_v2";
@@ -1975,8 +1975,19 @@ function computeBoardBounds() {
   const maxY = scenePositions.length ? Math.max(...scenePositions.map((point) => point.y + metrics.height), metrics.height) : metrics.height;
   const contentWidth = Math.max(metrics.width, maxX - minX);
   const contentHeight = Math.max(metrics.height, maxY - minY);
-  const width = Math.max(FLOW_WORKSPACE_MIN_WIDTH, Math.ceil(contentWidth + FLOW_WORKSPACE_PADDING * 2));
-  const height = Math.max(FLOW_WORKSPACE_MIN_HEIGHT, Math.ceil(contentHeight + FLOW_WORKSPACE_PADDING * 2));
+  const zoom = state.ui.flowZoom || 1;
+  const viewportLogicalWidth = Math.ceil((els.flowBoard?.clientWidth || FLOW_WORKSPACE_MIN_WIDTH) / zoom);
+  const viewportLogicalHeight = Math.ceil((els.flowBoard?.clientHeight || FLOW_WORKSPACE_MIN_HEIGHT) / zoom);
+  const width = Math.max(
+    FLOW_WORKSPACE_MIN_WIDTH,
+    viewportLogicalWidth + FLOW_WORKSPACE_PADDING * 2,
+    Math.ceil(contentWidth + FLOW_WORKSPACE_PADDING * 2)
+  );
+  const height = Math.max(
+    FLOW_WORKSPACE_MIN_HEIGHT,
+    viewportLogicalHeight + FLOW_WORKSPACE_PADDING * 2,
+    Math.ceil(contentHeight + FLOW_WORKSPACE_PADDING * 2)
+  );
   const offsetX = Math.round((width - contentWidth) / 2) - minX;
   const offsetY = Math.round((height - contentHeight) / 2) - minY;
   return { width, height, minX, minY, maxX, maxY, offsetX, offsetY };
