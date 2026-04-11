@@ -412,7 +412,8 @@ const state = {
     flowZoom: 1,
     currentProjectId: null,
     projectPickerOpen: false,
-    flowBoardBounds: null
+    flowBoardBounds: null,
+    copiedScenePayload: null
   }
 };
 
@@ -791,6 +792,7 @@ function bootstrap() {
   bindSceneEditor();
   bindMonsterEditor();
   bindActions();
+  bindKeyboardShortcuts();
   bindBoardPointerSystem();
   migrateLegacyLocalProjectIfNeeded();
   initializeEmptyWorkspace();
@@ -875,6 +877,64 @@ function bindActions() {
   els.refreshJsonBtn.addEventListener("click", renderJson);
   els.flowZoomOutBtn?.addEventListener("click", () => changeFlowZoom(-FLOW_ZOOM_STEP));
   els.flowZoomInBtn?.addEventListener("click", () => changeFlowZoom(FLOW_ZOOM_STEP));
+}
+
+function bindKeyboardShortcuts() {
+  window.addEventListener("keydown", handleGlobalHotkeys);
+}
+
+function handleGlobalHotkeys(event) {
+  const key = String(event.key || "").toLowerCase();
+  const hasModifier = event.ctrlKey || event.metaKey;
+
+  if (hasModifier && key === "s") {
+    event.preventDefault();
+    saveAdventureProject();
+    return;
+  }
+
+  if (shouldIgnoreGlobalHotkeys(event)) return;
+
+  if (hasModifier && key === "c") {
+    if (!state.selectedSceneId) return;
+    event.preventDefault();
+    copySelectedSceneToClipboard();
+    return;
+  }
+
+  if (hasModifier && key === "v") {
+    if (!state.ui.copiedScenePayload) return;
+    event.preventDefault();
+    pasteCopiedScene();
+    return;
+  }
+
+  if (key === "delete") {
+    if (!state.selectedSceneId) return;
+    event.preventDefault();
+    deleteScene();
+    return;
+  }
+
+  if (!hasModifier && key === "n") {
+    event.preventDefault();
+    createScene();
+    return;
+  }
+
+  if (key === "escape" && state.linkDraft) {
+    event.preventDefault();
+    state.linkDraft = null;
+    renderFlowLinks();
+  }
+}
+
+function shouldIgnoreGlobalHotkeys(event) {
+  if (event.defaultPrevented) return true;
+  if (state.ui.projectPickerOpen) return true;
+  const target = event.target;
+  if (!(target instanceof Element)) return false;
+  return Boolean(target.closest("input, textarea, select, [contenteditable='true'], [contenteditable='']"));
 }
 
 function bindSceneEditor() {
@@ -1253,7 +1313,7 @@ function createScene() {
   const column = (index - 1) % 3;
   const row = Math.floor((index - 1) / 3);
   const scene = {
-    id: createSceneId(index),
+    id: createUniqueSceneId(),
     kind: "description",
     title: `Evento ${index}`,
     openingText: "",
@@ -1271,6 +1331,74 @@ function createScene() {
   if (!state.adventure.startingSceneId) state.adventure.startingSceneId = scene.id;
   state.ui.sceneDirty = true;
   render();
+}
+
+function copySelectedSceneToClipboard() {
+  const scene = getSelectedScene();
+  if (!scene) return;
+  saveCurrentScene({ renderFlow: false });
+  state.ui.copiedScenePayload = cloneValue(scene);
+  updateSceneSaveStatus();
+}
+
+function pasteCopiedScene() {
+  if (!state.ui.copiedScenePayload) return;
+  saveCurrentScene({ renderFlow: false });
+  const scene = cloneValue(state.ui.copiedScenePayload);
+  const duplicated = preparePastedScene(scene);
+  state.adventure.scenes.push(duplicated);
+  const previousSceneId = state.selectedSceneId;
+  state.selectedSceneId = duplicated.id;
+  updateFlowCardSelection(previousSceneId, duplicated.id);
+  render();
+}
+
+function preparePastedScene(scene) {
+  const duplicated = cloneValue(scene);
+  normalizeScene(duplicated);
+  duplicated.id = createUniqueSceneId();
+  duplicated.title = uniqueSceneCopyTitle(duplicated.title || "Evento");
+  duplicated.position = {
+    x: clamp((duplicated.position?.x || 0) + 72, -FLOW_COORD_LIMIT, FLOW_COORD_LIMIT),
+    y: clamp((duplicated.position?.y || 0) + 72, -FLOW_COORD_LIMIT, FLOW_COORD_LIMIT)
+  };
+  duplicated.choices = (duplicated.choices || []).map((choice, index) =>
+    normalizeChoice({ ...choice, id: `choice_${index + 1}` }, index + 1)
+  );
+  outcomeKeysForScene(duplicated).forEach((key) => {
+    const branch = getOutcomeBranch(duplicated, key);
+    branch.choices = (branch.choices || []).map((choice, index) =>
+      normalizeChoice({ ...choice, id: `choice_${index + 1}` }, index + 1)
+    );
+  });
+  duplicateCombatMonstersForScene(duplicated);
+  return duplicated;
+}
+
+function duplicateCombatMonstersForScene(scene) {
+  if (!Array.isArray(scene.combatGroups) || !scene.combatGroups.length) return;
+  const duplicatedMonsterIds = new Map();
+  scene.combatGroups = scene.combatGroups.map((group) => {
+    const monsterId = normalizeString(group.monsterId);
+    if (!monsterId) return { ...group };
+    if (!duplicatedMonsterIds.has(monsterId)) {
+      const monster = state.adventure.encounters.find((entry) => entry.id === monsterId);
+      if (!monster) {
+        duplicatedMonsterIds.set(monsterId, monsterId);
+      } else {
+        const copy = cloneValue(monster);
+        copy.id = createUniqueMonsterId();
+        copy.name = uniqueMonsterName(monster.name);
+        copy.loot = (copy.loot || []).map((loot) => normalizeLoot(loot));
+        state.adventure.encounters.push(copy);
+        duplicatedMonsterIds.set(monsterId, copy.id);
+      }
+    }
+    return {
+      ...group,
+      monsterId: duplicatedMonsterIds.get(monsterId)
+    };
+  });
 }
 
 function deleteScene() {
@@ -1303,7 +1431,7 @@ function deleteScene() {
 function createMonster({ renderAfter = true } = {}) {
   const index = state.adventure.encounters.length + 1;
   const monster = {
-    id: `monster_${index}`,
+    id: createUniqueMonsterId(),
     name: `Mostro ${index}`,
     description: "",
     hitPoints: 10,
@@ -1342,8 +1470,7 @@ function createMonsterFromPreset() {
     return createMonster();
   }
 
-  const index = state.adventure.encounters.length + 1;
-  const monster = createMonsterFromPresetData(preset, `monster_${index}`);
+  const monster = createMonsterFromPresetData(preset, createUniqueMonsterId());
   state.adventure.encounters.push(monster);
   state.selectedMonsterId = monster.id;
   render();
@@ -3497,8 +3624,46 @@ function uniqueMonsterName(baseName) {
   return `${baseName} ${copyIndex}`;
 }
 
+function uniqueSceneCopyTitle(baseName) {
+  const normalizedBase = normalizeString(baseName) || "Evento";
+  const existingTitles = new Set(state.adventure.scenes.map((entry) => entry.title));
+  const initialCopyTitle = `${normalizedBase} copia`;
+  if (!existingTitles.has(initialCopyTitle)) return initialCopyTitle;
+
+  let copyIndex = 2;
+  while (existingTitles.has(`${initialCopyTitle} ${copyIndex}`)) {
+    copyIndex += 1;
+  }
+  return `${initialCopyTitle} ${copyIndex}`;
+}
+
+function createUniqueSceneId() {
+  const existingIds = new Set(state.adventure.scenes.map((scene) => scene.id));
+  let index = Math.max(1, state.adventure.scenes.length + 1);
+  while (existingIds.has(createSceneId(index))) {
+    index += 1;
+  }
+  return createSceneId(index);
+}
+
+function createUniqueMonsterId() {
+  const existingIds = new Set(state.adventure.encounters.map((monster) => monster.id));
+  let index = Math.max(1, state.adventure.encounters.length + 1);
+  while (existingIds.has(`monster_${index}`)) {
+    index += 1;
+  }
+  return `monster_${index}`;
+}
+
 function createSceneId(index) {
   return `scene_${index}`;
+}
+
+function cloneValue(value) {
+  if (typeof structuredClone === "function") {
+    return structuredClone(value);
+  }
+  return JSON.parse(JSON.stringify(value));
 }
 
 function slugify(text) {
