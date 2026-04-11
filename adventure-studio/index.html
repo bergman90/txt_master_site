@@ -344,7 +344,7 @@
       <label>Quantita<input data-field="quantity" type="number" min="1" value="1"></label>
       <div class="button-row loot-actions">
         <button data-action="approve-loot" type="button" class="small">Approva loot</button>
-        <button data-action="remove-loot" class="danger small">Rimuovi loot</button>
+        <button data-action="remove-loot" type="button" class="danger small">Rimuovi loot</button>
       </div>
     </details>
   </template>
@@ -357,6 +357,7 @@
           <small data-role="group-meta">Quantita 1</small>
           <small data-role="group-tag">Custom</small>
           <small data-role="group-mode">Modifica mostro</small>
+          <button type="button" data-action="edit-loot-inline" class="summary-link-btn">Modifica loot</button>
         </div>
       </summary>
       <p class="hint monster-card-hint">Scegli un mostro oppure creane uno nuovo. Dopo la selezione la card si compatta da sola.</p>

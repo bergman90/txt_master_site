@@ -597,6 +597,7 @@ button.small {
   align-items: center;
   gap: 12px;
   color: var(--muted);
+  flex-wrap: wrap;
 }
 
 .combat-group-summary-meta small:last-child {
@@ -632,6 +633,23 @@ button.small {
 
 .loot-summary-meta small:last-child {
   color: var(--accent);
+}
+
+.summary-link-btn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  padding: 0;
+  cursor: pointer;
+}
+
+.summary-link-btn:hover,
+.summary-link-btn:focus-visible {
+  color: #f0c789;
+  text-decoration: underline;
+  outline: none;
 }
 
 .loot-actions {

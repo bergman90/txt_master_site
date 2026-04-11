@@ -1271,12 +1271,10 @@ function onBoardPointerMove(event) {
   }
 
   if (state.linkDraft) {
-    const point = flowBoardPointFromClient(event);
-    state.linkDraft.current = {
-      x: point.x,
-      y: point.y
-    };
-    scheduleFlowLinksRender();
+    state.linkDraft.pointerClientX = event.clientX;
+    state.linkDraft.pointerClientY = event.clientY;
+    updateLinkDraftPosition(event.clientX, event.clientY);
+    ensureFlowAutoScrollLoop();
   }
 }
 
@@ -1289,6 +1287,9 @@ function onBoardPointerUp(event) {
     return;
   }
 
+  if (state.linkDraft) {
+    stopFlowAutoScrollLoop();
+  }
   if (!state.linkDraft) return;
 
   const targetNode = event.target.closest(".node-card");
@@ -1321,6 +1322,16 @@ function updateDraggedScenePosition(clientX, clientY) {
   scheduleFlowLinksRender("drag");
 }
 
+function updateLinkDraftPosition(clientX, clientY) {
+  if (!state.linkDraft) return;
+  const point = flowBoardPointFromClient({ clientX, clientY });
+  state.linkDraft.current = {
+    x: point.x,
+    y: point.y
+  };
+  scheduleFlowLinksRender("drag");
+}
+
 function finalizeFlowDrag() {
   const nextBounds = computeBoardBounds();
   const previousBounds = state.ui.flowBoardBounds || nextBounds;
@@ -1349,12 +1360,13 @@ function stopFlowAutoScrollLoop() {
 
 function stepFlowAutoScroll() {
   state.ui.flowAutoScrollFrame = null;
-  if (!state.drag || !els.flowBoard) return;
+  if ((!state.drag && !state.linkDraft) || !els.flowBoard) return;
 
   const board = els.flowBoard;
   const rect = board.getBoundingClientRect();
-  const clientX = state.drag.pointerClientX;
-  const clientY = state.drag.pointerClientY;
+  const pointerSource = state.drag || state.linkDraft;
+  const clientX = pointerSource?.pointerClientX;
+  const clientY = pointerSource?.pointerClientY;
   if (typeof clientX !== "number" || typeof clientY !== "number") return;
 
   const deltaX = computeFlowAutoScrollDelta(clientX - rect.left, rect.width);
@@ -1363,10 +1375,11 @@ function stepFlowAutoScroll() {
   if (deltaX !== 0 || deltaY !== 0) {
     board.scrollLeft += deltaX;
     board.scrollTop += deltaY;
-    updateDraggedScenePosition(clientX, clientY);
+    if (state.drag) updateDraggedScenePosition(clientX, clientY);
+    if (state.linkDraft) updateLinkDraftPosition(clientX, clientY);
   }
 
-  if (state.drag) {
+  if (state.drag || state.linkDraft) {
     state.ui.flowAutoScrollFrame = window.requestAnimationFrame(stepFlowAutoScroll);
   }
 }
@@ -1732,7 +1745,9 @@ function addSceneLoot() {
   const scene = getSelectedScene();
   if (!scene) return;
   scene.sceneLoot.push(createLootFromPreset(els.lootPresetSelect.value));
-  render();
+  markSceneDirty();
+  renderSceneLoot(scene);
+  scheduleJsonRender(180);
 }
 
 function addStarterKitLoot() {
@@ -1744,7 +1759,10 @@ function addMonsterLoot() {
   const monster = getSelectedMonster();
   if (!monster) return;
   monster.loot.push(createLootFromPreset(els.lootPresetSelect.value));
-  render();
+  markSceneDirty();
+  renderMonsterLootEditor(monster);
+  scheduleMonsterListRender();
+  scheduleJsonRender(180);
 }
 
 function addCombatGroup() {
@@ -2062,7 +2080,9 @@ function syncFlowCard(card, scene, index, bounds = getCurrentFlowBoardBounds()) 
     state.linkDraft = {
       sceneId,
       start,
-      current: { ...start }
+      current: { ...start },
+      pointerClientX: event.clientX,
+      pointerClientY: event.clientY
     };
     scheduleFlowLinksRender("drag");
   });
@@ -2479,10 +2499,16 @@ function renderSceneEditor() {
   hydrateSkillSelect(els.sceneCheckSkill, scene.checkConfig?.skill || "");
   els.sceneCheckDifficulty.value = scene.checkConfig?.difficulty ?? 10;
 
-  renderLootList(els.sceneLootList, scene.sceneLoot, render);
+  renderSceneLoot(scene);
   if (useGenericChoices) renderChoices(scene);
   else renderOutcomeEditor(scene);
   renderCombatGroups(scene);
+}
+
+function renderSceneLoot(scene) {
+  renderLootList(els.sceneLootList, scene.sceneLoot, {
+    rerender: () => renderSceneLoot(scene)
+  });
 }
 
 function renderSceneImagePreview(scene) {
@@ -2746,6 +2772,7 @@ function renderCombatGroups(scene) {
     const meta = node.querySelector('[data-role="group-meta"]');
     const tag = node.querySelector('[data-role="group-tag"]');
     const mode = node.querySelector('[data-role="group-mode"]');
+    const lootAction = node.querySelector('[data-action="edit-loot-inline"]');
     const hint = node.querySelector(".monster-card-hint");
     const preview = node.querySelector('[data-role="preview"]');
     const inlineEditor = node.querySelector(".monster-inline-editor");
@@ -2765,10 +2792,12 @@ function renderCombatGroups(scene) {
       const monster = resolveMonster();
       title.textContent = monster?.name || "Mostro della scena";
       meta.textContent = monster
-        ? `Quantita ${group.count ?? 1} | HP ${monster.hitPoints}`
+        ? `Quantita ${group.count ?? 1} | HP ${monster.hitPoints} | Loot ${(monster.loot || []).length}`
         : `Quantita ${group.count ?? 1}`;
       tag.textContent = monster?.sourceType === "preset" ? "Preset" : "Custom";
       mode.textContent = node.open ? "Vista compatta" : "Modifica mostro";
+      lootAction.textContent = monster ? "Modifica loot" : "Loot";
+      lootAction.disabled = !monster;
       hint.textContent = node.open
         ? "Modifica i dettagli del mostro e richiudi la card quando hai finito."
         : "Card compatta. Clicca la testata per riaprire la modifica.";
@@ -2799,7 +2828,7 @@ function renderCombatGroups(scene) {
       markSceneDirty();
       renderCombatGroups(scene);
       renderMonsterList();
-      renderJson();
+      scheduleJsonRender(180);
     });
     countField.addEventListener("input", (event) => {
       group.count = Number(event.target.value || 1);
@@ -2824,6 +2853,16 @@ function renderCombatGroups(scene) {
     node.querySelector('[data-action="collapse-group"]').addEventListener("click", () => {
       group.expanded = false;
       renderCombatGroups(scene);
+    });
+    lootAction.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const monster = resolveMonster();
+      if (!monster) return;
+      group.expanded = true;
+      node.open = true;
+      updateGroupHeader();
+      node.querySelector('[data-role="monster-loot-list"]')?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     });
 
     inlineEditor.classList.toggle("hidden", !monster);
@@ -2850,15 +2889,21 @@ function renderCombatGroups(scene) {
         });
       });
 
-      renderLootList(node.querySelector('[data-role="monster-loot-list"]'), monster.loot, () => {
-        renderCombatGroups(scene);
-        renderMonsterList();
+      renderLootList(node.querySelector('[data-role="monster-loot-list"]'), monster.loot, {
+        rerender: () => renderCombatGroups(scene),
+        onChange: () => {
+          markSceneDirty();
+          updateGroupHeader();
+          scheduleMonsterListRender();
+          scheduleJsonRender();
+        }
       });
       node.querySelector('[data-action="add-monster-loot-inline"]').addEventListener("click", () => {
         monster.loot.push(createLootFromPreset(els.lootPresetSelect.value));
         markSceneDirty();
         renderCombatGroups(scene);
-        renderJson();
+        scheduleMonsterListRender();
+        scheduleJsonRender(180);
       });
     }
 
@@ -2902,10 +2947,27 @@ function renderMonsterEditor() {
   els.monsterDamageMin.value = monster.damageMin;
   els.monsterDamageMax.value = monster.damageMax;
 
-  renderLootList(els.monsterLootList, monster.loot, render);
+  renderMonsterLootEditor(monster);
 }
 
-function renderLootList(container, items, rerender) {
+function renderMonsterLootEditor(monster) {
+  renderLootList(els.monsterLootList, monster.loot, {
+    rerender: () => renderMonsterLootEditor(monster),
+    onChange: () => {
+      markSceneDirty();
+      scheduleMonsterListRender();
+      scheduleJsonRender();
+    }
+  });
+}
+
+function renderLootList(container, items, options = {}) {
+  const normalizedOptions = typeof options === "function" ? { rerender: options } : (options || {});
+  const rerender = normalizedOptions.rerender || (() => {});
+  const onChange = normalizedOptions.onChange || (() => {
+    markSceneDirty();
+    scheduleJsonRender();
+  });
   container.innerHTML = "";
   items.forEach((loot, index) => {
     const node = document.getElementById("loot-template").content.firstElementChild.cloneNode(true);
@@ -2952,7 +3014,9 @@ function renderLootList(container, items, rerender) {
       loot.expanded = node.open;
       updateLootHeader();
     });
-    node.querySelector('[data-action="approve-loot"]').addEventListener("click", () => {
+    node.querySelector('[data-action="approve-loot"]').addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
       loot.expanded = false;
       rerender();
     });
@@ -2979,9 +3043,8 @@ function renderLootList(container, items, rerender) {
         loot.itemName = "";
         customItemIdInput.value = loot.itemId || "";
       }
-      markSceneDirty();
       updateLootHeader();
-      scheduleJsonRender();
+      onChange();
     });
     customInput.addEventListener("input", (event) => {
       if (select.value !== "custom") return;
@@ -2991,55 +3054,49 @@ function renderLootList(container, items, rerender) {
         loot.itemId = generatedId;
         customItemIdInput.value = generatedId;
       }
-      markSceneDirty();
       updateLootHeader();
-      scheduleJsonRender();
+      onChange();
     });
     customItemIdInput.addEventListener("input", (event) => {
       if (select.value !== "custom") return;
       loot.itemId = normalizeString(event.target.value) || "";
-      markSceneDirty();
       updateLootHeader();
-      scheduleJsonRender();
+      onChange();
     });
     categorySelect.addEventListener("change", (event) => {
       loot.category = normalizeString(event.target.value) || "";
-      markSceneDirty();
-      scheduleJsonRender();
+      onChange();
     });
     lockIdInput.addEventListener("input", (event) => {
       loot.lockId = normalizeString(event.target.value) || "";
-      markSceneDirty();
-      scheduleJsonRender();
+      onChange();
     });
     questItemInput.addEventListener("change", (event) => {
       loot.questItem = Boolean(event.target.checked);
-      markSceneDirty();
       updateLootHeader();
-      scheduleJsonRender();
+      onChange();
     });
     raritySelect.addEventListener("change", (event) => {
       loot.rarity = normalizeString(event.target.value) || "common";
-      markSceneDirty();
       updateLootHeader();
-      scheduleJsonRender();
+      onChange();
     });
     effectSelect.addEventListener("change", (event) => {
       const effectId = normalizeString(event.target.value) || "";
       loot.effectIds = effectId ? [effectId] : [];
       syncLootEffectMeta(effectId, familyField, triggerField);
-      markSceneDirty();
-      scheduleJsonRender();
+      onChange();
     });
     quantityField.addEventListener("input", (event) => {
       loot.quantity = Number(event.target.value || 1);
-      markSceneDirty();
       updateLootHeader();
-      scheduleJsonRender();
+      onChange();
     });
-    node.querySelector('[data-action="remove-loot"]').addEventListener("click", () => {
+    node.querySelector('[data-action="remove-loot"]').addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
       items.splice(index, 1);
-      markSceneDirty();
+      onChange();
       rerender();
     });
 
