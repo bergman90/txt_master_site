@@ -2714,7 +2714,7 @@ function scheduleMonsterListRender(delay = 90) {
   }, delay);
 }
 
-function exportJson() {
+async function exportJson() {
   const cleaned = cleanAdventure(state.adventure);
   const validation = validateAdventure(state.adventure, cleaned, { strictAlpha: state.ui.strictAlpha });
   renderValidation(validation);
@@ -2723,11 +2723,37 @@ function exportJson() {
     return;
   }
   const payload = JSON.stringify(cleaned, null, 2);
+  const suggestedName = `${slugify(state.adventure.title || "adventure")}.json`;
+
+  if (typeof window.showSaveFilePicker === "function") {
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName,
+        types: [
+          {
+            description: "Adventure Studio JSON",
+            accept: {
+              "application/json": [".json"]
+            }
+          }
+        ]
+      });
+      const writable = await handle.createWritable();
+      await writable.write(payload);
+      await writable.close();
+      window.alert("JSON esportato con successo.");
+      return;
+    } catch (error) {
+      if (error?.name === "AbortError") return;
+      window.alert("Esportazione con finestra di salvataggio non riuscita. Provo con il download classico.");
+    }
+  }
+
   const blob = new Blob([payload], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = `${slugify(state.adventure.title || "adventure")}.json`;
+  anchor.download = suggestedName;
   anchor.click();
   URL.revokeObjectURL(url);
 }
