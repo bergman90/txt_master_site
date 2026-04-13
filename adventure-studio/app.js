@@ -586,7 +586,6 @@ function openAdventureProject(payload, {
   render();
   renderProjectPicker();
   showProjectPicker(false);
-  maybeShowTutorial();
 }
 
 function updateDocumentTitle() {
@@ -1008,6 +1007,7 @@ function bindActions() {
   els.refreshJsonBtn.addEventListener("click", renderJson);
   els.flowZoomOutBtn?.addEventListener("click", () => changeFlowZoom(-FLOW_ZOOM_STEP));
   els.flowZoomInBtn?.addEventListener("click", () => changeFlowZoom(FLOW_ZOOM_STEP));
+  document.getElementById("tutorial-open-btn")?.addEventListener("click", showTutorial);
 }
 
 function bindKeyboardShortcuts() {
