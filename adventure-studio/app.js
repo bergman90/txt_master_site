@@ -743,6 +743,7 @@ function showProjectPicker(visible) {
   if (els.closeProjectPickerBtn) {
     els.closeProjectPickerBtn.disabled = !state.ui.currentProjectId;
   }
+  if (!visible) maybeShowTutorial();
 }
 
 const els = {
@@ -872,7 +873,6 @@ function bootstrap() {
   render();
   renderProjectPicker();
   showProjectPicker(true);
-  maybeShowTutorial();
 }
 
 function bindTutorial() {
