@@ -984,7 +984,10 @@ function bindActions() {
   els.createProjectBtn?.addEventListener("click", createFreshProjectFromScratch);
   els.pickerImportJsonBtn?.addEventListener("click", () => els.importJsonInput.click());
   els.closeProjectPickerBtn?.addEventListener("click", () => {
-    if (!state.ui.currentProjectId) return;
+    if (!state.ui.currentProjectId) {
+      createFreshProjectFromScratch();
+      return;
+    }
     showProjectPicker(false);
   });
   els.addMonsterFromPresetBtn.addEventListener("click", createMonsterFromPreset);
