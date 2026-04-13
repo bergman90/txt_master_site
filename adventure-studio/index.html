@@ -3,10 +3,60 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Adventure Studio</title>
+  <title>Adventure Studio — .txt-Master</title>
+  <meta name="description" content="Editor visuale per creare avventure dark fantasy compatibili con .txt-Master. Nodi drag-and-drop, combattimenti, loot e export JSON diretto.">
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
+
+  <!-- Tutorial overlay (shown on first visit) -->
+  <div id="tutorial-overlay" class="tutorial-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="tutorial-title">
+    <div class="tutorial-card">
+      <h2 id="tutorial-title">Benvenuto in Adventure Studio</h2>
+      <p>Crea avventure dark fantasy compatibili con .txt-Master in pochi passi.</p>
+      <ul class="tutorial-steps">
+        <li>
+          <span class="tutorial-step-icon">1</span>
+          <span>Premi <strong>Nuovo evento</strong> o usa il tasto <kbd>N</kbd> per aggiungere nodi alla mappa del flusso.</span>
+        </li>
+        <li>
+          <span class="tutorial-step-icon">2</span>
+          <span>Clicca un nodo per aprire l'editor: aggiungi testo, scelte, mostri e loot.</span>
+        </li>
+        <li>
+          <span class="tutorial-step-icon">3</span>
+          <span>Trascina il pallino arancione a destra di un nodo verso un altro per collegare le scene.</span>
+        </li>
+        <li>
+          <span class="tutorial-step-icon">4</span>
+          <span>Usa <strong>Salva avventura</strong> (o <kbd>Ctrl+S</kbd>) per salvare localmente nel browser in qualsiasi momento.</span>
+        </li>
+        <li>
+          <span class="tutorial-step-icon">5</span>
+          <span>Premi <strong>Esporta JSON</strong> per ottenere il file compatibile con l'app Android.</span>
+        </li>
+      </ul>
+      <div class="tutorial-footer">
+        <p class="hint">Puoi riaprire questo tutorial dal tasto <strong>?</strong> in basso a destra.</p>
+        <button id="tutorial-close-btn" type="button">Inizia</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hotkey badge -->
+  <button id="hotkey-badge-btn" class="hotkey-badge" type="button" title="Scorciatoie da tastiera" aria-label="Mostra scorciatoie">?</button>
+  <div id="hotkey-panel" class="hotkey-panel hidden" role="tooltip">
+    <h4>Scorciatoie</h4>
+    <ul class="hotkey-list">
+      <li><span>Nuovo evento</span><kbd>N</kbd></li>
+      <li><span>Salva avventura</span><kbd>Ctrl+S</kbd></li>
+      <li><span>Copia evento</span><kbd>Ctrl+C</kbd></li>
+      <li><span>Incolla evento</span><kbd>Ctrl+V</kbd></li>
+      <li><span>Elimina evento</span><kbd>Canc</kbd></li>
+      <li><span>Chiudi pannello</span><kbd>Esc</kbd></li>
+    </ul>
+  </div>
+
   <div id="project-picker-overlay" class="project-picker-overlay hidden">
     <div class="project-picker panel">
       <div class="panel-header project-picker-header">
@@ -28,77 +78,78 @@
   </div>
   <div class="app-shell flow-shell">
     <aside class="sidebar">
-      <div class="brand">
-        <div class="brand-mark">AS</div>
-        <div>
-          <h1>Adventure Studio</h1>
-          <p>Forge per avventure dark fantasy</p>
+      <div class="sidebar-scroll-area">
+        <div class="brand">
+          <div class="brand-mark">AS</div>
+          <div>
+            <h1>Adventure Studio</h1>
+            <p>Forge per avventure dark fantasy</p>
+          </div>
         </div>
-      </div>
-      <p class="sidebar-intro">Editor visuale per creare, salvare ed esportare avventure compatibili con .txt-Master.</p>
-      <div class="sidebar-sticky-actions sidebar-sticky-actions--top">
-        <button id="save-adventure-btn" type="button" class="save-project-btn">Salva avventura</button>
-        <p class="hint">Salva il progetto locale completo, inclusi nodi, immagini e metadata dell'editor.</p>
-      </div>
+        <p class="sidebar-intro">Editor visuale per creare, salvare ed esportare avventure compatibili con .txt-Master.</p>
 
-      <div class="panel">
-        <h2>Avventura</h2>
-        <label>Titolo<input id="adventure-title" type="text" placeholder="La Cripta di Cenere"></label>
-        <label>Descrizione<textarea id="adventure-description" rows="4"></textarea></label>
-        <div class="subsection">
-          <div class="subsection-header">
-            <h4>Tag grimorio</h4>
+        <div class="panel">
+          <h2>Avventura</h2>
+          <label>Titolo<input id="adventure-title" type="text" placeholder="La Cripta di Cenere"></label>
+          <label>Descrizione<textarea id="adventure-description" rows="4"></textarea></label>
+          <div class="subsection">
+            <div class="subsection-header">
+              <h4>Tag grimorio</h4>
+            </div>
+            <div class="three-col compact-tags-grid">
+              <label>Tag 1<input id="adventure-tag-1" type="text" placeholder="torbiera"></label>
+              <label>Tag 2<input id="adventure-tag-2" type="text" placeholder="abbazia"></label>
+              <label>Tag 3<input id="adventure-tag-3" type="text" placeholder="mistero"></label>
+            </div>
+            <p class="hint">Massimo 3 tag, una sola parola ciascuno.</p>
           </div>
-          <div class="three-col compact-tags-grid">
-            <label>Tag 1<input id="adventure-tag-1" type="text" placeholder="torbiera"></label>
-            <label>Tag 2<input id="adventure-tag-2" type="text" placeholder="abbazia"></label>
-            <label>Tag 3<input id="adventure-tag-3" type="text" placeholder="mistero"></label>
+          <label>Moltiplicatore adattivo per livello<input id="adventure-adaptive-multiplier" type="number" min="0" max="0.35" step="0.01" value="0.12"></label>
+          <p class="hint">Scala prove e combattimenti in base al livello del personaggio. `0.12` e un valore consigliato per una crescita morbida.</p>
+          <div class="subsection compact-project-tools">
+            <label class="compact-inline-select">
+              <span>Esempio rapido</span>
+              <select id="example-adventure-select"></select>
+            </label>
+            <div class="compact-project-actions">
+              <button id="load-example-btn" type="button">Apri esempio</button>
+              <button id="import-json-btn" type="button">Importa JSON</button>
+              <input id="import-json-input" type="file" accept=".json,application/json" class="hidden-file-input">
+            </div>
+            <p class="hint">Apri un esempio o importa un JSON esistente senza occupare spazio extra nella sidebar.</p>
           </div>
-          <p class="hint">Massimo 3 tag, una sola parola ciascuno.</p>
-        </div>
-        <label>Moltiplicatore adattivo per livello<input id="adventure-adaptive-multiplier" type="number" min="0" max="0.35" step="0.01" value="0.12"></label>
-        <p class="hint">Scala prove e combattimenti in base al livello del personaggio. `0.12` e un valore consigliato per una crescita morbida.</p>
-        <div class="subsection compact-project-tools">
-          <label class="compact-inline-select">
-            <span>Esempio rapido</span>
-            <select id="example-adventure-select"></select>
-          </label>
-          <div class="compact-project-actions">
-            <button id="load-example-btn" type="button">Apri esempio</button>
-            <button id="import-json-btn" type="button">Importa JSON</button>
-            <input id="import-json-input" type="file" accept=".json,application/json" class="hidden-file-input">
+          <label class="checkbox-line"><input id="adventure-carry-over" type="checkbox" checked> Consenti equipaggiamento pregresso</label>
+          <label class="checkbox-line"><input id="adventure-fresh-start" type="checkbox" checked> Consenti fresh start</label>
+          <label class="checkbox-line"><input id="alpha-strict-validation" type="checkbox" checked> Modalita alpha severa</label>
+          <div class="button-row">
+            <button id="restore-local-btn" type="button">Archivio progetti</button>
+            <button id="reset-project-btn" type="button" class="danger">Nuovo progetto</button>
           </div>
-          <p class="hint">Apri un esempio o importa un JSON esistente senza occupare spazio extra nella sidebar.</p>
-        </div>
-        <label class="checkbox-line"><input id="adventure-carry-over" type="checkbox" checked> Consenti equipaggiamento pregresso</label>
-        <label class="checkbox-line"><input id="adventure-fresh-start" type="checkbox" checked> Consenti fresh start</label>
-        <label class="checkbox-line"><input id="alpha-strict-validation" type="checkbox" checked> Modalita alpha severa</label>
-        <div class="button-row">
-          <button id="restore-local-btn" type="button">Archivio progetti</button>
-          <button id="reset-project-btn" type="button" class="danger">Nuovo progetto</button>
-        </div>
-        <p id="autosave-indicator" class="hint">Autosave locale inattivo.</p>
-        <details class="subsection panel-collapsible compact-section">
-          <summary class="panel-summary compact-summary">
-            <span>Starter kit</span>
-            <small>Opzionale</small>
-          </summary>
-          <div class="subsection-header">
-            <button id="add-starter-kit-btn" type="button">Aggiungi oggetto al kit</button>
+          <p id="autosave-indicator" class="hint">Autosave locale inattivo.</p>
+          <details class="subsection panel-collapsible compact-section">
+            <summary class="panel-summary compact-summary">
+              <span>Starter kit</span>
+              <small>Opzionale</small>
+            </summary>
+            <div class="subsection-header">
+              <button id="add-starter-kit-btn" type="button">Aggiungi oggetto al kit</button>
+            </div>
+            <div id="starter-kit-list"></div>
+          </details>
+          <div class="sidebar-primary-actions">
+            <button id="validate-adventure-btn" type="button">Controlla avventura</button>
+            <button id="export-json-btn">Esporta JSON</button>
           </div>
-          <div id="starter-kit-list"></div>
-        </details>
-        <div class="sidebar-primary-actions">
-          <button id="validate-adventure-btn" type="button">Controlla avventura</button>
-          <button id="export-json-btn">Esporta JSON</button>
-        </div>
-        <div class="subsection">
-          <div class="subsection-header">
-            <h4>Validazione export</h4>
+          <div class="subsection">
+            <div class="subsection-header">
+              <h4>Validazione export</h4>
+            </div>
+            <div id="validation-summary" class="validation-summary"></div>
+            <ul id="validation-list" class="validation-list"></ul>
           </div>
-          <div id="validation-summary" class="validation-summary"></div>
-          <ul id="validation-list" class="validation-list"></ul>
         </div>
+      </div>
+      <div class="sidebar-footer">
+        <button id="save-adventure-btn" type="button" class="save-project-btn">Salva avventura</button>
       </div>
     </aside>
 
@@ -258,11 +309,25 @@
             <label>Descrizione<textarea id="monster-description" rows="4"></textarea></label>
             <div class="two-col">
               <label>HP<input id="monster-hp" type="number" min="1"></label>
-              <label>Attack Bonus<input id="monster-attack" type="number"></label>
-              <label>Defense<input id="monster-defense" type="number"></label>
-              <label>Gold Reward<input id="monster-gold" type="number" min="0"></label>
-              <label>Damage Min<input id="monster-damage-min" type="number" min="0"></label>
-              <label>Damage Max<input id="monster-damage-max" type="number" min="0"></label>
+              <label>Bonus attacco<input id="monster-attack" type="number"></label>
+              <label>Difesa<input id="monster-defense" type="number"></label>
+              <label>Ricompensa oro<input id="monster-gold" type="number" min="0"></label>
+              <label>Danno min<input id="monster-damage-min" type="number" min="0"></label>
+              <label>Danno max<input id="monster-damage-max" type="number" min="0"></label>
+            </div>
+            <div class="subsection">
+              <div class="subsection-header">
+                <h4>Abilita speciali</h4>
+              </div>
+              <div class="two-col">
+                <label class="checkbox-line"><input id="monster-ability-howl" type="checkbox" value="enemy_howl_of_dread"> Urlo di Rovina</label>
+                <label class="checkbox-line"><input id="monster-ability-charge" type="checkbox" value="enemy_brutal_charge"> Carica Brutale</label>
+                <label class="checkbox-line"><input id="monster-ability-claws" type="checkbox" value="enemy_draining_claws"> Artigli Famelici</label>
+                <label class="checkbox-line"><input id="monster-ability-regen" type="checkbox" value="enemy_regenerate"> Rigenerazione</label>
+                <label class="checkbox-line"><input id="monster-ability-armorbreak" type="checkbox" value="enemy_armor_break"> Spezza Armatura</label>
+                <label class="checkbox-line"><input id="monster-ability-enrage" type="checkbox" value="enemy_enrage"> Furia Crescente</label>
+              </div>
+              <label class="checkbox-line"><input id="monster-berserker-phase" type="checkbox"> Fase Berserk (sotto 20% HP: ATK +4, DEF ignorata)</label>
             </div>
             <div class="subsection">
               <div class="subsection-header">
@@ -374,11 +439,11 @@
         <label>Descrizione<textarea data-field="monsterDescription" rows="3"></textarea></label>
         <div class="two-col">
           <label>HP<input data-field="monsterHp" type="number" min="1"></label>
-          <label>Attack Bonus<input data-field="monsterAttack" type="number"></label>
-          <label>Defense<input data-field="monsterDefense" type="number"></label>
-          <label>Gold Reward<input data-field="monsterGold" type="number" min="0"></label>
-          <label>Damage Min<input data-field="monsterDamageMin" type="number" min="0"></label>
-          <label>Damage Max<input data-field="monsterDamageMax" type="number" min="0"></label>
+          <label>Bonus attacco<input data-field="monsterAttack" type="number"></label>
+          <label>Difesa<input data-field="monsterDefense" type="number"></label>
+          <label>Ricompensa oro<input data-field="monsterGold" type="number" min="0"></label>
+          <label>Danno min<input data-field="monsterDamageMin" type="number" min="0"></label>
+          <label>Danno max<input data-field="monsterDamageMax" type="number" min="0"></label>
         </div>
         <div class="subsection">
           <div class="subsection-header">

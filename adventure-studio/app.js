@@ -73,14 +73,18 @@ const EFFECT_PRESETS = [
   { value: "defense_surge", label: "Impulso difensivo", family: "combat_defense", trigger: "consumable", description: "Aumenta la difesa o offre una protezione temporanea. Funziona bene su scudi, armature, reliquie o consumabili tattici.", categories: ["consumable", "shield", "armor", "helm", "cloak", "relic"] },
   { value: "bonus_damage", label: "Bonus danno", family: "combat_offense", trigger: "on_hit", description: "Aggiunge danno bonus ai colpi andati a segno. Ideale per armi o reliquie offensive.", categories: ["weapon", "relic", "ring"] },
   { value: "fatigue_relief", label: "Sollievo fatica", family: "combat_tempo", trigger: "passive", description: "Riduce il peso della fatica o migliora la gestione della stamina in modo passivo.", categories: ["utility", "consumable", "ring", "cloak", "boots", "relic"] },
-  { value: "recover_boost", label: "Recupero potenziato", family: "survival_recovery", trigger: "on_recover", description: "Rende piu efficace l'azione di recupero fiato o rigenera qualcosa nel tempo.", categories: ["consumable", "utility", "ring", "cloak", "relic"] },
-  { value: "crit_guard", label: "Guardia anti-critico", family: "combat_defense", trigger: "passive", description: "Riduce il rischio o l'impatto dei colpi critici subiti. Adatto a equipaggiamento difensivo.", categories: ["shield", "armor", "helm", "cloak", "relic"] },
-  { value: "ember_retaliation", label: "Ritorsione ardente", family: "combat_defense", trigger: "on_defend", description: "Restituisce una risposta offensiva o un contraccolpo quando difendi.", categories: ["shield", "armor", "relic"] },
+  { value: "recover_boost", label: "Recupero potenziato", family: "survival_recovery", trigger: "on_recover", description: "Rende piu efficace l'azione di recupero fiato. Su bastoni rituali (stile=ritual) si attiva anche quando difendi.", categories: ["weapon", "consumable", "utility", "ring", "cloak", "boots", "relic"] },
+  { value: "crit_guard", label: "Guardia anti-critico", family: "combat_defense", trigger: "passive", description: "Riduce il rischio o l'impatto dei colpi critici subiti.", categories: ["weapon", "shield", "armor", "helm", "cloak", "relic"] },
+  { value: "ember_retaliation", label: "Ritorsione ardente", family: "combat_defense", trigger: "on_defend", description: "Restituisce una risposta offensiva o un contraccolpo quando difendi.", categories: ["shield", "armor", "helm", "boots", "relic"] },
   { value: "escape", label: "Ritirata rapida", family: "combat_tempo", trigger: "active_combat", description: "Aiuta la fuga o migliora la ritirata tattica in combattimento.", categories: ["boots", "cloak", "consumable", "utility", "relic"] },
-  { value: "guaranteed_crit", label: "Critico assicurato", family: "combat_offense", trigger: "on_crit", description: "Garantisce o prepara un colpo critico. Molto adatto ad armi uniche o reliquie d'assalto.", categories: ["weapon", "relic"] },
-  { value: "key_access", label: "Accesso narrativo", family: "narrative_key", trigger: "on_choice", description: "Sblocca passaggi, porte o rami narrativi specifici. Va usato su chiavi, sigilli o reliquie narrative.", categories: ["key", "relic", "quest"] },
-  { value: "trade_value", label: "Valore commerciale", family: "economy_loot", trigger: "passive", description: "Aumenta il valore economico percepito dell'oggetto o il suo peso commerciale.", categories: ["treasure", "relic", "utility", "key", "quest"] },
-  { value: "check_bonus", label: "Bonus alle prove", family: "skill_check", trigger: "passive", description: "Concede un bonus alle prove o ai check. Perfetto per pergamene, talismani e strumenti speciali.", categories: ["treasure", "relic", "ring", "cloak", "utility", "consumable"] }
+  { value: "guaranteed_crit", label: "Critico assicurato", family: "combat_offense", trigger: "on_crit", description: "Garantisce o potenzia un colpo critico. Adatto ad armi rare e reliquie.", categories: ["weapon", "relic"] },
+  { value: "apply_staggered", label: "Sbilancia il nemico", family: "combat_control", trigger: "on_crit", description: "Applica la condizione Sbilanciato al nemico su critico (o su colpo solido con armi pesanti). Riduce ATK e DEF nemico.", categories: ["weapon", "consumable", "relic"] },
+  { value: "cleanse_exposed", label: "Pulisce Scoperto", family: "combat_tempo", trigger: "on_crit", description: "Rimuove la condizione Scoperto dal giocatore su critico (armi) o al recupero (mantelli/oggetti).", categories: ["weapon", "cloak", "consumable", "relic"] },
+  { value: "focus_surge", label: "Picco di messa a fuoco", family: "combat_tempo", trigger: "on_defend", description: "Applica la condizione Messa a fuoco dopo una guardia pulita o un recupero. Migliora il prossimo attacco.", categories: ["weapon", "ring", "boots", "relic"] },
+  { value: "guarded_surge", label: "Guardia rinforzata", family: "combat_defense", trigger: "on_defend", description: "Applica la condizione Guardia salda dopo aver difeso. Aumenta la difesa per 1-2 turni.", categories: ["weapon", "shield", "helm", "boots", "relic"] },
+  { value: "key_access", label: "Accesso narrativo", family: "narrative_key", trigger: "on_choice", description: "Sblocca passaggi, porte o rami narrativi specifici.", categories: ["key", "relic", "quest"] },
+  { value: "trade_value", label: "Valore commerciale", family: "economy_loot", trigger: "passive", description: "Aumenta il valore economico percepito dell'oggetto.", categories: ["treasure", "relic", "utility", "key", "quest"] },
+  { value: "check_bonus", label: "Bonus alle prove", family: "skill_check", trigger: "passive", description: "Concede un bonus alle prove o ai check. Perfetto per pergamene, talismani e bastoni arcani.", categories: ["weapon", "treasure", "relic", "ring", "cloak", "utility", "consumable"] }
 ];
 
 const MONSTER_PRESETS = [
@@ -315,28 +319,65 @@ const MONSTER_PRESETS = [
 ];
 
 const LOOT_PRESETS = [
-  { id: "coins", name: "Monete", category: "treasure", rarity: "common", effectIds: ["trade_value"] },
-  { id: "healing_potion", name: "Pozione curativa", category: "consumable", rarity: "common", effectIds: ["restore_hp"] },
-  { id: "short_sword", name: "Spada corta", category: "weapon", rarity: "common", effectIds: [] },
-  { id: "longsword", name: "Spada lunga", category: "weapon", rarity: "uncommon", effectIds: [] },
-  { id: "war_axe", name: "Ascia pesante", category: "weapon", rarity: "uncommon", effectIds: [] },
-  { id: "hunter_bow", name: "Arco del cacciatore", category: "weapon", rarity: "uncommon", effectIds: [] },
-  { id: "dagger", name: "Pugnale", category: "weapon", rarity: "common", effectIds: [] },
-  { id: "camp_buckler", name: "Buckler da campo", category: "shield", rarity: "common", effectIds: ["defense_surge"] },
-  { id: "miner_helm", name: "Elmo da minatore", category: "helm", rarity: "common", effectIds: ["crit_guard"] },
-  { id: "torch", name: "Torcia", category: "utility", rarity: "common", effectIds: [] },
-  { id: "travel_rations", name: "Razioni da viaggio", category: "utility", rarity: "common", effectIds: [] },
-  { id: "ancient_key", name: "Chiave antica", category: "key", rarity: "uncommon", effectIds: ["key_access"], lockId: "magister_archive" },
-  { id: "arcane_scroll", name: "Pergamena arcana", category: "treasure", rarity: "rare", effectIds: ["check_bonus"] },
-  { id: "ritual_gem", name: "Gemma rituale", category: "relic", rarity: "rare", effectIds: ["trade_value"] },
-  { id: "rusted_blade", name: "Spada corrosa", category: "weapon", rarity: "common", effectIds: [] },
-  { id: "wolf_pelt", name: "Pelle di lupo", category: "treasure", rarity: "common", effectIds: ["trade_value"] },
-  { id: "alchemic_fire", name: "Fuoco alchemico", category: "consumable", rarity: "rare", effectIds: ["direct_damage"] },
-  { id: "warding_dust", name: "Polvere di guardia", category: "consumable", rarity: "rare", effectIds: ["defense_surge"] },
-  { id: "phoenix_tear", name: "Lacrima della Fenice", category: "consumable", rarity: "mythic", effectIds: ["restore_all"] },
-  { id: "eclipse_blade", name: "Lama dell'Eclisse", category: "relic", rarity: "unique", effectIds: ["bonus_damage", "guaranteed_crit"] },
-  { id: "crown_of_embers", name: "Corona delle Braci", category: "relic", rarity: "mythic", effectIds: ["ember_retaliation", "crit_guard"] },
-  { id: "custom", name: "Personalizzato", category: "", rarity: "common", effectIds: [] }
+  // ── consumabili / utensili ───────────────────────────────────────────────
+  { id: "coins",          name: "Monete",                category: "treasure",   rarity: "common",   effectIds: ["trade_value"] },
+  { id: "healing_potion", name: "Pozione curativa",      category: "consumable", rarity: "common",   effectIds: ["restore_hp"] },
+  { id: "alchemic_fire",  name: "Fuoco alchemico",       category: "consumable", rarity: "rare",     effectIds: ["direct_damage", "apply_staggered"] },
+  { id: "warding_dust",   name: "Polvere di guardia",    category: "consumable", rarity: "rare",     effectIds: ["defense_surge"] },
+  { id: "phoenix_tear",   name: "Lacrima della Fenice",  category: "consumable", rarity: "mythic",   effectIds: ["restore_all"] },
+  { id: "torch",          name: "Torcia",                category: "utility",    rarity: "common",   effectIds: [] },
+  { id: "travel_rations", name: "Razioni da viaggio",    category: "utility",    rarity: "common",   effectIds: [] },
+  // ── armi light ──────────────────────────────────────────────────────────
+  { id: "dagger",         name: "Pugnale",               category: "weapon",     rarity: "common",   effectIds: [] },
+  { id: "long_dagger",    name: "Pugnale lungo",         category: "weapon",     rarity: "uncommon", effectIds: ["cleanse_exposed"] },
+  { id: "shadow_blade",   name: "Lama d'ombra",          category: "weapon",     rarity: "rare",     effectIds: ["crit_guard", "apply_staggered"] },
+  { id: "viper_fang",     name: "Zanna del Vipera",      category: "weapon",     rarity: "mythic",   effectIds: ["guaranteed_crit", "apply_staggered"] },
+  // ── armi balanced ───────────────────────────────────────────────────────
+  { id: "rusted_blade",   name: "Spada corrosa",         category: "weapon",     rarity: "common",   effectIds: [] },
+  { id: "short_sword",    name: "Spada corta",           category: "weapon",     rarity: "uncommon", effectIds: [] },
+  { id: "longsword",      name: "Spada lunga",           category: "weapon",     rarity: "rare",     effectIds: ["cleanse_exposed"] },
+  { id: "ancestor_blade", name: "Lama degli Antenati",   category: "weapon",     rarity: "mythic",   effectIds: ["focus_surge", "bonus_damage"] },
+  // ── armi heavy ──────────────────────────────────────────────────────────
+  { id: "hatchet",        name: "Accetta",               category: "weapon",     rarity: "common",   effectIds: [] },
+  { id: "battle_axe",     name: "Ascia da guerra",       category: "weapon",     rarity: "uncommon", effectIds: [] },
+  { id: "war_axe",        name: "Ascia pesante",         category: "weapon",     rarity: "rare",     effectIds: ["apply_staggered"] },
+  { id: "great_axe",      name: "Grande ascia",          category: "weapon",     rarity: "mythic",   effectIds: ["apply_staggered", "bonus_damage"] },
+  // ── armi ranged ─────────────────────────────────────────────────────────
+  { id: "shortbow",       name: "Arco leggero",          category: "weapon",     rarity: "common",   effectIds: [] },
+  { id: "short_bow",      name: "Arco corto",            category: "weapon",     rarity: "uncommon", effectIds: [] },
+  { id: "hunter_bow",     name: "Arco del cacciatore",   category: "weapon",     rarity: "rare",     effectIds: ["guaranteed_crit"] },
+  { id: "war_bow",        name: "Arco da guerra",        category: "weapon",     rarity: "mythic",   effectIds: ["apply_staggered", "bonus_damage"] },
+  // ── armi ritual ─────────────────────────────────────────────────────────
+  { id: "walking_staff",  name: "Bastone da viaggio",    category: "weapon",     rarity: "common",   effectIds: ["recover_boost"] },
+  { id: "iron_staff",     name: "Bastone ferrato",       category: "weapon",     rarity: "uncommon", effectIds: ["recover_boost"] },
+  { id: "elder_staff",    name: "Bastone degli Anziani", category: "weapon",     rarity: "rare",     effectIds: ["recover_boost", "check_bonus"] },
+  { id: "void_staff",     name: "Bastone del Vuoto",     category: "weapon",     rarity: "mythic",   effectIds: ["recover_boost", "focus_surge"] },
+  // ── armature / protezioni ───────────────────────────────────────────────
+  { id: "camp_buckler",   name: "Buckler da campo",      category: "shield",     rarity: "common",   effectIds: [] },
+  { id: "iron_shield",    name: "Scudo di ferro",        category: "shield",     rarity: "uncommon", effectIds: ["guarded_surge"] },
+  { id: "tower_shield",   name: "Scudo a torre",         category: "shield",     rarity: "rare",     effectIds: ["guarded_surge", "crit_guard"] },
+  { id: "obsidian_aegis", name: "Egida di Ossidiana",    category: "shield",     rarity: "mythic",   effectIds: ["ember_retaliation", "guarded_surge", "crit_guard"] },
+  { id: "miner_helm",     name: "Elmo da minatore",      category: "helm",       rarity: "common",   effectIds: ["crit_guard"] },
+  { id: "bronze_helm",    name: "Elmo di bronzo",        category: "helm",       rarity: "uncommon", effectIds: ["crit_guard"] },
+  { id: "war_helm",       name: "Elmo da guerra",        category: "helm",       rarity: "rare",     effectIds: ["crit_guard", "guarded_surge"] },
+  { id: "hobnail_boots",  name: "Stivali chiodati",      category: "boots",      rarity: "uncommon", effectIds: ["fatigue_relief", "guarded_surge"] },
+  { id: "trail_boots",    name: "Stivali da pista",      category: "boots",      rarity: "uncommon", effectIds: ["fatigue_relief", "focus_surge"] },
+  { id: "iron_boots",     name: "Stivali ferrati",       category: "boots",      rarity: "rare",     effectIds: ["fatigue_relief", "guarded_surge"] },
+  { id: "forge_boots",    name: "Stivali della Forgia",  category: "boots",      rarity: "mythic",   effectIds: ["fatigue_relief", "guarded_surge", "ember_retaliation"] },
+  { id: "traveler_cloak", name: "Mantello del viandante",category: "cloak",      rarity: "uncommon", effectIds: ["recover_boost", "cleanse_exposed"] },
+  { id: "shadow_cloak",   name: "Mantello d'ombra",      category: "cloak",      rarity: "rare",     effectIds: ["recover_boost", "cleanse_exposed", "escape"] },
+  { id: "veil_of_ashes",  name: "Velo delle Ceneri",     category: "cloak",      rarity: "mythic",   effectIds: ["recover_boost", "cleanse_exposed", "escape"] },
+  { id: "silver_ring",    name: "Anello d'argento",      category: "ring",       rarity: "uncommon", effectIds: ["defense_surge", "focus_surge"] },
+  { id: "seal_ring",      name: "Anello del sigillo",    category: "ring",       rarity: "rare",     effectIds: ["check_bonus"] },
+  { id: "void_ring",      name: "Anello del Vuoto",      category: "ring",       rarity: "mythic",   effectIds: ["defense_surge", "recover_boost", "focus_surge"] },
+  // ── chiavi / tesori / reliquie ───────────────────────────────────────────
+  { id: "ancient_key",    name: "Chiave antica",         category: "key",        rarity: "uncommon", effectIds: ["key_access"], lockId: "magister_archive" },
+  { id: "arcane_scroll",  name: "Pergamena arcana",      category: "treasure",   rarity: "rare",     effectIds: ["check_bonus", "trade_value"] },
+  { id: "ritual_gem",     name: "Gemma rituale",         category: "relic",      rarity: "rare",     effectIds: ["trade_value"] },
+  { id: "wolf_pelt",      name: "Pelle di lupo",         category: "treasure",   rarity: "common",   effectIds: ["trade_value"] },
+  { id: "eclipse_blade",  name: "Lama dell'Eclisse",     category: "relic",      rarity: "unique",   effectIds: ["bonus_damage", "guaranteed_crit", "apply_staggered"] },
+  { id: "crown_of_embers",name: "Corona delle Braci",    category: "relic",      rarity: "mythic",   effectIds: ["ember_retaliation", "crit_guard", "guarded_surge"] },
+  { id: "custom",         name: "Personalizzato",        category: "",           rarity: "common",   effectIds: [] }
 ];
 
 const EXAMPLE_ADVENTURES = [
@@ -382,6 +423,7 @@ const LEGACY_LOCAL_PROJECT_KEY = "adventure_studio_project_v1";
 const LOCAL_PROJECT_INDEX_KEY = "adventure_studio_project_index_v2";
 const LOCAL_PROJECT_LAST_KEY = "adventure_studio_last_project_id_v2";
 const LOCAL_PROJECT_PREFIX = "adventure_studio_project_v2_";
+const TUTORIAL_SEEN_KEY = "adventure_studio_tutorial_seen_v1";
 
 const state = {
   adventure: {
@@ -540,9 +582,17 @@ function openAdventureProject(payload, {
   if (persist) {
     persistLocalProject({ syncScene: false });
   }
+  updateDocumentTitle();
   render();
   renderProjectPicker();
   showProjectPicker(false);
+}
+
+function updateDocumentTitle() {
+  const title = state.adventure?.title?.trim();
+  document.title = title
+    ? `${title} — Adventure Studio`
+    : "Adventure Studio — .txt-Master";
 }
 
 function restoreProjectById(projectId) {
@@ -787,8 +837,21 @@ const els = {
   monsterDamageMax: document.getElementById("monster-damage-max"),
   monsterLootList: document.getElementById("monster-loot-list"),
   addMonsterLootBtn: document.getElementById("add-monster-loot-btn"),
+  monsterAbilityCheckboxes: [
+    document.getElementById("monster-ability-howl"),
+    document.getElementById("monster-ability-charge"),
+    document.getElementById("monster-ability-claws"),
+    document.getElementById("monster-ability-regen"),
+    document.getElementById("monster-ability-armorbreak"),
+    document.getElementById("monster-ability-enrage")
+  ],
+  monsterBerserkerPhase: document.getElementById("monster-berserker-phase"),
   refreshJsonBtn: document.getElementById("refresh-json-btn"),
-  jsonOutput: document.getElementById("json-output")
+  jsonOutput: document.getElementById("json-output"),
+  tutorialOverlay: document.getElementById("tutorial-overlay"),
+  tutorialCloseBtn: document.getElementById("tutorial-close-btn"),
+  hotkeyBadgeBtn: document.getElementById("hotkey-badge-btn"),
+  hotkeyPanel: document.getElementById("hotkey-panel")
 };
 
 function bootstrap() {
@@ -802,17 +865,71 @@ function bootstrap() {
   bindActions();
   bindKeyboardShortcuts();
   bindBoardPointerSystem();
+  bindTutorial();
+  bindHotkeyPanel();
   migrateLegacyLocalProjectIfNeeded();
   initializeEmptyWorkspace();
   render();
   renderProjectPicker();
   showProjectPicker(true);
+  maybeShowTutorial();
+}
+
+function bindTutorial() {
+  if (!els.tutorialCloseBtn || !els.tutorialOverlay) return;
+  els.tutorialCloseBtn.addEventListener("click", closeTutorial);
+  els.tutorialOverlay.addEventListener("click", (e) => {
+    if (e.target === els.tutorialOverlay) closeTutorial();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !els.tutorialOverlay.classList.contains("hidden")) {
+      closeTutorial();
+    }
+  });
+}
+
+function maybeShowTutorial() {
+  try {
+    const seen = window.localStorage.getItem(TUTORIAL_SEEN_KEY);
+    if (!seen) showTutorial();
+  } catch (_) {
+    // localStorage not available — skip tutorial
+  }
+}
+
+function showTutorial() {
+  if (!els.tutorialOverlay) return;
+  els.tutorialOverlay.classList.remove("hidden");
+}
+
+function closeTutorial() {
+  if (!els.tutorialOverlay) return;
+  els.tutorialOverlay.classList.add("hidden");
+  try {
+    window.localStorage.setItem(TUTORIAL_SEEN_KEY, "1");
+  } catch (_) {}
+}
+
+function bindHotkeyPanel() {
+  if (!els.hotkeyBadgeBtn || !els.hotkeyPanel) return;
+  els.hotkeyBadgeBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    els.hotkeyPanel.classList.toggle("hidden");
+  });
+  document.addEventListener("click", (e) => {
+    if (!els.hotkeyPanel.classList.contains("hidden") &&
+        !els.hotkeyPanel.contains(e.target) &&
+        e.target !== els.hotkeyBadgeBtn) {
+      els.hotkeyPanel.classList.add("hidden");
+    }
+  });
 }
 
 function bindMeta() {
   els.adventureTitle.addEventListener("input", (e) => {
     state.adventure.title = e.target.value;
     if (!state.adventure.id) state.adventure.id = slugify(e.target.value || "new-adventure");
+    updateDocumentTitle();
     scheduleJsonRender(280, { syncScene: false });
   });
   els.adventureDescription.addEventListener("input", (e) => {
@@ -1561,6 +1678,8 @@ function createMonster({ renderAfter = true } = {}) {
     damageMin: 1,
     damageMax: 4,
     goldReward: 0,
+    abilityIds: [],
+    hasBerserkerPhase: false,
     loot: [],
     sourceType: "custom"
   };
@@ -1609,6 +1728,8 @@ function createMonsterFromPresetData(preset, fallbackId) {
     damageMin: preset.damageMin,
     damageMax: preset.damageMax,
     goldReward: preset.goldReward,
+    abilityIds: preset.abilityIds || [],
+    hasBerserkerPhase: preset.hasBerserkerPhase || false,
     loot: buildMonsterLootFromPreset(preset),
     sourceType: "preset",
     presetId: preset.id
@@ -2056,7 +2177,29 @@ function createFlowCard(scene, index, bounds = getCurrentFlowBoardBounds()) {
     };
   });
 
+  // Link-handle listener bound once per card creation, not on every sync
+  bindLinkHandle(card, scene);
+
   return card;
+}
+
+function bindLinkHandle(card, scene) {
+  card.addEventListener("pointerdown", (event) => {
+    if (!event.target.closest(".link-handle")) return;
+    event.stopPropagation();
+    const sceneId = card.dataset.sceneId;
+    const currentScene = state.adventure.scenes.find((entry) => entry.id === sceneId);
+    if (!currentScene) return;
+    const start = nodeAnchor(currentScene);
+    state.linkDraft = {
+      sceneId,
+      start,
+      current: { ...start },
+      pointerClientX: event.clientX,
+      pointerClientY: event.clientY
+    };
+    scheduleFlowLinksRender("drag");
+  }, { capture: false });
 }
 
 function syncFlowCard(card, scene, index, bounds = getCurrentFlowBoardBounds()) {
@@ -2071,21 +2214,6 @@ function syncFlowCard(card, scene, index, bounds = getCurrentFlowBoardBounds()) 
   card.style.minHeight = metrics.compact ? "" : `${metrics.height}px`;
   card.title = `${index + 1}. ${scene.title || "Evento"} (${sceneLabel(scene.kind)})`;
   card.innerHTML = buildFlowCardMarkup(scene, index);
-  card.querySelector(".link-handle")?.addEventListener("pointerdown", (event) => {
-    event.stopPropagation();
-    const sceneId = card.dataset.sceneId;
-    const currentScene = state.adventure.scenes.find((entry) => entry.id === sceneId);
-    if (!currentScene) return;
-    const start = nodeAnchor(currentScene);
-    state.linkDraft = {
-      sceneId,
-      start,
-      current: { ...start },
-      pointerClientX: event.clientX,
-      pointerClientY: event.clientY
-    };
-    scheduleFlowLinksRender("drag");
-  });
 }
 
 function buildFlowCardMarkup(scene, index) {
@@ -2947,6 +3075,26 @@ function renderMonsterEditor() {
   els.monsterDamageMin.value = monster.damageMin;
   els.monsterDamageMax.value = monster.damageMax;
 
+  const abilityIds = monster.abilityIds || [];
+  els.monsterAbilityCheckboxes.forEach((cb) => {
+    if (!cb) return;
+    cb.checked = abilityIds.includes(cb.value);
+    cb.onchange = () => {
+      const current = monster.abilityIds || [];
+      monster.abilityIds = cb.checked
+        ? [...current, cb.value]
+        : current.filter((id) => id !== cb.value);
+      scheduleJsonRender();
+    };
+  });
+  if (els.monsterBerserkerPhase) {
+    els.monsterBerserkerPhase.checked = Boolean(monster.hasBerserkerPhase);
+    els.monsterBerserkerPhase.onchange = () => {
+      monster.hasBerserkerPhase = els.monsterBerserkerPhase.checked;
+      scheduleJsonRender();
+    };
+  }
+
   renderMonsterLootEditor(monster);
 }
 
@@ -3309,6 +3457,8 @@ function cleanAdventure(adventure) {
       damageMin: monster.damageMin,
       damageMax: monster.damageMax,
       goldReward: monster.goldReward,
+      abilityIds: (monster.abilityIds || []).filter(Boolean),
+      hasBerserkerPhase: Boolean(monster.hasBerserkerPhase) || undefined,
       loot: monster.loot
         .filter((loot) => loot.itemName)
         .map(serializeLoot)
@@ -3519,6 +3669,11 @@ function hydrateSkillSelect(select, value = "") {
 
 function hydrateLootSelect(select, value = "") {
   select.innerHTML = "";
+  const noneOpt = document.createElement("option");
+  noneOpt.value = "";
+  noneOpt.textContent = "— Nessuno —";
+  if (!value) noneOpt.selected = true;
+  select.appendChild(noneOpt);
   LOOT_PRESETS.forEach((loot) => {
     const option = document.createElement("option");
     option.value = loot.id;

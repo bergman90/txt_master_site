@@ -14,6 +14,8 @@
   --shadow: 0 22px 50px rgba(0, 0, 0, 0.36);
   --radius: 20px;
   --mono: "IBM Plex Mono", "Courier New", monospace;
+  --sidebar-width: 400px;
+  --save-bar-height: 72px;
 }
 
 * {
@@ -105,7 +107,7 @@ select {
 
 .app-shell {
   display: grid;
-  grid-template-columns: 400px 1fr;
+  grid-template-columns: var(--sidebar-width) 1fr;
   min-height: 100vh;
   min-width: 0;
   overflow-x: hidden;
@@ -119,7 +121,6 @@ select {
 }
 
 .sidebar {
-  padding: 24px;
   border-right: 1px solid var(--border);
   background:
     linear-gradient(180deg, rgba(15, 18, 25, 0.94), rgba(13, 17, 25, 0.98)),
@@ -128,7 +129,41 @@ select {
   position: sticky;
   top: 0;
   height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-scroll-area {
+  flex: 1;
   overflow-y: auto;
+  padding: 24px;
+  padding-bottom: 12px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(209, 144, 82, 0.3) transparent;
+}
+
+.sidebar-scroll-area::-webkit-scrollbar {
+  width: 5px;
+}
+
+.sidebar-scroll-area::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-scroll-area::-webkit-scrollbar-thumb {
+  background: rgba(209, 144, 82, 0.28);
+  border-radius: 4px;
+}
+
+.sidebar-footer {
+  flex-shrink: 0;
+  padding: 12px 16px;
+  border-top: 1px solid rgba(209, 144, 82, 0.16);
+  background:
+    linear-gradient(180deg, rgba(30, 38, 50, 0.97), rgba(18, 22, 30, 0.99)),
+    rgba(18, 13, 11, 0.98);
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.28);
 }
 
 .workspace {
@@ -189,9 +224,7 @@ select {
 }
 
 .panel {
-  background:
-    linear-gradient(180deg, rgba(39, 47, 61, 0.96), rgba(24, 30, 40, 0.98)),
-    linear-gradient(180deg, rgba(53, 40, 33, 0.95), rgba(32, 25, 21, 0.98));
+  background: linear-gradient(180deg, rgba(39, 47, 61, 0.96), rgba(24, 30, 40, 0.98));
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
@@ -204,7 +237,7 @@ select {
   overflow: hidden;
 }
 
-.sidebar > .panel:first-of-type {
+.sidebar-scroll-area > .panel:first-of-type {
   margin-top: 16px;
 }
 
@@ -455,20 +488,11 @@ button:hover {
 }
 
 .sidebar-sticky-actions {
-  position: sticky;
-  top: 16px;
-  z-index: 4;
-  padding: 14px;
-  border: 1px solid rgba(209, 144, 82, 0.24);
-  border-radius: 16px;
-  background:
-    linear-gradient(180deg, rgba(30, 38, 50, 0.95), rgba(21, 26, 35, 0.98)),
-    rgba(18, 13, 11, 0.94);
-  box-shadow: 0 16px 30px rgba(0, 0, 0, 0.28);
+  display: none;
 }
 
 .sidebar-sticky-actions--top {
-  margin: 0 0 18px;
+  display: none;
 }
 
 .save-project-btn {
@@ -934,6 +958,167 @@ button.small {
   color: #c9f0d1;
 }
 
+/* ── Tutorial overlay ── */
+.tutorial-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(5, 8, 14, 0.84);
+  backdrop-filter: blur(8px);
+  padding: 24px;
+}
+
+.tutorial-card {
+  width: min(560px, 100%);
+  background: linear-gradient(180deg, rgba(39, 47, 61, 0.98), rgba(22, 28, 38, 0.99));
+  border: 1px solid rgba(209, 144, 82, 0.36);
+  border-radius: var(--radius);
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(209, 144, 82, 0.06);
+  padding: 28px 28px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.tutorial-card h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  letter-spacing: 0.03em;
+}
+
+.tutorial-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.tutorial-steps {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tutorial-steps li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  color: var(--text);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.tutorial-step-icon {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(209, 144, 82, 0.18);
+  border: 1px solid rgba(209, 144, 82, 0.28);
+  display: grid;
+  place-items: center;
+  font-size: 0.85rem;
+  color: var(--accent);
+}
+
+.tutorial-footer {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+.tutorial-footer .hint {
+  flex: 1;
+  margin: 0;
+  align-self: center;
+}
+
+/* ── Hotkey badge ── */
+.hotkey-badge {
+  position: fixed;
+  bottom: 18px;
+  right: 18px;
+  z-index: 50;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(30, 38, 50, 0.92);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.95rem;
+  transition: border-color 140ms, color 140ms;
+  backdrop-filter: blur(6px);
+}
+
+.hotkey-badge:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  filter: none;
+  transform: none;
+}
+
+.hotkey-panel {
+  position: fixed;
+  bottom: 66px;
+  right: 18px;
+  z-index: 50;
+  width: 280px;
+  background: linear-gradient(180deg, rgba(39, 47, 61, 0.98), rgba(22, 28, 38, 0.99));
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 16px;
+}
+
+.hotkey-panel h4 {
+  margin: 0 0 12px;
+  font-size: 0.82rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.hotkey-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hotkey-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.hotkey-list kbd {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  color: var(--text);
+  white-space: nowrap;
+}
+
 @media (max-width: 1080px) {
   .app-shell {
     grid-template-columns: 1fr;
@@ -945,6 +1130,15 @@ button.small {
     border-bottom: 1px solid var(--border);
     position: static;
     height: auto;
+    max-height: 80vh;
+  }
+
+  .sidebar-scroll-area {
+    max-height: calc(80vh - 60px);
+  }
+
+  .sidebar-footer {
+    padding: 10px 14px;
   }
 
   .editor-grid {
@@ -961,5 +1155,20 @@ button.small {
 
   .scene-image-preview {
     grid-template-columns: 1fr;
+  }
+
+  .hotkey-badge {
+    display: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .flow-board {
+    height: clamp(300px, 45vh, 520px);
+    min-height: 300px;
+  }
+
+  .editor-grid {
+    gap: 12px;
   }
 }
