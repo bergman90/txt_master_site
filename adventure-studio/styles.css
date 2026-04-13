@@ -1031,6 +1031,7 @@ button.small {
   gap: 10px;
   flex-wrap: wrap;
   justify-content: flex-end;
+  align-items: center;
   margin-top: 4px;
 }
 
@@ -1038,6 +1039,22 @@ button.small {
   flex: 1;
   margin: 0;
   align-self: center;
+}
+
+.button-ghost-small {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  box-shadow: none;
+  padding: 8px 14px;
+  font-size: 0.9rem;
+}
+
+.button-ghost-small:hover {
+  color: var(--text);
+  border-color: var(--muted);
+  filter: none;
+  transform: none;
 }
 
 /* ── Hotkey badge ── */

@@ -851,6 +851,7 @@ const els = {
   jsonOutput: document.getElementById("json-output"),
   tutorialOverlay: document.getElementById("tutorial-overlay"),
   tutorialCloseBtn: document.getElementById("tutorial-close-btn"),
+  tutorialSkipBtn: document.getElementById("tutorial-skip-btn"),
   hotkeyBadgeBtn: document.getElementById("hotkey-badge-btn"),
   hotkeyPanel: document.getElementById("hotkey-panel")
 };
@@ -876,14 +877,15 @@ function bootstrap() {
 }
 
 function bindTutorial() {
-  if (!els.tutorialCloseBtn || !els.tutorialOverlay) return;
-  els.tutorialCloseBtn.addEventListener("click", closeTutorial);
+  if (!els.tutorialOverlay) return;
+  els.tutorialCloseBtn?.addEventListener("click", closeTutorial);
+  els.tutorialSkipBtn?.addEventListener("click", skipTutorial);
   els.tutorialOverlay.addEventListener("click", (e) => {
-    if (e.target === els.tutorialOverlay) closeTutorial();
+    if (e.target === els.tutorialOverlay) skipTutorial();
   });
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && !els.tutorialOverlay.classList.contains("hidden")) {
-      closeTutorial();
+      skipTutorial();
     }
   });
 }
@@ -908,6 +910,12 @@ function closeTutorial() {
   try {
     window.localStorage.setItem(TUTORIAL_SEEN_KEY, "1");
   } catch (_) {}
+}
+
+function skipTutorial() {
+  if (!els.tutorialOverlay) return;
+  els.tutorialOverlay.classList.add("hidden");
+  // Non salva il flag: il tutorial riappare alla prossima visita
 }
 
 function bindHotkeyPanel() {
