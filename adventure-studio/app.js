@@ -877,16 +877,16 @@ function bootstrap() {
 }
 
 function bindTutorial() {
-  if (!els.tutorialOverlay) return;
-  els.tutorialCloseBtn?.addEventListener("click", closeTutorial);
-  els.tutorialSkipBtn?.addEventListener("click", skipTutorial);
-  els.tutorialOverlay.addEventListener("click", (e) => {
-    if (e.target === els.tutorialOverlay) skipTutorial();
+  document.addEventListener("click", (e) => {
+    if (e.target.id === "tutorial-close-btn") { closeTutorial(); return; }
+    if (e.target.id === "tutorial-skip-btn") { skipTutorial(); return; }
+    const overlay = document.getElementById("tutorial-overlay");
+    if (overlay && e.target === overlay) skipTutorial();
   });
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && !els.tutorialOverlay.classList.contains("hidden")) {
-      skipTutorial();
-    }
+    if (e.key !== "Escape") return;
+    const overlay = document.getElementById("tutorial-overlay");
+    if (overlay && !overlay.classList.contains("hidden")) skipTutorial();
   });
 }
 
@@ -894,41 +894,39 @@ function maybeShowTutorial() {
   try {
     const seen = window.localStorage.getItem(TUTORIAL_SEEN_KEY);
     if (!seen) showTutorial();
-  } catch (_) {
-    // localStorage not available — skip tutorial
-  }
-}
-
-function showTutorial() {
-  if (!els.tutorialOverlay) return;
-  els.tutorialOverlay.classList.remove("hidden");
-}
-
-function closeTutorial() {
-  if (!els.tutorialOverlay) return;
-  els.tutorialOverlay.classList.add("hidden");
-  try {
-    window.localStorage.setItem(TUTORIAL_SEEN_KEY, "1");
   } catch (_) {}
 }
 
+function showTutorial() {
+  const overlay = document.getElementById("tutorial-overlay");
+  if (overlay) overlay.classList.remove("hidden");
+}
+
+function closeTutorial() {
+  const overlay = document.getElementById("tutorial-overlay");
+  if (!overlay) return;
+  overlay.classList.add("hidden");
+  try { window.localStorage.setItem(TUTORIAL_SEEN_KEY, "1"); } catch (_) {}
+}
+
 function skipTutorial() {
-  if (!els.tutorialOverlay) return;
-  els.tutorialOverlay.classList.add("hidden");
+  const overlay = document.getElementById("tutorial-overlay");
+  if (overlay) overlay.classList.add("hidden");
   // Non salva il flag: il tutorial riappare alla prossima visita
 }
 
 function bindHotkeyPanel() {
-  if (!els.hotkeyBadgeBtn || !els.hotkeyPanel) return;
-  els.hotkeyBadgeBtn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    els.hotkeyPanel.classList.toggle("hidden");
-  });
   document.addEventListener("click", (e) => {
-    if (!els.hotkeyPanel.classList.contains("hidden") &&
-        !els.hotkeyPanel.contains(e.target) &&
-        e.target !== els.hotkeyBadgeBtn) {
-      els.hotkeyPanel.classList.add("hidden");
+    const badge = document.getElementById("hotkey-badge-btn");
+    const panel = document.getElementById("hotkey-panel");
+    if (!badge || !panel) return;
+    if (e.target === badge || badge.contains(e.target)) {
+      e.stopPropagation();
+      panel.classList.toggle("hidden");
+      return;
+    }
+    if (!panel.classList.contains("hidden") && !panel.contains(e.target)) {
+      panel.classList.add("hidden");
     }
   });
 }
