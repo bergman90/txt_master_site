@@ -586,6 +586,7 @@ function openAdventureProject(payload, {
   render();
   renderProjectPicker();
   showProjectPicker(false);
+  maybeShowTutorial();
 }
 
 function updateDocumentTitle() {
@@ -743,7 +744,6 @@ function showProjectPicker(visible) {
   if (els.closeProjectPickerBtn) {
     els.closeProjectPickerBtn.disabled = !state.ui.currentProjectId;
   }
-  if (!visible) maybeShowTutorial();
 }
 
 const els = {
