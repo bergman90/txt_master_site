@@ -592,7 +592,7 @@ button.small {
 }
 
 .hidden {
-  display: none;
+  display: none !important;
 }
 
 .empty-state {
