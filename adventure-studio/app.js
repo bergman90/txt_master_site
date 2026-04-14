@@ -3998,11 +3998,16 @@ function setOutcomeTarget(scene, key, targetSceneId) {
 function addLinkedTargetToScene(scene, targetSceneId) {
   normalizeScene(scene);
   if (scene.kind === "description") {
-    scene.choices.push({
-      ...createEmptyChoice(scene.choices.length + 1),
-      text: `Scelta ${choiceLabel(scene.choices.length)}`,
-      targetSceneId
-    });
+    const emptyChoice = scene.choices.find((c) => !c.targetSceneId && !c.skillCheck);
+    if (emptyChoice) {
+      emptyChoice.targetSceneId = targetSceneId;
+    } else {
+      scene.choices.push({
+        ...createEmptyChoice(scene.choices.length + 1),
+        text: `Scelta ${choiceLabel(scene.choices.length)}`,
+        targetSceneId
+      });
+    }
     return;
   }
 
