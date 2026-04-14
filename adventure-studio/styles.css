@@ -526,6 +526,15 @@ button:hover {
   color: #08110a;
 }
 
+.save-project-btn--toolbar {
+  width: auto;
+  min-height: unset;
+  padding: 5px 14px;
+  font-size: 0.82rem;
+  box-shadow: none;
+  transition: background 0.2s, color 0.2s;
+}
+
 .hidden-file-input {
   display: none;
 }
@@ -885,6 +894,33 @@ button.small {
   font-weight: 700;
 }
 
+.flow-card-badges {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.flow-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.flow-badge--start {
+  background: rgba(116, 164, 117, 0.2);
+  color: var(--accent-2);
+  border: 1px solid rgba(116, 164, 117, 0.35);
+}
+
+.flow-badge--orphan {
+  background: rgba(202, 101, 91, 0.18);
+  color: #e07e76;
+  border: 1px solid rgba(202, 101, 91, 0.35);
+}
+
 .flow-card p {
   line-height: 1.45;
 }
@@ -892,9 +928,9 @@ button.small {
 .flow-choices {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-top: 12px;
-  padding-top: 12px;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
   border-top: 1px dashed var(--border);
 }
 

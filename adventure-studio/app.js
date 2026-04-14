@@ -398,7 +398,7 @@ const EXAMPLE_ADVENTURES = [
 ];
 
 const NODE_WIDTH = 280;
-const NODE_HEIGHT = 170;
+const NODE_HEIGHT = 130;
 const CREATE_MONSTER_OPTION = "__create_new__";
 const SCENE_IMAGE_ASPECT_RATIO = 2.48;
 const SCENE_IMAGE_TARGET_WIDTH = 1200;
@@ -450,6 +450,7 @@ const state = {
     sceneSavedAt: null,
     jsonRenderTimer: null,
     jsonRenderOptions: { syncScene: true },
+    flowCardRefreshTimer: null,
     monsterListRenderTimer: null,
     flowLinksFrame: null,
     lastFlowLinksDragRenderAt: 0,
@@ -774,6 +775,7 @@ const els = {
   validateAdventureBtn: document.getElementById("validate-adventure-btn"),
   exportJsonBtn: document.getElementById("export-json-btn"),
   saveAdventureBtn: document.getElementById("save-adventure-btn"),
+  saveAdventureToolbarBtn: document.getElementById("save-adventure-toolbar-btn"),
   validationSummary: document.getElementById("validation-summary"),
   validationList: document.getElementById("validation-list"),
   monsterPresetSelect: document.getElementById("monster-preset-select"),
@@ -911,7 +913,7 @@ function closeTutorial() {
 function skipTutorial() {
   const overlay = document.getElementById("tutorial-overlay");
   if (overlay) overlay.classList.add("hidden");
-  // Non salva il flag: il tutorial riappare alla prossima visita
+  try { window.localStorage.setItem(TUTORIAL_SEEN_KEY, "1"); } catch (_) {}
 }
 
 function bindHotkeyPanel() {
@@ -1006,6 +1008,7 @@ function bindActions() {
   els.addMonsterLootBtn.addEventListener("click", addMonsterLoot);
   els.addCombatGroupBtn.addEventListener("click", addCombatGroup);
   els.saveAdventureBtn.addEventListener("click", saveAdventureProject);
+  els.saveAdventureToolbarBtn?.addEventListener("click", saveAdventureProject);
   els.exportJsonBtn.addEventListener("click", exportJson);
   els.refreshJsonBtn.addEventListener("click", renderJson);
   els.flowZoomOutBtn?.addEventListener("click", () => changeFlowZoom(-FLOW_ZOOM_STEP));
@@ -1086,7 +1089,7 @@ function bindSceneEditor() {
     if (!scene) return;
     scene.title = e.target.value;
     markSceneDirty();
-    refreshFlowCard(scene.id);
+    scheduleFlowCardRefresh(scene.id);
     scheduleJsonRender();
   });
 
@@ -1095,7 +1098,7 @@ function bindSceneEditor() {
     if (!scene) return;
     scene.openingText = e.target.value;
     markSceneDirty();
-    refreshFlowCard(scene.id);
+    scheduleFlowCardRefresh(scene.id);
     scheduleJsonRender();
   });
 
@@ -1104,7 +1107,7 @@ function bindSceneEditor() {
     if (!scene) return;
     scene.checkConfig.skill = normalizeString(e.target.value);
     markSceneDirty();
-    renderJson();
+    scheduleJsonRender(90);
   });
 
   els.sceneCheckDifficulty.addEventListener("input", (e) => {
@@ -1112,7 +1115,7 @@ function bindSceneEditor() {
     if (!scene) return;
     scene.checkConfig.difficulty = Number(e.target.value || 0);
     markSceneDirty();
-    renderJson();
+    scheduleJsonRender(140);
   });
 }
 
@@ -1142,7 +1145,7 @@ async function onSceneImageSelected(event) {
     scene.eventImage = framedImage;
     markSceneDirty();
     renderSceneEditor();
-    renderJson();
+    scheduleJsonRender(90);
   } catch (error) {
     window.alert("Impossibile caricare l'immagine evento.");
   } finally {
@@ -1276,7 +1279,7 @@ function removeSceneImage() {
   scene.eventImage = null;
   markSceneDirty();
   renderSceneEditor();
-  renderJson();
+  scheduleJsonRender(90);
 }
 
 function hydrateExampleAdventureSelect() {
@@ -1932,7 +1935,13 @@ function renderAdventureSetup() {
       ? `Progetto locale attivo | ultimo salvataggio ${formatAutosaveTime(state.ui.autosaveAt)}`
       : "Progetto locale attivo | in attesa del primo salvataggio."
     : "Nessun progetto aperto. Scegli o crea un progetto dall'archivio locale.";
-  renderLootList(els.starterKitList, state.adventure.starterKitItems, render);
+  renderLootList(els.starterKitList, state.adventure.starterKitItems, {
+    rerender: () => renderLootList(els.starterKitList, state.adventure.starterKitItems, {
+      rerender: () => renderAdventureSetup(),
+      onChange: () => { scheduleJsonRender(140, { syncScene: false }); }
+    }),
+    onChange: () => { scheduleJsonRender(140, { syncScene: false }); }
+  });
 }
 
 function persistLocalProject({ syncScene = true } = {}) {
@@ -2099,16 +2108,20 @@ function saveAdventureProject() {
 }
 
 function flashSaveAdventureButton() {
-  if (!els.saveAdventureBtn) return;
   if (state.ui.saveAdventureFeedbackTimer) {
     window.clearTimeout(state.ui.saveAdventureFeedbackTimer);
     state.ui.saveAdventureFeedbackTimer = null;
   }
-  els.saveAdventureBtn.textContent = "Salvato";
-  els.saveAdventureBtn.classList.add("is-saved");
+  [els.saveAdventureBtn, els.saveAdventureToolbarBtn].forEach((btn) => {
+    if (!btn) return;
+    btn.classList.add("is-saved");
+  });
+  if (els.saveAdventureBtn) els.saveAdventureBtn.textContent = "Salvato ✓";
+  if (els.saveAdventureToolbarBtn) els.saveAdventureToolbarBtn.textContent = "Salvato ✓";
   state.ui.saveAdventureFeedbackTimer = window.setTimeout(() => {
-    els.saveAdventureBtn.textContent = "Salva avventura";
-    els.saveAdventureBtn.classList.remove("is-saved");
+    if (els.saveAdventureBtn) els.saveAdventureBtn.textContent = "Salva avventura";
+    if (els.saveAdventureToolbarBtn) els.saveAdventureToolbarBtn.textContent = "Salva";
+    [els.saveAdventureBtn, els.saveAdventureToolbarBtn].forEach((btn) => btn?.classList.remove("is-saved"));
     state.ui.saveAdventureFeedbackTimer = null;
   }, 1600);
 }
@@ -2227,23 +2240,25 @@ function syncFlowCard(card, scene, index, bounds = getCurrentFlowBoardBounds()) 
 
 function buildFlowCardMarkup(scene, index) {
   const metrics = getFlowCardMetrics();
+  const connectedIds = getConnectedSceneIds();
+  const isStart = scene.id === state.adventure.startingSceneId;
+  const isOrphan = !isStart && state.adventure.scenes.length > 1 && !connectedIds.has(scene.id);
   if (metrics.compact) {
     return `
       <button class="link-handle" title="Trascina per collegare"></button>
       <div class="flow-card-mini-index">${index + 1}</div>
       <div class="flow-card-mini-meta">
         <span>${sceneKindShortLabel(scene.kind)}</span>
-        <span>${scene.id === state.adventure.startingSceneId ? "IN" : ""}</span>
+        <span>${isStart ? "IN" : ""}${isOrphan ? "!" : ""}</span>
       </div>
     `;
   }
   return `
     <button class="link-handle" title="Trascina per collegare"></button>
     <div class="flow-card-head">
-      <strong>${index + 1}. [${sceneLabel(scene.kind)}] ${scene.title}</strong>
-      <span>${scene.id === state.adventure.startingSceneId ? "INIZIO" : ""}</span>
+      <strong>${index + 1}. [${sceneLabel(scene.kind)}] ${scene.title || "Senza titolo"}</strong>
+      <span class="flow-card-badges">${isStart ? '<span class="flow-badge flow-badge--start">INIZIO</span>' : ""}${isOrphan ? '<span class="flow-badge flow-badge--orphan" title="Nessuna scena collega a questo nodo">&#x26A0; orfano</span>' : ""}</span>
     </div>
-    <p>${truncate(scene.openingText || "Nessun testo iniziale ancora.", 120)}</p>
     <div class="flow-choices">
       ${renderFlowChoiceSummary(scene)}
     </div>
@@ -2253,10 +2268,39 @@ function buildFlowCardMarkup(scene, index) {
 function renderFlowChoiceSummary(scene) {
   if (scene.kind !== "description") return renderOutcomeSummary(scene);
   return scene.choices.length
-    ? scene.choices.map((choice, idx) =>
-      `<div class="flow-choice-row">${choiceLabel(idx)} ${choice.text || "(scelta senza testo)"} -> ${targetLabel(choice)}</div>`
-    ).join("")
+    ? scene.choices.map((choice, idx) => {
+        const icon = choice.skillCheck ? "&#x2694;" : choice.requiredLockId ? "&#x1F512;" : "&#x2192;";
+        const dest = choice.skillCheck
+          ? `${sceneTitleById(choice.skillCheck.successSceneId, "?")} / ${sceneTitleById(choice.skillCheck.failureSceneId, "?")}`
+          : sceneTitleById(choice.targetSceneId);
+        return `<div class="flow-choice-row">${choiceLabel(idx)} ${icon} ${dest}</div>`;
+      }).join("")
     : '<div class="flow-empty">Nessuna scelta ancora.</div>';
+}
+
+function getConnectedSceneIds() {
+  const ids = new Set();
+  state.adventure.scenes.forEach((scene) => {
+    if (scene.kind === "description") {
+      scene.choices.forEach((choice) => {
+        if (choice.skillCheck) {
+          if (choice.skillCheck.successSceneId) ids.add(choice.skillCheck.successSceneId);
+          if (choice.skillCheck.failureSceneId) ids.add(choice.skillCheck.failureSceneId);
+        } else if (choice.targetSceneId) {
+          ids.add(choice.targetSceneId);
+        }
+      });
+    } else {
+      outcomeDefinitionsForScene(scene).forEach((definition) => {
+        const branch = getOutcomeBranch(scene, definition.key);
+        if (branch.targetSceneId) ids.add(branch.targetSceneId);
+        branch.choices.forEach((choice) => {
+          if (choice.targetSceneId) ids.add(choice.targetSceneId);
+        });
+      });
+    }
+  });
+  return ids;
 }
 
 function renderFlowLinks(bounds = computeBoardBounds()) {
@@ -2571,6 +2615,16 @@ function refreshFlowCard(sceneId) {
     return;
   }
   syncFlowCard(current, state.adventure.scenes[sceneIndex], sceneIndex, bounds);
+}
+
+function scheduleFlowCardRefresh(sceneId, delay = 300) {
+  if (state.ui.flowCardRefreshTimer) {
+    window.clearTimeout(state.ui.flowCardRefreshTimer);
+  }
+  state.ui.flowCardRefreshTimer = window.setTimeout(() => {
+    state.ui.flowCardRefreshTimer = null;
+    refreshFlowCard(sceneId);
+  }, delay);
 }
 
 function updateFlowCardSelection(previousSceneId, nextSceneId) {
