@@ -87,43 +87,28 @@
             <p>Forge per avventure dark fantasy</p>
           </div>
         </div>
-        <p class="sidebar-intro">Editor visuale per creare, salvare ed esportare avventure compatibili con .txt-Master.</p>
-
         <div class="panel">
           <h2>Avventura</h2>
           <label>Titolo<input id="adventure-title" type="text" placeholder="La Cripta di Cenere"></label>
-          <label>Descrizione<textarea id="adventure-description" rows="4"></textarea></label>
-          <div class="subsection">
-            <div class="subsection-header">
-              <h4>Tag grimorio</h4>
-            </div>
+          <label>Descrizione<textarea id="adventure-description" rows="3"></textarea></label>
+          <details class="subsection panel-collapsible compact-section">
+            <summary class="panel-summary compact-summary">
+              <span>Tag grimorio</span>
+              <small>Opzionale</small>
+            </summary>
             <div class="three-col compact-tags-grid">
               <label>Tag 1<input id="adventure-tag-1" type="text" placeholder="torbiera"></label>
               <label>Tag 2<input id="adventure-tag-2" type="text" placeholder="abbazia"></label>
               <label>Tag 3<input id="adventure-tag-3" type="text" placeholder="mistero"></label>
             </div>
-            <p class="hint">Massimo 3 tag, una sola parola ciascuno.</p>
-          </div>
-          <label>Moltiplicatore adattivo per livello<input id="adventure-adaptive-multiplier" type="number" min="0" max="0.35" step="0.01" value="0.12"></label>
-          <p class="hint">Scala prove e combattimenti in base al livello del personaggio. `0.12` e un valore consigliato per una crescita morbida.</p>
-          <div class="subsection compact-project-tools">
-            <label class="compact-inline-select">
-              <span>Esempio rapido</span>
-              <select id="example-adventure-select"></select>
-            </label>
-            <div class="compact-project-actions">
-              <button id="load-example-btn" type="button">Apri esempio</button>
-              <button id="import-json-btn" type="button">Importa JSON</button>
-              <input id="import-json-input" type="file" accept=".json,application/json" class="hidden-file-input">
-            </div>
-            <p class="hint">Apri un esempio o importa un JSON esistente senza occupare spazio extra nella sidebar.</p>
-          </div>
+          </details>
+          <label>Moltiplicatore adattivo<input id="adventure-adaptive-multiplier" type="number" min="0" max="0.35" step="0.01" value="0.12"></label>
           <label class="checkbox-line"><input id="adventure-carry-over" type="checkbox" checked> Consenti equipaggiamento pregresso</label>
           <label class="checkbox-line"><input id="adventure-fresh-start" type="checkbox" checked> Consenti fresh start</label>
           <label class="checkbox-line"><input id="alpha-strict-validation" type="checkbox" checked> Modalita alpha severa</label>
           <div class="button-row">
-            <button id="restore-local-btn" type="button">Archivio progetti</button>
-            <button id="reset-project-btn" type="button" class="danger">Nuovo progetto</button>
+            <button id="restore-local-btn" type="button">Progetti</button>
+            <button id="reset-project-btn" type="button">Nuovo progetto</button>
           </div>
           <p id="autosave-indicator" class="hint">Autosave locale inattivo.</p>
           <details class="subsection panel-collapsible compact-section">
@@ -139,7 +124,12 @@
           <div class="sidebar-primary-actions">
             <button id="validate-adventure-btn" type="button">Controlla avventura</button>
             <button id="export-json-btn">Esporta JSON</button>
+            <button id="import-json-btn" type="button">Importa JSON</button>
+            <input id="import-json-input" type="file" accept=".json,application/json" class="hidden-file-input">
           </div>
+          <!-- hidden selects kept for JS compatibility -->
+          <select id="example-adventure-select" class="hidden-file-input" aria-hidden="true" tabindex="-1"></select>
+          <button id="load-example-btn" type="button" class="hidden-file-input" aria-hidden="true" tabindex="-1">Apri esempio</button>
           <div class="subsection">
             <div class="subsection-header">
               <h4>Validazione export</h4>
