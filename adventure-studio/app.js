@@ -33,8 +33,8 @@ const ITEM_RARITIES = [
   { value: "rare", label: "Rara" },
   { value: "mythic", label: "Mitica" },
   { value: "unique", label: "Unica" },
-  { value: "epic", label: "Mitica" },
-  { value: "legendary", label: "Mitica" }
+  { value: "epic", label: "Epica" },
+  { value: "legendary", label: "Leggendaria" }
 ];
 
 const EFFECT_FAMILIES = [
@@ -44,7 +44,6 @@ const EFFECT_FAMILIES = [
   { value: "combat_tempo", label: "Tempo di combattimento" },
   { value: "combat_control", label: "Controllo in combattimento" },
   { value: "survival_recovery", label: "Recupero e sopravvivenza" },
-  { value: "exploration", label: "Esplorazione" },
   { value: "skill_check", label: "Prove / skill check" },
   { value: "economy_loot", label: "Economia e bottino" },
   { value: "narrative_key", label: "Chiave narrativa" }
@@ -60,9 +59,7 @@ const EFFECT_TRIGGERS = [
   { value: "on_crit", label: "Su critico" },
   { value: "on_defend", label: "Quando difende" },
   { value: "on_recover", label: "Quando recupera fiato" },
-  { value: "on_low_hp", label: "Con HP bassi" },
-  { value: "on_choice", label: "Su scelta/evento" },
-  { value: "on_scene_enter", label: "Entrando in scena" }
+  { value: "on_choice", label: "Su scelta/evento" }
 ];
 
 const EFFECT_PRESETS = [
@@ -70,7 +67,8 @@ const EFFECT_PRESETS = [
   { value: "restore_hp", label: "Cura", family: "survival_recovery", trigger: "consumable", description: "Recupera una parte degli HP quando l'oggetto viene usato.", categories: ["consumable"] },
   { value: "restore_all", label: "Rigenerazione totale", family: "survival_recovery", trigger: "consumable", description: "Ripristina completamente vita e stamina. Pensato per consumabili rari o reliquie attivabili.", categories: ["consumable", "relic"] },
   { value: "direct_damage", label: "Danno diretto", family: "combat_offense", trigger: "consumable", description: "Infligge danno immediato quando l'oggetto viene usato in combattimento.", categories: ["consumable", "utility"] },
-  { value: "defense_surge", label: "Impulso difensivo", family: "combat_defense", trigger: "consumable", description: "Aumenta la difesa o offre una protezione temporanea. Funziona bene su scudi, armature, reliquie o consumabili tattici.", categories: ["consumable", "shield", "armor", "helm", "cloak", "relic"] },
+  { value: "defense_surge", label: "Impulso difensivo", family: "combat_defense", trigger: "passive", description: "Aumenta la difesa o offre una protezione passiva. Ideale su scudi, armature, elmi, mantelli, anelli e reliquie difensive.", categories: ["shield", "armor", "helm", "cloak", "ring", "relic"] },
+  { value: "defense_potion", label: "Pozione difensiva", family: "combat_defense", trigger: "consumable", description: "Offre una protezione temporanea quando il consumabile viene usato in combattimento.", categories: ["consumable"] },
   { value: "bonus_damage", label: "Bonus danno", family: "combat_offense", trigger: "on_hit", description: "Aggiunge danno bonus ai colpi andati a segno. Ideale per armi o reliquie offensive.", categories: ["weapon", "relic", "ring"] },
   { value: "fatigue_relief", label: "Sollievo fatica", family: "combat_tempo", trigger: "passive", description: "Riduce il peso della fatica o migliora la gestione della stamina in modo passivo.", categories: ["utility", "consumable", "ring", "cloak", "boots", "relic"] },
   { value: "recover_boost", label: "Recupero potenziato", family: "survival_recovery", trigger: "on_recover", description: "Rende piu efficace l'azione di recupero fiato. Su bastoni rituali (stile=ritual) si attiva anche quando difendi.", categories: ["weapon", "consumable", "utility", "ring", "cloak", "boots", "relic"] },
@@ -167,7 +165,7 @@ const MONSTER_PRESETS = [
     damageMin: 2,
     damageMax: 6,
     goldReward: 13,
-    loot: [{ itemId: "warding_dust", itemName: "Polvere di guardia", quantity: 1, category: "consumable", rarity: "rare", effectIds: ["defense_surge"] }]
+    loot: [{ itemId: "warding_dust", itemName: "Polvere di guardia", quantity: 1, category: "consumable", rarity: "rare", effectIds: ["defense_potion"] }]
   },
   {
     id: "grave_devotee",
@@ -323,7 +321,7 @@ const LOOT_PRESETS = [
   { id: "coins",          name: "Monete",                category: "treasure",   rarity: "common",   effectIds: ["trade_value"] },
   { id: "healing_potion", name: "Pozione curativa",      category: "consumable", rarity: "common",   effectIds: ["restore_hp"] },
   { id: "alchemic_fire",  name: "Fuoco alchemico",       category: "consumable", rarity: "rare",     effectIds: ["direct_damage", "apply_staggered"] },
-  { id: "warding_dust",   name: "Polvere di guardia",    category: "consumable", rarity: "rare",     effectIds: ["defense_surge"] },
+  { id: "warding_dust",   name: "Polvere di guardia",    category: "consumable", rarity: "rare",     effectIds: ["defense_potion"] },
   { id: "phoenix_tear",   name: "Lacrima della Fenice",  category: "consumable", rarity: "mythic",   effectIds: ["restore_all"] },
   { id: "torch",          name: "Torcia",                category: "utility",    rarity: "common",   effectIds: [] },
   { id: "travel_rations", name: "Razioni da viaggio",    category: "utility",    rarity: "common",   effectIds: [] },
@@ -3197,6 +3195,7 @@ function renderLootList(container, items, options = {}) {
     const categorySelect = node.querySelector('[data-field="category"]');
     const raritySelect = node.querySelector('[data-field="rarity"]');
     const effectSelect = node.querySelector('[data-field="effectId"]');
+    const effectSelect2 = node.querySelector('[data-field="effectId2"]');
     const effectHelp = node.querySelector('[data-role="effect-help"]');
     const lockIdInput = node.querySelector('[data-field="lockId"]');
     const questItemInput = node.querySelector('[data-field="questItem"]');
@@ -3208,6 +3207,7 @@ function renderLootList(container, items, options = {}) {
     hydrateCategorySelect(categorySelect, loot.category || "");
     hydrateRaritySelect(raritySelect, loot.rarity || "common");
     hydrateEffectSelect(effectSelect, loot.effectIds?.[0] || "", loot.category || "");
+    hydrateEffectSelect(effectSelect2, loot.effectIds?.[1] || "", loot.category || "");
     customInput.value = selectedPreset === "custom" ? loot.itemName || "" : "";
     customInput.disabled = selectedPreset !== "custom";
     customItemIdInput.value = selectedPreset === "custom" ? (loot.itemId || slugify(loot.itemName || "custom_loot")) : (loot.itemId || "");
@@ -3218,10 +3218,9 @@ function renderLootList(container, items, options = {}) {
     quantityField.value = loot.quantity ?? 1;
 
     function syncLootEffectUi() {
-      if (!effectAllowedForCategory(loot.effectIds?.[0] || "", loot.category || "")) {
-        loot.effectIds = [];
-      }
+      loot.effectIds = (loot.effectIds || []).filter((id) => effectAllowedForCategory(id, loot.category || ""));
       hydrateEffectSelect(effectSelect, loot.effectIds?.[0] || "", loot.category || "");
+      hydrateEffectSelect(effectSelect2, loot.effectIds?.[1] || "", loot.category || "");
       syncLootEffectMeta(effectSelect.value, familyField, triggerField);
       effectHelp.textContent = effectHelpText(effectSelect.value, loot.category || "");
     }
@@ -3309,9 +3308,16 @@ function renderLootList(container, items, options = {}) {
     });
     effectSelect.addEventListener("change", (event) => {
       const effectId = normalizeString(event.target.value) || "";
-      loot.effectIds = effectId ? [effectId] : [];
+      const second = loot.effectIds?.[1] || "";
+      loot.effectIds = [effectId, second].filter(Boolean);
       syncLootEffectMeta(effectId, familyField, triggerField);
       effectHelp.textContent = effectHelpText(effectId, loot.category || "");
+      onChange();
+    });
+    effectSelect2.addEventListener("change", (event) => {
+      const effectId2 = normalizeString(event.target.value) || "";
+      const first = loot.effectIds?.[0] || "";
+      loot.effectIds = [first, effectId2].filter(Boolean);
       onChange();
     });
     quantityField.addEventListener("input", (event) => {
@@ -4257,7 +4263,9 @@ function validateAdventure(adventure, cleaned = cleanAdventure(adventure), optio
     if (!Number.isFinite(Number(loot.quantity)) || Number(loot.quantity) < 1) {
       errors.push(`${ownerLabel}: il loot ${loot.itemName || itemId} deve avere quantita >= 1.`);
     }
-    if (loot.category && !validCategories.has(loot.category)) {
+    if (!loot.category) {
+      pushWarning(`${ownerLabel}: il loot ${loot.itemName || itemId} non ha una categoria — il runtime potrebbe ignorarlo.`, { alphaBlocking: true });
+    } else if (!validCategories.has(loot.category)) {
       errors.push(`${ownerLabel}: il loot ${loot.itemName || itemId} usa una categoria non valida (${loot.category}).`);
     }
     if (loot.rarity && !validRarities.has(loot.rarity)) {
