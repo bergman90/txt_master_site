@@ -775,7 +775,8 @@ const els = {
   validateAdventureBtn: document.getElementById("validate-adventure-btn"),
   exportJsonBtn: document.getElementById("export-json-btn"),
   saveAdventureBtn: document.getElementById("save-adventure-btn"),
-  saveAdventureToolbarBtn: document.getElementById("save-adventure-toolbar-btn"),
+  saveFab: document.getElementById("save-fab"),
+  saveToast: document.getElementById("save-toast"),
   validationSummary: document.getElementById("validation-summary"),
   validationList: document.getElementById("validation-list"),
   monsterPresetSelect: document.getElementById("monster-preset-select"),
@@ -1007,8 +1008,8 @@ function bindActions() {
   els.addSceneLootBtn.addEventListener("click", addSceneLoot);
   els.addMonsterLootBtn.addEventListener("click", addMonsterLoot);
   els.addCombatGroupBtn.addEventListener("click", addCombatGroup);
-  els.saveAdventureBtn.addEventListener("click", saveAdventureProject);
-  els.saveAdventureToolbarBtn?.addEventListener("click", saveAdventureProject);
+  els.saveAdventureBtn?.addEventListener("click", saveAdventureProject);
+  els.saveFab?.addEventListener("click", saveAdventureProject);
   els.exportJsonBtn.addEventListener("click", exportJson);
   els.refreshJsonBtn.addEventListener("click", renderJson);
   els.flowZoomOutBtn?.addEventListener("click", () => changeFlowZoom(-FLOW_ZOOM_STEP));
@@ -2112,18 +2113,22 @@ function flashSaveAdventureButton() {
     window.clearTimeout(state.ui.saveAdventureFeedbackTimer);
     state.ui.saveAdventureFeedbackTimer = null;
   }
-  [els.saveAdventureBtn, els.saveAdventureToolbarBtn].forEach((btn) => {
-    if (!btn) return;
-    btn.classList.add("is-saved");
-  });
-  if (els.saveAdventureBtn) els.saveAdventureBtn.textContent = "Salvato ✓";
-  if (els.saveAdventureToolbarBtn) els.saveAdventureToolbarBtn.textContent = "Salvato ✓";
+
+  // FAB pulse
+  els.saveFab?.classList.add("is-saved");
+
+  // Toast centrale
+  if (els.saveToast) {
+    els.saveToast.classList.add("visible");
+  }
+
   state.ui.saveAdventureFeedbackTimer = window.setTimeout(() => {
-    if (els.saveAdventureBtn) els.saveAdventureBtn.textContent = "Salva avventura";
-    if (els.saveAdventureToolbarBtn) els.saveAdventureToolbarBtn.textContent = "Salva";
-    [els.saveAdventureBtn, els.saveAdventureToolbarBtn].forEach((btn) => btn?.classList.remove("is-saved"));
+    els.saveFab?.classList.remove("is-saved");
+    if (els.saveToast) {
+      els.saveToast.classList.remove("visible");
+    }
     state.ui.saveAdventureFeedbackTimer = null;
-  }, 1600);
+  }, 2000);
 }
 
 function updateSceneSaveStatus() {

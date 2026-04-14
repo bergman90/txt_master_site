@@ -512,27 +512,70 @@ button:hover {
   transform: none;
 }
 
-.save-project-btn {
-  width: 100%;
-  min-height: 54px;
-  font-size: 1rem;
-  letter-spacing: 0.02em;
-  border: 1px solid rgba(255, 243, 220, 0.15);
-  box-shadow: 0 14px 28px rgba(209, 144, 82, 0.22);
+/* ── Save FAB ───────────────────────────────────────────────────────────── */
+.save-fab {
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  z-index: 900;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: none;
+  background: var(--accent);
+  color: #1a1006;
+  box-shadow: 0 6px 24px rgba(209, 144, 82, 0.45), 0 2px 6px rgba(0,0,0,0.4);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s, box-shadow 0.15s, background 0.2s;
 }
 
-.save-project-btn.is-saved {
-  background: linear-gradient(180deg, var(--accent-2), #547a55);
-  color: #08110a;
+.save-fab:hover {
+  transform: scale(1.1);
+  box-shadow: 0 10px 32px rgba(209, 144, 82, 0.6), 0 2px 8px rgba(0,0,0,0.4);
 }
 
-.save-project-btn--toolbar {
-  width: auto;
-  min-height: unset;
-  padding: 5px 14px;
-  font-size: 0.82rem;
-  box-shadow: none;
-  transition: background 0.2s, color 0.2s;
+.save-fab:active {
+  transform: scale(0.95);
+}
+
+.save-fab svg {
+  width: 26px;
+  height: 26px;
+  pointer-events: none;
+}
+
+.save-fab.is-saved {
+  background: var(--accent-2);
+  box-shadow: 0 6px 24px rgba(116, 164, 117, 0.5), 0 2px 6px rgba(0,0,0,0.4);
+}
+
+/* ── Save toast ─────────────────────────────────────────────────────────── */
+.save-toast {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1100;
+  background: rgba(22, 28, 38, 0.92);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 18px 40px;
+  border-radius: 16px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(209,144,82,0.15);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+
+.save-toast.visible {
+  opacity: 1;
 }
 
 .hidden-file-input {
