@@ -325,6 +325,12 @@
                 <h4>Loot mostro</h4>
                 <button id="add-monster-loot-btn">Aggiungi loot</button>
               </div>
+              <div class="loot-quick-btns">
+                <button type="button" data-quick-loot="coins" class="small">+ Monete</button>
+                <button type="button" data-quick-loot="healing_potion" class="small">+ Pozione</button>
+                <button type="button" data-quick-loot="rusted_blade" class="small">+ Arma drop</button>
+                <button type="button" data-quick-loot="wolf_pelt" class="small">+ Tesoro</button>
+              </div>
               <div id="monster-loot-list"></div>
             </div>
           </div>
@@ -384,22 +390,49 @@
         <div class="loot-summary-meta">
           <small data-role="loot-meta">Quantita 1</small>
           <small data-role="loot-tag">Comune</small>
+          <label class="loot-quest-inline" title="Quest item: questo oggetto è necessario per sbloccare una scelta narrativa specifica. Non si può scartare."><input data-field="questItem" type="checkbox"> Quest</label>
           <small data-role="loot-action">Approva loot</small>
         </div>
       </summary>
+
       <label>Tipo loot<select data-field="itemName"></select></label>
-      <label>Nome personalizzato<input data-field="customName" type="text" placeholder="Solo se scegli Personalizzato"></label>
-      <label>ItemId runtime<input data-field="customItemId" type="text" placeholder="es. sigil_key_custom"></label>
-      <label>Lock ID<input data-field="lockId" type="text" placeholder="es. magister_archive"></label>
-      <label class="checkbox-line"><input data-field="questItem" type="checkbox"> Quest item</label>
-      <label>Categoria<select data-field="category"></select></label>
-      <label>Rarita<select data-field="rarity"></select></label>
-      <label>Effetto 1<select data-field="effectId" data-effect-index="0"></select></label>
-      <p class="hint effect-help" data-role="effect-help">Scegli un effetto compatibile con il tipo di loot.</p>
-      <label>Effetto 2 <small>(opzionale)</small><select data-field="effectId2" data-effect-index="1"></select></label>
-      <label>Famiglia effetto<input data-field="effectFamily" type="text" readonly></label>
-      <label>Trigger effetto<input data-field="effectTrigger" type="text" readonly></label>
+      <p class="hint loot-preview" data-role="loot-preview"></p>
+      <p class="hint loot-error" data-role="loot-error" style="display:none"></p>
+
       <label>Quantita<input data-field="quantity" type="number" min="1" value="1"></label>
+
+      <div class="loot-effects-section">
+        <div class="loot-effects-header">
+          <span class="loot-effects-label">Effetti</span>
+          <button data-action="add-effect" type="button" class="small">+ Effetto</button>
+        </div>
+        <div data-role="effect-chips" class="effect-chips"></div>
+        <p class="hint effect-help" data-role="effect-help"></p>
+      </div>
+
+      <details class="loot-advanced">
+        <summary>Opzioni avanzate</summary>
+
+        <label>Rarita<select data-field="rarity"></select></label>
+        <label>Categoria<select data-field="category"></select></label>
+
+        <div data-role="lock-row">
+          <label>Lock ID
+            <input data-field="lockId" type="text" placeholder="es. magister_archive">
+          </label>
+          <p class="hint" data-role="lock-hint"></p>
+        </div>
+
+        <div data-role="custom-row">
+          <label>Nome personalizzato<input data-field="customName" type="text" placeholder="Solo se scegli Personalizzato"></label>
+        </div>
+
+        <label class="checkbox-line hint quest-hint">
+          <input data-field="questItemAdv" type="checkbox">
+          Quest item — questo oggetto è richiesto da una scelta narrativa (requiredItemId). Il giocatore non può scartarlo. Usalo solo se una scelta nell'avventura ha lo stesso itemId come requisito.
+        </label>
+      </details>
+
       <div class="button-row loot-actions">
         <button data-action="approve-loot" type="button" class="small">Approva loot</button>
         <button data-action="remove-loot" type="button" class="danger small">Rimuovi loot</button>

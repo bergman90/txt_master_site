@@ -749,6 +749,150 @@ button.small {
   margin-top: 8px;
 }
 
+/* Quest item checkbox inline nella summary */
+.loot-quest-inline {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.78rem;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+}
+.loot-quest-inline input {
+  width: auto;
+  margin: 0;
+}
+
+/* Anteprima preset */
+.loot-preview {
+  margin: -4px 0 6px;
+  font-size: 0.78rem;
+  color: var(--muted);
+  padding: 0;
+  border: none;
+  background: none;
+}
+
+/* Errore inline loot */
+.loot-error {
+  margin: 4px 0;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(220, 80, 60, 0.4);
+  background: rgba(220, 80, 60, 0.10);
+  color: #f08070;
+  font-size: 0.82rem;
+}
+
+/* Sezione effetti con chip */
+.loot-effects-section {
+  margin: 6px 0 4px;
+}
+
+.loot-effects-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.loot-effects-label {
+  font-size: 0.82rem;
+  color: var(--muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.effect-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 28px;
+  align-items: center;
+}
+
+.effect-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px 3px 10px;
+  border-radius: 20px;
+  background: rgba(209, 144, 82, 0.18);
+  border: 1px solid rgba(209, 144, 82, 0.35);
+  font-size: 0.80rem;
+  color: #e8c98a;
+  white-space: nowrap;
+}
+
+.effect-chip--empty {
+  color: var(--muted);
+  background: transparent;
+  border-color: rgba(255,255,255,0.08);
+  font-style: italic;
+}
+
+.effect-chip-remove {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: rgba(220, 130, 80, 0.7);
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0 1px;
+  cursor: pointer;
+  border-radius: 50%;
+}
+.effect-chip-remove:hover {
+  color: #f08060;
+}
+
+/* Select inline che appare al click "+ Effetto" */
+.effect-add-select {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+}
+
+/* Sezione opzioni avanzate */
+.loot-advanced {
+  margin: 8px 0 4px;
+  border: 1px dashed rgba(255,255,255,0.10);
+  border-radius: 10px;
+  padding: 2px 10px 8px;
+}
+
+.loot-advanced > summary {
+  cursor: pointer;
+  font-size: 0.80rem;
+  color: var(--muted);
+  padding: 6px 0;
+  list-style: none;
+}
+.loot-advanced > summary::before {
+  content: "▸ ";
+}
+.loot-advanced[open] > summary::before {
+  content: "▾ ";
+}
+
+.quest-hint {
+  margin-top: 6px;
+  line-height: 1.4;
+  font-size: 0.80rem;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+/* Pulsanti quick-loot mostro */
+.loot-quick-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
 .effect-help {
   margin: 6px 0 2px;
   padding: 8px 10px;

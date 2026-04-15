@@ -1005,6 +1005,17 @@ function bindActions() {
   els.addChoiceBtn.addEventListener("click", addChoice);
   els.addSceneLootBtn.addEventListener("click", addSceneLoot);
   els.addMonsterLootBtn.addEventListener("click", addMonsterLoot);
+  document.querySelectorAll("[data-quick-loot]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const monster = getSelectedMonster();
+      if (!monster) return;
+      monster.loot.push(createLootFromPreset(btn.dataset.quickLoot));
+      markSceneDirty();
+      renderMonsterLootEditor(monster);
+      scheduleMonsterListRender();
+      scheduleJsonRender(180);
+    });
+  });
   els.addCombatGroupBtn.addEventListener("click", addCombatGroup);
   els.saveAdventureBtn?.addEventListener("click", saveAdventureProject);
   els.saveFab?.addEventListener("click", saveAdventureProject);
@@ -3185,60 +3196,154 @@ function renderLootList(container, items, options = {}) {
   container.innerHTML = "";
   items.forEach((loot, index) => {
     const node = document.getElementById("loot-template").content.firstElementChild.cloneNode(true);
-    const title = node.querySelector('[data-role="loot-title"]');
-    const meta = node.querySelector('[data-role="loot-meta"]');
-    const tag = node.querySelector('[data-role="loot-tag"]');
-    const action = node.querySelector('[data-role="loot-action"]');
-    const select = node.querySelector('[data-field="itemName"]');
-    const customInput = node.querySelector('[data-field="customName"]');
+    const title      = node.querySelector('[data-role="loot-title"]');
+    const meta       = node.querySelector('[data-role="loot-meta"]');
+    const tag        = node.querySelector('[data-role="loot-tag"]');
+    const action     = node.querySelector('[data-role="loot-action"]');
+    const preview    = node.querySelector('[data-role="loot-preview"]');
+    const errorEl    = node.querySelector('[data-role="loot-error"]');
+    const select     = node.querySelector('[data-field="itemName"]');
+    const customInput      = node.querySelector('[data-field="customName"]');
+    const categorySelect   = node.querySelector('[data-field="category"]');
+    const raritySelect     = node.querySelector('[data-field="rarity"]');
+    const lockIdInput      = node.querySelector('[data-field="lockId"]');
+    const lockHint         = node.querySelector('[data-role="lock-hint"]');
+    const lockRow          = node.querySelector('[data-role="lock-row"]');
+    const questInline      = node.querySelector('[data-field="questItem"]');
+    const questAdv         = node.querySelector('[data-field="questItemAdv"]');
+    const customRow        = node.querySelector('[data-role="custom-row"]');
+    const chipsContainer   = node.querySelector('[data-role="effect-chips"]');
+    const effectHelp       = node.querySelector('[data-role="effect-help"]');
+    const addEffectBtn     = node.querySelector('[data-action="add-effect"]');
+    const quantityField    = node.querySelector('[data-field="quantity"]');
+
     const selectedPreset = findLootPresetId(loot.itemId || loot.itemName);
-    const categorySelect = node.querySelector('[data-field="category"]');
-    const raritySelect = node.querySelector('[data-field="rarity"]');
-    const effectSelect = node.querySelector('[data-field="effectId"]');
-    const effectSelect2 = node.querySelector('[data-field="effectId2"]');
-    const effectHelp = node.querySelector('[data-role="effect-help"]');
-    const lockIdInput = node.querySelector('[data-field="lockId"]');
-    const questItemInput = node.querySelector('[data-field="questItem"]');
-    const customItemIdInput = node.querySelector('[data-field="customItemId"]');
-    const familyField = node.querySelector('[data-field="effectFamily"]');
-    const triggerField = node.querySelector('[data-field="effectTrigger"]');
-    const quantityField = node.querySelector('[data-field="quantity"]');
     hydrateLootSelect(select, selectedPreset);
     hydrateCategorySelect(categorySelect, loot.category || "");
     hydrateRaritySelect(raritySelect, loot.rarity || "common");
-    hydrateEffectSelect(effectSelect, loot.effectIds?.[0] || "", loot.category || "");
-    hydrateEffectSelect(effectSelect2, loot.effectIds?.[1] || "", loot.category || "");
-    customInput.value = selectedPreset === "custom" ? loot.itemName || "" : "";
+    customInput.value    = selectedPreset === "custom" ? loot.itemName || "" : "";
     customInput.disabled = selectedPreset !== "custom";
-    customItemIdInput.value = selectedPreset === "custom" ? (loot.itemId || slugify(loot.itemName || "custom_loot")) : (loot.itemId || "");
-    customItemIdInput.disabled = selectedPreset !== "custom";
-    lockIdInput.value = loot.lockId || "";
-    questItemInput.checked = Boolean(loot.questItem);
-    syncLootEffectMeta(effectSelect.value, familyField, triggerField);
-    quantityField.value = loot.quantity ?? 1;
+    lockIdInput.value    = loot.lockId || "";
+    questInline.checked  = Boolean(loot.questItem);
+    questAdv.checked     = Boolean(loot.questItem);
+    quantityField.value  = loot.quantity ?? 1;
 
-    function syncLootEffectUi() {
-      loot.effectIds = (loot.effectIds || []).filter((id) => effectAllowedForCategory(id, loot.category || ""));
-      hydrateEffectSelect(effectSelect, loot.effectIds?.[0] || "", loot.category || "");
-      hydrateEffectSelect(effectSelect2, loot.effectIds?.[1] || "", loot.category || "");
-      syncLootEffectMeta(effectSelect.value, familyField, triggerField);
-      effectHelp.textContent = effectHelpText(effectSelect.value, loot.category || "");
+    // ── helpers ──────────────────────────────────────────────────────────────
+
+    function renderEffectChips() {
+      chipsContainer.innerHTML = "";
+      const ids = loot.effectIds || [];
+      if (ids.length === 0) {
+        const empty = document.createElement("span");
+        empty.className = "effect-chip effect-chip--empty";
+        empty.textContent = "Nessun effetto";
+        chipsContainer.appendChild(empty);
+      } else {
+        ids.forEach((effectId, i) => {
+          const preset = effectPresetById(effectId);
+          const chip = document.createElement("span");
+          chip.className = "effect-chip";
+          chip.title = preset ? `${preset.description} — trigger: ${effectTriggerLabel(preset.trigger)} — famiglia: ${effectFamilyLabel(preset.family)}` : effectId;
+          chip.innerHTML = `<span class="effect-chip-label">${preset?.label || effectId}</span><button type="button" class="effect-chip-remove" data-idx="${i}" title="Rimuovi effetto">×</button>`;
+          chip.querySelector(".effect-chip-remove").addEventListener("click", (e) => {
+            e.stopPropagation();
+            loot.effectIds = ids.filter((_, j) => j !== i);
+            renderEffectChips();
+            updateEffectHelp();
+            updateLootError();
+            onChange();
+          });
+          chipsContainer.appendChild(chip);
+        });
+      }
+      updateAddEffectBtn();
+    }
+
+    function updateAddEffectBtn() {
+      const allowed = effectPresetsForCategory(loot.category || "").filter((e) => e.value && !(loot.effectIds || []).includes(e.value));
+      addEffectBtn.disabled = allowed.length === 0;
+      addEffectBtn.title = allowed.length === 0 ? "Tutti gli effetti compatibili sono già stati aggiunti" : "Aggiungi un effetto compatibile con questa categoria";
+    }
+
+    function updateEffectHelp() {
+      const ids = loot.effectIds || [];
+      if (ids.length === 0) {
+        effectHelp.textContent = loot.category
+          ? `Nessun effetto. Clicca "+ Effetto" per aggiungerne uno compatibile con ${ITEM_CATEGORIES.find((c) => c.value === loot.category)?.label || loot.category}.`
+          : "Scegli prima un tipo di loot per vedere gli effetti compatibili.";
+      } else {
+        const labels = ids.map((id) => effectPresetById(id)?.label || id).join(", ");
+        effectHelp.textContent = `Effetti attivi: ${labels}. Passa il mouse sui chip per i dettagli.`;
+      }
+    }
+
+    function updateLootError() {
+      const errors = (loot.effectIds || []).filter((id) => !effectAllowedForCategory(id, loot.category || ""));
+      if (errors.length > 0) {
+        const labels = errors.map((id) => effectPresetById(id)?.label || id).join(", ");
+        errorEl.textContent = `⚠ Effetto non compatibile con la categoria "${loot.category}": ${labels}. Rimuovilo o cambia categoria.`;
+        errorEl.style.display = "";
+      } else {
+        errorEl.textContent = "";
+        errorEl.style.display = "none";
+      }
+    }
+
+    function updatePreview() {
+      const preset = lootPresetById(selectedPreset === "custom" ? "custom" : select.value);
+      if (preset && preset.id !== "custom") {
+        const catLabel = ITEM_CATEGORIES.find((c) => c.value === preset.category)?.label || preset.category;
+        const rarLabel = ITEM_RARITIES.find((r) => r.value === preset.rarity)?.label || preset.rarity;
+        preview.textContent = `${catLabel} · ${rarLabel}`;
+        preview.style.display = "";
+      } else {
+        preview.textContent = "";
+        preview.style.display = "none";
+      }
+    }
+
+    function updateLockHint() {
+      const id = loot.lockId?.trim();
+      if (!id) { lockHint.textContent = ""; return; }
+      const matches = (state.adventure.scenes || []).flatMap((s) =>
+        (s.choices || []).filter((c) => c.requiredLockId === id).map(() => s.title || s.id)
+      );
+      lockHint.textContent = matches.length
+        ? `Collegato a: ${[...new Set(matches)].join(", ")}`
+        : `Nessuna scelta usa ancora lockId "${id}".`;
+    }
+
+    function syncVisibility() {
+      // lock row: solo se categoria key
+      lockRow.style.display = loot.category === "key" ? "" : "none";
+      // custom row: solo se preset custom
+      customRow.style.display = select.value === "custom" ? "" : "none";
     }
 
     function updateLootHeader() {
       title.textContent = loot.itemName || "Loot personalizzato";
-      meta.textContent = `Quantita ${loot.quantity ?? 1} | ${runtimeLootItemId(loot)}`;
+      meta.textContent  = `Quantita ${loot.quantity ?? 1} | ${runtimeLootItemId(loot)}`;
       const rarityLabel = loot.rarity ? loot.rarity.charAt(0).toUpperCase() + loot.rarity.slice(1) : "Comune";
-      tag.textContent = loot.questItem ? `Quest item • ${rarityLabel}` : rarityLabel;
-      action.textContent = node.open ? "Approva loot" : "Modifica loot";
+      tag.textContent   = loot.questItem ? `Quest · ${rarityLabel}` : rarityLabel;
+      action.textContent = node.open ? "Approva" : "Modifica";
     }
 
+    // ── initial render ────────────────────────────────────────────────────────
+    renderEffectChips();
+    updateEffectHelp();
+    updateLootError();
+    updatePreview();
+    updateLockHint();
+    syncVisibility();
     node.open = loot.expanded !== false;
     updateLootHeader();
+
+    // ── events ────────────────────────────────────────────────────────────────
     node.addEventListener("toggle", () => {
       loot.expanded = node.open;
       updateLootHeader();
     });
+
     node.querySelector('[data-action="approve-loot"]').addEventListener("click", (event) => {
       event.preventDefault();
       event.stopPropagation();
@@ -3249,82 +3354,109 @@ function renderLootList(container, items, options = {}) {
     select.addEventListener("change", (event) => {
       const nextPreset = event.target.value;
       const preset = lootPresetById(nextPreset);
-      const nextLabel = lootLabelFromPreset(nextPreset);
-      loot.itemId = preset?.id === "custom" ? "" : preset?.id || "";
-      loot.itemName = nextLabel;
-      loot.category = preset?.category || loot.category || "";
-      loot.rarity = preset?.rarity || loot.rarity || "common";
+      loot.itemId    = preset?.id === "custom" ? "" : preset?.id || "";
+      loot.itemName  = lootLabelFromPreset(nextPreset);
+      loot.category  = preset?.category || loot.category || "";
+      loot.rarity    = preset?.rarity   || loot.rarity   || "common";
       loot.effectIds = [...(preset?.effectIds || [])];
+      if (preset?.lockId) loot.lockId = preset.lockId;
       hydrateCategorySelect(categorySelect, loot.category || "");
       hydrateRaritySelect(raritySelect, loot.rarity || "common");
-      syncLootEffectUi();
       customInput.disabled = nextPreset !== "custom";
-      customItemIdInput.disabled = nextPreset !== "custom";
-      if (nextPreset !== "custom") {
-        customInput.value = "";
-        customItemIdInput.value = loot.itemId || "";
-      } else if (!loot.itemName) {
-        loot.itemName = "";
-        customItemIdInput.value = loot.itemId || "";
-      }
+      if (nextPreset !== "custom") customInput.value = "";
+      renderEffectChips();
+      updateEffectHelp();
+      updateLootError();
+      updatePreview();
+      updateLockHint();
+      syncVisibility();
       updateLootHeader();
       onChange();
     });
+
     customInput.addEventListener("input", (event) => {
       if (select.value !== "custom") return;
       loot.itemName = event.target.value;
-      if (!customItemIdInput.value.trim()) {
-        const generatedId = slugify(event.target.value || "custom_loot");
-        loot.itemId = generatedId;
-        customItemIdInput.value = generatedId;
-      }
+      loot.itemId   = slugify(event.target.value || "custom_loot");
       updateLootHeader();
       onChange();
     });
-    customItemIdInput.addEventListener("input", (event) => {
-      if (select.value !== "custom") return;
-      loot.itemId = normalizeString(event.target.value) || "";
-      updateLootHeader();
-      onChange();
-    });
+
     categorySelect.addEventListener("change", (event) => {
-      loot.category = normalizeString(event.target.value) || "";
-      syncLootEffectUi();
+      loot.category  = normalizeString(event.target.value) || "";
+      loot.effectIds = (loot.effectIds || []).filter((id) => effectAllowedForCategory(id, loot.category));
+      renderEffectChips();
+      updateEffectHelp();
+      updateLootError();
+      syncVisibility();
+      updateLockHint();
       onChange();
     });
-    lockIdInput.addEventListener("input", (event) => {
-      loot.lockId = normalizeString(event.target.value) || "";
-      onChange();
-    });
-    questItemInput.addEventListener("change", (event) => {
-      loot.questItem = Boolean(event.target.checked);
-      updateLootHeader();
-      onChange();
-    });
+
     raritySelect.addEventListener("change", (event) => {
       loot.rarity = normalizeString(event.target.value) || "common";
       updateLootHeader();
       onChange();
     });
-    effectSelect.addEventListener("change", (event) => {
-      const effectId = normalizeString(event.target.value) || "";
-      const second = loot.effectIds?.[1] || "";
-      loot.effectIds = [effectId, second].filter(Boolean);
-      syncLootEffectMeta(effectId, familyField, triggerField);
-      effectHelp.textContent = effectHelpText(effectId, loot.category || "");
+
+    lockIdInput.addEventListener("input", (event) => {
+      loot.lockId = normalizeString(event.target.value) || "";
+      updateLockHint();
       onChange();
     });
-    effectSelect2.addEventListener("change", (event) => {
-      const effectId2 = normalizeString(event.target.value) || "";
-      const first = loot.effectIds?.[0] || "";
-      loot.effectIds = [first, effectId2].filter(Boolean);
+
+    questInline.addEventListener("change", (event) => {
+      loot.questItem  = Boolean(event.target.checked);
+      questAdv.checked = loot.questItem;
+      updateLootHeader();
       onChange();
     });
+    questAdv.addEventListener("change", (event) => {
+      loot.questItem   = Boolean(event.target.checked);
+      questInline.checked = loot.questItem;
+      updateLootHeader();
+      onChange();
+    });
+
     quantityField.addEventListener("input", (event) => {
       loot.quantity = Number(event.target.value || 1);
       updateLootHeader();
       onChange();
     });
+
+    // "+ Effetto" button — inline select that appears, picks one, then disappears
+    addEffectBtn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (node.querySelector(".effect-add-select")) return; // already open
+      const allowed = effectPresetsForCategory(loot.category || "").filter((e) => e.value && !(loot.effectIds || []).includes(e.value));
+      if (allowed.length === 0) return;
+      const sel = document.createElement("select");
+      sel.className = "effect-add-select";
+      const placeholder = document.createElement("option");
+      placeholder.value = "";
+      placeholder.textContent = "— Scegli effetto —";
+      sel.appendChild(placeholder);
+      allowed.forEach((e) => {
+        const opt = document.createElement("option");
+        opt.value = e.value;
+        opt.textContent = e.label;
+        opt.title = e.description;
+        sel.appendChild(opt);
+      });
+      sel.addEventListener("change", () => {
+        if (!sel.value) return;
+        loot.effectIds = [...(loot.effectIds || []), sel.value];
+        sel.remove();
+        renderEffectChips();
+        updateEffectHelp();
+        updateLootError();
+        onChange();
+      });
+      sel.addEventListener("blur", () => sel.remove());
+      addEffectBtn.insertAdjacentElement("afterend", sel);
+      sel.focus();
+    });
+
     node.querySelector('[data-action="remove-loot"]').addEventListener("click", (event) => {
       event.preventDefault();
       event.stopPropagation();
@@ -3332,8 +3464,6 @@ function renderLootList(container, items, options = {}) {
       onChange();
       rerender();
     });
-
-    syncLootEffectUi();
 
     container.appendChild(node);
   });
@@ -3732,6 +3862,11 @@ function hydrateSceneTargetSelect(select, value = "") {
 
 function hydrateSkillSelect(select, value = "") {
   select.innerHTML = "";
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "— Nessuna prova —";
+  if (!value) placeholder.selected = true;
+  select.appendChild(placeholder);
   SKILLS.forEach((skill) => {
     const option = document.createElement("option");
     option.value = skill.value;
