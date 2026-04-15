@@ -1608,6 +1608,27 @@ function createScene() {
   createSceneOfKind("description");
 }
 
+// Dato il titolo di una scena sorgente, restituisce il prossimo titolo disponibile
+// nella forma "<base> <n>". Strappa il numero finale per trovare la base, poi cerca
+// il massimo numero gia usato tra tutte le scene con quella base.
+function deriveChildTitle(sourceTitle) {
+  const base = (sourceTitle || "").replace(/\s+\d+$/, "").trim() || sourceTitle || "Evento";
+  let max = 1;
+  state.adventure.scenes.forEach((s) => {
+    if (!s.title) return;
+    if (s.title === base) {
+      max = Math.max(max, 1);
+    } else {
+      const lastSpace = s.title.lastIndexOf(" ");
+      if (lastSpace !== -1 && s.title.slice(0, lastSpace) === base) {
+        const num = parseInt(s.title.slice(lastSpace + 1), 10);
+        if (!isNaN(num)) max = Math.max(max, num);
+      }
+    }
+  });
+  return `${base} ${max + 1}`;
+}
+
 // Crea una scena del tipo specificato, opzionalmente in una posizione precisa (drag-to-create),
 // collegandola a una scena sorgente, con un preset mostro o con checkConfig pre-compilato.
 function createSceneOfKind(kind, { position = null, sourceSceneId = null, presetId = null, checkConfig = null } = {}) {
@@ -1616,10 +1637,12 @@ function createSceneOfKind(kind, { position = null, sourceSceneId = null, preset
   const spawnPosition = position || findNextScenePosition();
   const isFinal = kind === "final";
   const effectiveKind = isFinal ? "description" : kind;
+  const sourceScene = sourceSceneId ? state.adventure.scenes.find((s) => s.id === sourceSceneId) : null;
+  const defaultTitle = isFinal ? "Nodo finale" : sourceScene ? deriveChildTitle(sourceScene.title) : `Evento ${index}`;
   const scene = {
     id: createUniqueSceneId(),
     kind: effectiveKind,
-    title: isFinal ? "Nodo finale" : `Evento ${index}`,
+    title: defaultTitle,
     openingText: "",
     eventImage: null,
     choices: [],
