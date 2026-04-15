@@ -1297,6 +1297,33 @@ button.small {
   transform: none;
 }
 
+/* ── Testo di transizione esito ── */
+.outcome-transition {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 6px 0 4px;
+}
+
+.outcome-transition-btn {
+  align-self: flex-start;
+  font-size: 0.82rem;
+  padding: 5px 10px;
+}
+
+.outcome-transition-textarea {
+  width: 100%;
+  min-height: 72px;
+  resize: vertical;
+  font-size: 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-input, var(--bg));
+  color: var(--text);
+  padding: 8px 10px;
+  box-sizing: border-box;
+}
+
 /* ── Hotkey badge ── */
 .hotkey-badge {
   position: fixed;
@@ -1531,4 +1558,281 @@ button.small {
 .node-picker-btn--final:hover,
 .node-picker-btn--final:focus {
   border-color: var(--accent);
+}
+
+/* ─── Node picker step 2 ──────────────────────────────────────────────────── */
+
+.node-picker-step2-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.node-picker-back-btn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.82rem;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+  box-shadow: none;
+}
+.node-picker-back-btn:hover {
+  color: var(--accent);
+  filter: none;
+  transform: none;
+}
+
+.node-picker-title--step2 {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.node-picker-preset-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 320px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(209, 144, 82, 0.3) transparent;
+}
+
+.node-picker-preset-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 10px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s, border-color 0.1s;
+  width: 100%;
+  box-shadow: none;
+}
+.node-picker-preset-btn:hover,
+.node-picker-preset-btn:focus {
+  background: var(--panel-3);
+  border-color: var(--danger);
+  outline: none;
+  filter: none;
+  transform: none;
+}
+.node-picker-preset-btn--custom:hover,
+.node-picker-preset-btn--custom:focus {
+  border-color: var(--accent);
+}
+
+.node-picker-preset-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.node-picker-preset-stats {
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-family: var(--mono);
+}
+
+/* Check step 2 */
+.node-picker-check-step {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.node-picker-check-label {
+  margin-bottom: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.node-picker-difficulty-pills {
+  margin-top: 0;
+}
+
+.node-picker-check-footer {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.node-picker-check-confirm-btn {
+  flex: 1;
+  font-size: 0.88rem;
+  padding: 8px 12px;
+}
+
+/* ─── Difficulty pills ────────────────────────────────────────────────────── */
+
+.difficulty-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.difficulty-pills-label {
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  align-self: center;
+  margin-right: 2px;
+}
+
+.difficulty-pill {
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border-radius: 20px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  cursor: pointer;
+  box-shadow: none;
+  transition: background 0.1s, border-color 0.1s, color 0.1s;
+  font-family: var(--mono);
+}
+.difficulty-pill:hover {
+  border-color: var(--accent);
+  color: var(--text);
+  filter: none;
+  transform: none;
+}
+.difficulty-pill--active {
+  background: rgba(209, 144, 82, 0.2);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ─── Scene type badge ────────────────────────────────────────────────────── */
+
+.scene-type-badge {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid;
+}
+
+.scene-type-badge--description {
+  background: rgba(116, 164, 117, 0.15);
+  color: var(--accent-2);
+  border-color: rgba(116, 164, 117, 0.35);
+}
+
+.scene-type-badge--check {
+  background: rgba(126, 168, 196, 0.15);
+  color: #7ea8c4;
+  border-color: rgba(126, 168, 196, 0.35);
+}
+
+.scene-type-badge--combat {
+  background: rgba(202, 101, 91, 0.15);
+  color: #e07e76;
+  border-color: rgba(202, 101, 91, 0.35);
+}
+
+/* ─── Archetype picker (inline nel combat group) ──────────────────────────── */
+
+.archetype-picker {
+  margin-bottom: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(209, 144, 82, 0.2);
+  background: rgba(10, 14, 20, 0.4);
+}
+
+.archetype-picker-title {
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin: 0 0 10px;
+}
+
+.archetype-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.archetype-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 4px;
+  border-radius: 10px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.1s, border-color 0.1s;
+  box-shadow: none;
+}
+.archetype-card:hover,
+.archetype-card:focus {
+  background: var(--panel-3);
+  border-color: var(--danger);
+  outline: none;
+  filter: none;
+  transform: none;
+}
+
+.archetype-card-icon {
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.archetype-card-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.archetype-card-hint {
+  font-size: 0.62rem;
+  color: var(--muted);
+  line-height: 1.2;
+  display: none;
+}
+
+.archetype-card-stats {
+  font-size: 0.62rem;
+  color: var(--muted);
+  font-family: var(--mono);
+  line-height: 1.2;
+}
+
+.archetype-picker-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 6px;
+}
+
+@media (max-width: 720px) {
+  .archetype-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }

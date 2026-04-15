@@ -395,6 +395,17 @@ const EXAMPLE_ADVENTURES = [
   }
 ];
 
+const MONSTER_STAT_ARCHETYPES = [
+  { id: "gregario",        label: "Gregario",          icon: "👥", hint: "carne da macello",                    hitPoints:  7, attackBonus: 1, defense: 10, damageMin: 1, damageMax: 3, goldReward:  4, abilityIds: [],                                        hasBerserkerPhase: false },
+  { id: "predatore",       label: "Predatore",         icon: "🐾", hint: "veloce, colpisce e scappa",           hitPoints: 10, attackBonus: 3, defense: 12, damageMin: 2, damageMax: 5, goldReward:  7, abilityIds: ["enemy_brutal_charge"],                   hasBerserkerPhase: false },
+  { id: "soldato",         label: "Soldato",           icon: "⚔",  hint: "combattente equilibrato",            hitPoints: 14, attackBonus: 3, defense: 12, damageMin: 2, damageMax: 6, goldReward: 11, abilityIds: [],                                        hasBerserkerPhase: false },
+  { id: "bruto",           label: "Bruto",             icon: "🪨", hint: "lento, corazzato, letale",            hitPoints: 20, attackBonus: 2, defense: 13, damageMin: 4, damageMax: 8, goldReward: 12, abilityIds: ["enemy_armor_break"],                     hasBerserkerPhase: false },
+  { id: "assassino",       label: "Assassino",         icon: "🗡",  hint: "fragile ma letale",                  hitPoints:  9, attackBonus: 5, defense: 10, damageMin: 3, damageMax: 7, goldReward: 14, abilityIds: ["enemy_draining_claws"],                  hasBerserkerPhase: false },
+  { id: "ritualista",      label: "Ritualista",        icon: "📜", hint: "caster oscuro, minaccia psicologica", hitPoints: 12, attackBonus: 4, defense: 11, damageMin: 2, damageMax: 6, goldReward: 16, abilityIds: ["enemy_howl_of_dread"],                   hasBerserkerPhase: false },
+  { id: "guardiano_elite", label: "Guardiano d'Elite", icon: "🛡",  hint: "sub-boss tenace",                    hitPoints: 22, attackBonus: 4, defense: 13, damageMin: 3, damageMax: 7, goldReward: 18, abilityIds: ["enemy_enrage"],                          hasBerserkerPhase: false },
+  { id: "boss",            label: "Boss",              icon: "💀", hint: "scontro finale, fase berserk",        hitPoints: 28, attackBonus: 5, defense: 14, damageMin: 4, damageMax: 9, goldReward: 25, abilityIds: ["enemy_howl_of_dread", "enemy_enrage"],    hasBerserkerPhase: true  }
+];
+
 const NODE_WIDTH = 280;
 const NODE_HEIGHT = 130;
 const CREATE_MONSTER_OPTION = "__create_new__";
@@ -433,6 +444,8 @@ const state = {
     startingSceneId: "",
     allowCarryOverLoadout: true,
     allowFreshStart: true,
+    forceLoadout: false,
+    restoreLoadoutOnEnd: false,
     starterKitItems: [],
     scenes: [],
     encounters: []
@@ -474,6 +487,8 @@ function createEmptyAdventure() {
     startingSceneId: "",
     allowCarryOverLoadout: true,
     allowFreshStart: true,
+    forceLoadout: false,
+    restoreLoadoutOnEnd: false,
     starterKitItems: [],
     scenes: [],
     encounters: []
@@ -757,6 +772,10 @@ const els = {
   importJsonInput: document.getElementById("import-json-input"),
   adventureCarryOver: document.getElementById("adventure-carry-over"),
   adventureFreshStart: document.getElementById("adventure-fresh-start"),
+  adventureForceLoadout: document.getElementById("adventure-force-loadout"),
+  adventureRestoreLoadout: document.getElementById("adventure-restore-loadout"),
+  restoreLoadoutRow: document.getElementById("restore-loadout-row"),
+  restoreLoadoutHint: document.getElementById("restore-loadout-hint"),
   alphaStrictValidation: document.getElementById("alpha-strict-validation"),
   restoreLocalBtn: document.getElementById("restore-local-btn"),
   resetProjectBtn: document.getElementById("reset-project-btn"),
@@ -964,6 +983,15 @@ function bindMeta() {
     state.adventure.allowFreshStart = Boolean(e.target.checked);
     scheduleJsonRender(90, { syncScene: false });
   });
+  els.adventureForceLoadout.addEventListener("change", (e) => {
+    state.adventure.forceLoadout = Boolean(e.target.checked);
+    syncForceLoadoutUI();
+    scheduleJsonRender(90, { syncScene: false });
+  });
+  els.adventureRestoreLoadout.addEventListener("change", (e) => {
+    state.adventure.restoreLoadoutOnEnd = Boolean(e.target.checked);
+    scheduleJsonRender(90, { syncScene: false });
+  });
   els.alphaStrictValidation.addEventListener("change", (e) => {
     state.ui.strictAlpha = Boolean(e.target.checked);
     scheduleJsonRender(90, { syncScene: false });
@@ -1017,6 +1045,19 @@ function bindActions() {
     });
   });
   els.addCombatGroupBtn.addEventListener("click", addCombatGroup);
+
+  // Difficulty pills nel pannello check (solo quelle statiche nell'editor)
+  document.querySelectorAll("#scene-check-config .difficulty-pill[data-value]").forEach((pill) => {
+    pill.addEventListener("click", () => {
+      const val = Number(pill.dataset.value);
+      if (els.sceneCheckDifficulty) {
+        els.sceneCheckDifficulty.value = String(val);
+        els.sceneCheckDifficulty.dispatchEvent(new Event("input"));
+      }
+      syncDifficultyPills(val);
+    });
+  });
+
   els.saveAdventureBtn?.addEventListener("click", saveAdventureProject);
   els.saveFab?.addEventListener("click", saveAdventureProject);
   els.exportJsonBtn.addEventListener("click", exportJson);
@@ -1144,7 +1185,9 @@ function bindSceneEditor() {
   els.sceneCheckDifficulty.addEventListener("input", (e) => {
     const scene = getSelectedScene();
     if (!scene) return;
-    scene.checkConfig.difficulty = Number(e.target.value || 0);
+    const val = Number(e.target.value || 0);
+    scene.checkConfig.difficulty = val;
+    syncDifficultyPills(val);
     markSceneDirty();
     scheduleJsonRender(140);
   });
@@ -1564,9 +1607,9 @@ function createScene() {
   createSceneOfKind("description");
 }
 
-// Crea una scena del tipo specificato, opzionalmente in una posizione precisa (drag-to-create)
-// e opzionalmente collegandola a una scena sorgente.
-function createSceneOfKind(kind, { position = null, sourceSceneId = null } = {}) {
+// Crea una scena del tipo specificato, opzionalmente in una posizione precisa (drag-to-create),
+// collegandola a una scena sorgente, con un preset mostro o con checkConfig pre-compilato.
+function createSceneOfKind(kind, { position = null, sourceSceneId = null, presetId = null, checkConfig = null } = {}) {
   saveCurrentScene();
   const index = state.adventure.scenes.length + 1;
   const spawnPosition = position || findNextScenePosition();
@@ -1578,33 +1621,33 @@ function createSceneOfKind(kind, { position = null, sourceSceneId = null } = {})
     title: isFinal ? "Nodo finale" : `Evento ${index}`,
     openingText: "",
     eventImage: null,
-    choices: isFinal ? [] : [],
+    choices: [],
     outcomes: createEmptySceneOutcomes(),
     sceneLoot: [],
     position: spawnPosition
   };
 
-  // Per le scene di combattimento, aggiungi subito un mostro vuoto collegato
+  // Per le scene di combattimento: crea gruppo con preset oppure lascia vuoto (apre l'archetype picker)
   if (kind === "combat") {
     scene.combatGroups = [];
-    const monster = {
-      id: createUniqueMonsterId(),
-      name: `Mostro ${state.adventure.encounters.length + 1}`,
-      description: "",
-      hitPoints: 12,
-      attackBonus: 3,
-      defense: 11,
-      damageMin: 2,
-      damageMax: 5,
-      goldReward: 8,
-      abilityIds: [],
-      hasBerserkerPhase: false,
-      loot: [{ itemId: "coins", itemName: "Monete", quantity: 8, category: "treasure", rarity: "common", effectIds: ["trade_value"] }],
-      sourceType: "custom"
-    };
-    state.adventure.encounters.push(monster);
-    scene.combatGroups.push({ monsterId: monster.id, count: 1, composition: "" });
-    state.selectedMonsterId = monster.id;
+    if (presetId) {
+      const preset = monsterPresetById(presetId);
+      if (preset) {
+        const monster = createMonsterFromPresetData(preset, createUniqueMonsterId());
+        state.adventure.encounters.push(monster);
+        scene.combatGroups.push({ monsterId: monster.id, count: 1, composition: "" });
+        state.selectedMonsterId = monster.id;
+      }
+    }
+    if (!scene.combatGroups.length) {
+      // Nessun preset: gruppo vuoto, l'archetype picker si aprirà nell'editor
+      scene.combatGroups.push({ monsterId: "", count: 1, composition: "" });
+    }
+  }
+
+  // Per le scene check: pre-compila checkConfig se fornito dal node picker
+  if (kind === "check" && checkConfig) {
+    scene.checkConfig = { skill: checkConfig.skill || "", difficulty: checkConfig.difficulty ?? 12 };
   }
 
   state.adventure.scenes.push(scene);
@@ -1621,6 +1664,8 @@ function createSceneOfKind(kind, { position = null, sourceSceneId = null } = {})
   state.ui.sceneDirty = true;
   renderWorkspace({ skipJson: true });
   scheduleJsonRender(320, { syncScene: false });
+  // Autofocus sul titolo: permette di iniziare a digitare subito
+  setTimeout(() => els.sceneTitle?.focus(), 80);
   return scene;
 }
 
@@ -1634,10 +1679,16 @@ function showNodePicker({ mode = "toolbar", sourceSceneId = null, dropPoint = nu
   const picker = document.getElementById("node-picker");
   if (!picker) return;
 
+  // Ripristina step 1
+  document.getElementById("node-picker-step1")?.classList.remove("hidden");
+  const step2 = document.getElementById("node-picker-step2");
+  if (step2) { step2.classList.add("hidden"); step2.innerHTML = ""; }
+  picker.style.maxWidth = "";
+
   // Posizionamento: vicino al pulsante toolbar o dove il mouse ha rilasciato il drag
   if (mode === "drag" && clientX != null && clientY != null) {
-    picker.style.left = `${Math.min(clientX, window.innerWidth - 220)}px`;
-    picker.style.top = `${Math.min(clientY + 8, window.innerHeight - 220)}px`;
+    picker.style.left = `${Math.min(clientX, window.innerWidth - 260)}px`;
+    picker.style.top = `${Math.min(clientY + 8, window.innerHeight - 260)}px`;
     picker.style.position = "fixed";
   } else {
     // Centrato sotto il pulsante "Nuovo evento" o al centro della viewport
@@ -1666,9 +1717,125 @@ function hideNodePicker() {
 }
 
 function onNodePickerChoose(kind) {
-  const { sourceSceneId = null, dropPoint = null } = _nodePicker || {};
-  hideNodePicker();
-  createSceneOfKind(kind, { position: dropPoint, sourceSceneId });
+  if (kind === "description" || kind === "final") {
+    const { sourceSceneId = null, dropPoint = null } = _nodePicker || {};
+    hideNodePicker();
+    createSceneOfKind(kind, { position: dropPoint, sourceSceneId });
+    return;
+  }
+  // Combat e check: mostra step 2
+  const step1 = document.getElementById("node-picker-step1");
+  const step2 = document.getElementById("node-picker-step2");
+  if (!step1 || !step2) return;
+  step1.classList.add("hidden");
+  step2.classList.remove("hidden");
+  step2.innerHTML = "";
+  if (kind === "combat") renderNodePickerStep2Combat(step2);
+  else if (kind === "check") renderNodePickerStep2Check(step2);
+}
+
+function nodePickerGoBack() {
+  const step2 = document.getElementById("node-picker-step2");
+  if (step2) { step2.classList.add("hidden"); step2.innerHTML = ""; }
+  document.getElementById("node-picker-step1")?.classList.remove("hidden");
+  const picker = document.getElementById("node-picker");
+  if (picker) picker.style.maxWidth = "";
+}
+
+function renderNodePickerStep2Combat(container) {
+  const picker = document.getElementById("node-picker");
+  if (picker) picker.style.maxWidth = "320px";
+
+  const header = document.createElement("div");
+  header.className = "node-picker-step2-header";
+  header.innerHTML = `
+    <button type="button" class="node-picker-back-btn">&#8592; Indietro</button>
+    <span class="node-picker-title node-picker-title--step2">Scegli mostro iniziale</span>
+  `;
+  header.querySelector(".node-picker-back-btn").addEventListener("click", nodePickerGoBack);
+  container.appendChild(header);
+
+  const list = document.createElement("div");
+  list.className = "node-picker-preset-list";
+
+  MONSTER_PRESETS.forEach((preset) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "node-picker-preset-btn";
+    btn.innerHTML = `<span class="node-picker-preset-name">${preset.name}</span><span class="node-picker-preset-stats">HP ${preset.hitPoints} &nbsp;ATK +${preset.attackBonus} &nbsp;DEF ${preset.defense}</span>`;
+    btn.addEventListener("click", () => {
+      const { sourceSceneId = null, dropPoint = null } = _nodePicker || {};
+      hideNodePicker();
+      createSceneOfKind("combat", { position: dropPoint, sourceSceneId, presetId: preset.id });
+    });
+    list.appendChild(btn);
+  });
+
+  const customBtn = document.createElement("button");
+  customBtn.type = "button";
+  customBtn.className = "node-picker-preset-btn node-picker-preset-btn--custom";
+  customBtn.innerHTML = `<span class="node-picker-preset-name">+ Mostro custom</span><span class="node-picker-preset-stats">Scegli archetipo nell'editor</span>`;
+  customBtn.addEventListener("click", () => {
+    const { sourceSceneId = null, dropPoint = null } = _nodePicker || {};
+    hideNodePicker();
+    createSceneOfKind("combat", { position: dropPoint, sourceSceneId });
+  });
+  list.appendChild(customBtn);
+
+  container.appendChild(list);
+}
+
+function renderNodePickerStep2Check(container) {
+  const header = document.createElement("div");
+  header.className = "node-picker-step2-header";
+  header.innerHTML = `
+    <button type="button" class="node-picker-back-btn">&#8592; Indietro</button>
+    <span class="node-picker-title node-picker-title--step2">Configura la prova</span>
+  `;
+  header.querySelector(".node-picker-back-btn").addEventListener("click", nodePickerGoBack);
+  container.appendChild(header);
+
+  const body = document.createElement("div");
+  body.className = "node-picker-check-step";
+  body.innerHTML = `
+    <label class="node-picker-check-label">Abilita<select id="node-picker-skill"></select></label>
+    <div class="difficulty-pills node-picker-difficulty-pills">
+      <span class="difficulty-pills-label">Difficolta</span>
+      <button type="button" class="difficulty-pill" data-value="8">Facile 8</button>
+      <button type="button" class="difficulty-pill difficulty-pill--active" data-value="12">Media 12</button>
+      <button type="button" class="difficulty-pill" data-value="16">Difficile 16</button>
+      <button type="button" class="difficulty-pill" data-value="20">Brutale 20</button>
+    </div>
+    <div class="node-picker-check-footer">
+      <button type="button" id="node-picker-check-confirm" class="node-picker-check-confirm-btn">Crea prova &#8594;</button>
+      <button type="button" id="node-picker-check-skip" class="button-ghost-small">Configura dopo</button>
+    </div>
+  `;
+  container.appendChild(body);
+
+  hydrateSkillSelect(body.querySelector("#node-picker-skill"), "");
+
+  let selectedDifficulty = 12;
+  body.querySelectorAll(".difficulty-pill").forEach((pill) => {
+    pill.addEventListener("click", () => {
+      selectedDifficulty = Number(pill.dataset.value);
+      body.querySelectorAll(".difficulty-pill").forEach((p) => p.classList.remove("difficulty-pill--active"));
+      pill.classList.add("difficulty-pill--active");
+    });
+  });
+
+  body.querySelector("#node-picker-check-confirm").addEventListener("click", () => {
+    const skill = normalizeString(body.querySelector("#node-picker-skill").value);
+    const { sourceSceneId = null, dropPoint = null } = _nodePicker || {};
+    hideNodePicker();
+    createSceneOfKind("check", { position: dropPoint, sourceSceneId, checkConfig: { skill, difficulty: selectedDifficulty } });
+  });
+
+  body.querySelector("#node-picker-check-skip").addEventListener("click", () => {
+    const { sourceSceneId = null, dropPoint = null } = _nodePicker || {};
+    hideNodePicker();
+    createSceneOfKind("check", { position: dropPoint, sourceSceneId });
+  });
 }
 
 function findNextScenePosition() {
@@ -2042,6 +2209,16 @@ function renderWorkspace({ skipJson = false } = {}) {
   if (!skipJson) renderJson();
 }
 
+function syncForceLoadoutUI() {
+  const forced = Boolean(state.adventure.forceLoadout);
+  els.restoreLoadoutRow.classList.toggle("hidden", !forced);
+  els.restoreLoadoutHint.classList.toggle("hidden", !forced);
+  if (!forced) {
+    state.adventure.restoreLoadoutOnEnd = false;
+    els.adventureRestoreLoadout.checked = false;
+  }
+}
+
 function renderAdventureSetup() {
   els.adventureTitle.value = state.adventure.title || "";
   els.adventureDescription.value = state.adventure.description || "";
@@ -2051,6 +2228,9 @@ function renderAdventureSetup() {
   els.adventureAdaptiveMultiplier.value = Number(state.adventure.adaptivePowerMultiplier ?? 0.12).toFixed(2);
   els.adventureCarryOver.checked = Boolean(state.adventure.allowCarryOverLoadout);
   els.adventureFreshStart.checked = Boolean(state.adventure.allowFreshStart);
+  els.adventureForceLoadout.checked = Boolean(state.adventure.forceLoadout);
+  els.adventureRestoreLoadout.checked = Boolean(state.adventure.restoreLoadoutOnEnd);
+  syncForceLoadoutUI();
   els.alphaStrictValidation.checked = Boolean(state.ui.strictAlpha);
   updateFlowZoomLabel();
   els.autosaveIndicator.textContent = state.ui.currentProjectId
@@ -2805,6 +2985,21 @@ function renderSceneEditor() {
   els.sceneChoicesSection.classList.toggle("hidden", !useGenericChoices);
   els.sceneOutcomesSection.classList.toggle("hidden", useGenericChoices);
   els.sceneChoicesSection.open = true;
+  // Esiti sempre aperti per combat/check — l'azione più comune è collegare subito vittoria/successo
+  if (!useGenericChoices) els.sceneOutcomesSection.open = true;
+
+  // Badge tipo nel header editor
+  const badge = document.getElementById("scene-type-badge");
+  if (badge) {
+    badge.className = "scene-type-badge";
+    badge.classList.add(`scene-type-badge--${scene.kind}`);
+    badge.textContent = scene.kind === "combat" ? "Combattimento" : scene.kind === "check" ? "Prova" : "Descrittiva";
+    badge.classList.remove("hidden");
+  }
+
+  // Difficulty pills: sincronizza stato attivo col valore corrente
+  syncDifficultyPills(scene.checkConfig?.difficulty ?? 10);
+
   els.sceneChoicesSummary.textContent = "Scelte del nodo";
   els.sceneChoicesHint.textContent = "Le scelte guidano il nodo e i suoi rami principali.";
   els.addChoiceBtn.textContent = "Aggiungi scelta";
@@ -2822,6 +3017,70 @@ function renderSceneEditor() {
   if (useGenericChoices) renderChoices(scene);
   else renderOutcomeEditor(scene);
   renderCombatGroups(scene);
+}
+
+function syncDifficultyPills(value) {
+  document.querySelectorAll("#scene-check-config .difficulty-pill[data-value]").forEach((pill) => {
+    pill.classList.toggle("difficulty-pill--active", Number(pill.dataset.value) === Number(value));
+  });
+}
+
+function createMonsterFromArchetype(archetype) {
+  return {
+    id: createUniqueMonsterId(),
+    name: "",
+    description: "",
+    hitPoints: archetype.hitPoints,
+    attackBonus: archetype.attackBonus,
+    defense: archetype.defense,
+    damageMin: archetype.damageMin,
+    damageMax: archetype.damageMax,
+    goldReward: archetype.goldReward,
+    abilityIds: [...archetype.abilityIds],
+    hasBerserkerPhase: archetype.hasBerserkerPhase,
+    loot: [{ itemId: "coins", itemName: "Monete", quantity: archetype.goldReward, category: "treasure", rarity: "common", effectIds: ["trade_value"] }],
+    sourceType: "archetype",
+    archetypeId: archetype.id
+  };
+}
+
+function buildArchetypePicker(onSelect) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "archetype-picker";
+
+  const title = document.createElement("p");
+  title.className = "archetype-picker-title";
+  title.textContent = "Scegli il ruolo del mostro";
+  wrapper.appendChild(title);
+
+  const grid = document.createElement("div");
+  grid.className = "archetype-grid";
+  MONSTER_STAT_ARCHETYPES.forEach((arch) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "archetype-card";
+    btn.innerHTML = `
+      <span class="archetype-card-icon">${arch.icon}</span>
+      <span class="archetype-card-label">${arch.label}</span>
+      <span class="archetype-card-hint">${arch.hint}</span>
+      <span class="archetype-card-stats">HP ${arch.hitPoints} &nbsp;ATK +${arch.attackBonus} &nbsp;DEF ${arch.defense}</span>
+    `;
+    btn.addEventListener("click", () => onSelect(arch.id));
+    grid.appendChild(btn);
+  });
+  wrapper.appendChild(grid);
+
+  const footer = document.createElement("div");
+  footer.className = "archetype-picker-footer";
+  const customBtn = document.createElement("button");
+  customBtn.type = "button";
+  customBtn.className = "button-ghost-small";
+  customBtn.textContent = "Personalizza da zero";
+  customBtn.addEventListener("click", () => onSelect("__custom__"));
+  footer.appendChild(customBtn);
+  wrapper.appendChild(footer);
+
+  return wrapper;
 }
 
 function renderSceneLoot(scene) {
@@ -2997,6 +3256,7 @@ function renderOutcomeEditor(scene) {
     const summaryMeta = branch.choices.length
       ? `${branch.choices.length} scelta/e di esito`
       : directLabel;
+    const hasTransitionText = Boolean(branch.transitionText);
     wrapper.innerHTML = `
       <summary class="panel-summary compact-summary combat-group-summary">
         <span>${definition.title}</span>
@@ -3004,6 +3264,10 @@ function renderOutcomeEditor(scene) {
       </summary>
       <label>Vai direttamente a evento<select data-role="outcome-target"></select></label>
       <p class="hint">${definition.hint}</p>
+      <div class="outcome-transition">
+        <button type="button" data-action="toggle-transition-text" class="button-ghost-small outcome-transition-btn">${hasTransitionText ? "Modifica testo transizione" : "+ Testo di transizione"}</button>
+        <textarea data-role="transition-text" class="outcome-transition-textarea${hasTransitionText ? "" : " hidden"}" placeholder="Testo mostrato al giocatore prima di passare all'evento collegato..."></textarea>
+      </div>
       <div class="subsection-header">
         <button type="button" data-action="add-outcome-choice">Aggiungi scelta di esito</button>
       </div>
@@ -3018,6 +3282,20 @@ function renderOutcomeEditor(scene) {
       refreshFlowCard(scene.id);
       scheduleFlowLinksRender();
       scheduleJsonRender();
+    });
+
+    const transitionTextarea = wrapper.querySelector('[data-role="transition-text"]');
+    transitionTextarea.value = branch.transitionText || "";
+    transitionTextarea.addEventListener("input", () => {
+      branch.transitionText = transitionTextarea.value;
+      markSceneDirty();
+      scheduleJsonRender();
+    });
+
+    wrapper.querySelector('[data-action="toggle-transition-text"]').addEventListener("click", (event) => {
+      const isHidden = transitionTextarea.classList.toggle("hidden");
+      event.currentTarget.textContent = isHidden ? "+ Testo di transizione" : "Modifica testo transizione";
+      if (!isHidden) transitionTextarea.focus();
     });
 
     wrapper.querySelector('[data-action="add-outcome-choice"]').addEventListener("click", () => {
@@ -3106,7 +3384,7 @@ function renderCombatGroups(scene) {
 
     function updatePreview(monster) {
       preview.innerHTML = monster
-        ? `<strong>${monster.name}</strong><span>HP ${monster.hitPoints} | ATK ${monster.attackBonus} | DEF ${monster.defense} | DMG ${monster.damageMin}-${monster.damageMax}</span><p>${monster.description || "Nessuna descrizione."}</p>`
+        ? `<strong>${monster.name || "(senza nome)"}</strong><span>HP ${monster.hitPoints} | ATK +${monster.attackBonus} | DEF ${monster.defense} | DMG ${monster.damageMin}-${monster.damageMax}</span><p>${monster.description || "Nessuna descrizione."}</p>`
         : "<strong>Nessun mostro selezionato</strong><span>Scegli un mostro esistente oppure crea un mostro nuovo direttamente da qui.</span>";
     }
 
@@ -3116,7 +3394,8 @@ function renderCombatGroups(scene) {
       meta.textContent = monster
         ? `Quantita ${group.count ?? 1} | HP ${monster.hitPoints} | Loot ${(monster.loot || []).length}`
         : `Quantita ${group.count ?? 1}`;
-      tag.textContent = monster?.sourceType === "preset" ? "Preset" : "Custom";
+      const srcLabel = monster?.sourceType === "preset" ? "Preset" : monster?.sourceType === "archetype" ? "Archetipo" : "Custom";
+      tag.textContent = srcLabel;
       mode.textContent = node.open ? "Vista compatta" : "Modifica mostro";
       lootAction.textContent = monster ? "Modifica loot" : "Loot";
       lootAction.disabled = !monster;
@@ -3124,6 +3403,51 @@ function renderCombatGroups(scene) {
         ? "Modifica i dettagli del mostro e richiudi la card quando hai finito."
         : "Card compatta. Clicca la testata per riaprire la modifica.";
       updatePreview(monster);
+    }
+
+    // Se non c'è ancora un mostro: mostra archetype picker al posto del select
+    if (!group.monsterId) {
+      const selectLabel = monsterSelect.closest("label");
+      if (selectLabel) selectLabel.style.display = "none";
+      hint.style.display = "none";
+      preview.style.display = "none";
+
+      const archetypePicker = buildArchetypePicker((archetypeId) => {
+        let newMonster;
+        if (archetypeId === "__custom__") {
+          newMonster = {
+            id: createUniqueMonsterId(),
+            name: "",
+            description: "",
+            hitPoints: 12,
+            attackBonus: 3,
+            defense: 11,
+            damageMin: 2,
+            damageMax: 5,
+            goldReward: 8,
+            abilityIds: [],
+            hasBerserkerPhase: false,
+            loot: [{ itemId: "coins", itemName: "Monete", quantity: 8, category: "treasure", rarity: "common", effectIds: ["trade_value"] }],
+            sourceType: "custom"
+          };
+        } else {
+          const arch = MONSTER_STAT_ARCHETYPES.find((a) => a.id === archetypeId);
+          newMonster = createMonsterFromArchetype(arch);
+        }
+        state.adventure.encounters.push(newMonster);
+        group.monsterId = newMonster.id;
+        group.expanded = true;
+        markSceneDirty();
+        renderCombatGroups(scene);
+        scheduleJsonRender(180);
+        // Focus sul campo nome
+        setTimeout(() => {
+          const nameField = els.combatGroupList.querySelector('[data-field="monsterName"]');
+          if (nameField) { nameField.select(); nameField.focus(); }
+        }, 60);
+      });
+
+      node.insertBefore(archetypePicker, countField.closest("label") || inlineEditor);
     }
 
     monsterSelect.addEventListener("change", (event) => {
@@ -3716,6 +4040,8 @@ function cleanAdventure(adventure) {
     startingSceneId: adventure.startingSceneId,
     allowCarryOverLoadout: Boolean(adventure.allowCarryOverLoadout),
     allowFreshStart: Boolean(adventure.allowFreshStart),
+    forceLoadout: Boolean(adventure.forceLoadout),
+    restoreLoadoutOnEnd: Boolean(adventure.restoreLoadoutOnEnd),
     starterKitItems: (adventure.starterKitItems || [])
       .filter((loot) => loot.itemName)
       .map(serializeLoot),
@@ -3753,7 +4079,10 @@ function cleanAdventure(adventure) {
           }));
           return syntheticId;
         }
-        return normalizeString(branch.targetSceneId);
+        const explicit = normalizeString(branch.targetSceneId);
+        if (explicit) return explicit;
+        if (key === "defeat" || key === "failure") return scene.id;
+        return "";
       };
 
       if (scene.kind === "check") {
@@ -3764,7 +4093,9 @@ function cleanAdventure(adventure) {
             attribute: normalizeString(scene.checkConfig?.skill),
             difficulty: Number(scene.checkConfig?.difficulty || 0),
             successSceneId: outcomeTargetForExport("success"),
-            failureSceneId: outcomeTargetForExport("failure")
+            successTransitionText: getOutcomeBranch(scene, "success").transitionText || "",
+            failureSceneId: outcomeTargetForExport("failure"),
+            failureTransitionText: getOutcomeBranch(scene, "failure").transitionText || ""
           },
           _editor: {
             generatedCheckGate: true
@@ -3775,8 +4106,11 @@ function cleanAdventure(adventure) {
         const firstGroup = combatGroups[0];
         if (firstGroup) output.encounterId = firstGroup.monsterId;
         output.victorySceneId = outcomeTargetForExport("victory");
+        output.victoryTransitionText = getOutcomeBranch(scene, "victory").transitionText || "";
         output.defeatSceneId = outcomeTargetForExport("defeat");
+        output.defeatTransitionText = getOutcomeBranch(scene, "defeat").transitionText || "";
         output.retreatSceneId = outcomeTargetForExport("retreat");
+        output.retreatTransitionText = getOutcomeBranch(scene, "retreat").transitionText || "";
       }
 
       return [pruneEmpty(output), ...syntheticScenes];
@@ -3857,6 +4191,8 @@ function normalizeAdventureImport(adventure) {
     startingSceneId,
     allowCarryOverLoadout: adventure.allowCarryOverLoadout !== false,
     allowFreshStart: adventure.allowFreshStart !== false,
+    forceLoadout: Boolean(adventure.forceLoadout),
+    restoreLoadoutOnEnd: Boolean(adventure.restoreLoadoutOnEnd),
     starterKitItems: (adventure.starterKitItems || []).map((loot) => normalizeLoot(loot)),
     scenes,
     encounters
@@ -3931,13 +4267,17 @@ function normalizeImportedOutcomes(outcomes, scene) {
     if (!normalized[key]) return;
     normalized[key] = {
       targetSceneId: normalizeString(branch?.targetSceneId),
-      choices: (branch?.choices || []).map((choice, index) => normalizeImportedChoice(choice, index))
+      choices: (branch?.choices || []).map((choice, index) => normalizeImportedChoice(choice, index)),
+      transitionText: branch?.transitionText || ""
     };
   });
 
   if (scene.victorySceneId) normalized.victory.targetSceneId = normalizeString(scene.victorySceneId);
+  if (scene.victoryTransitionText) normalized.victory.transitionText = scene.victoryTransitionText;
   if (scene.defeatSceneId) normalized.defeat.targetSceneId = normalizeString(scene.defeatSceneId);
+  if (scene.defeatTransitionText) normalized.defeat.transitionText = scene.defeatTransitionText;
   if (scene.retreatSceneId) normalized.retreat.targetSceneId = normalizeString(scene.retreatSceneId);
+  if (scene.retreatTransitionText) normalized.retreat.transitionText = scene.retreatTransitionText;
 
   return normalized;
 }
@@ -4217,7 +4557,8 @@ function createEmptyChoice(index = 1) {
 function createEmptyOutcomeBranch() {
   return {
     targetSceneId: "",
-    choices: []
+    choices: [],
+    transitionText: ""
   };
 }
 
@@ -4241,13 +4582,13 @@ function outcomeDefinitionsForScene(scene) {
   if (scene.kind === "check") {
     return [
       { key: "success", title: "Se la prova riesce", hint: "Puoi andare a un evento diretto oppure aprire un bivio successivo." },
-      { key: "failure", title: "Se la prova fallisce", hint: "Usa questo ramo per costo, deviazione o complicazione." }
+      { key: "failure", title: "Se la prova fallisce", hint: "Usa questo ramo per costo, deviazione o complicazione. Se non impostato, il giocatore rimane su questa scena." }
     ];
   }
   if (scene.kind === "combat") {
     return [
       { key: "victory", title: "Se il combattimento finisce in vittoria", hint: "Premio, svolta o scelta successiva alla vittoria." },
-      { key: "defeat", title: "Se il combattimento finisce in sconfitta", hint: "Caduta, cattura o ultima scelta prima del memoriale." },
+      { key: "defeat", title: "Se il combattimento finisce in sconfitta", hint: "Caduta, cattura o ultima scelta prima del memoriale. Se non impostato, il giocatore rimane su questa scena." },
       { key: "retreat", title: "Se il giocatore si ritira", hint: "Fuga, ripiego o bivio di emergenza. Se vuoto, il runtime ricade sulla sconfitta." }
     ];
   }

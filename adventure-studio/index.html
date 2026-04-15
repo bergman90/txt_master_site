@@ -113,9 +113,13 @@
           <p id="autosave-indicator" class="hint">Autosave locale inattivo.</p>
           <details class="subsection panel-collapsible compact-section">
             <summary class="panel-summary compact-summary">
-              <span>Starter kit</span>
+              <span>Starter kit / Loadout iniziale</span>
               <small>Opzionale</small>
             </summary>
+            <label class="checkbox-line"><input id="adventure-force-loadout" type="checkbox"> Forza loadout iniziale</label>
+            <p class="hint" id="force-loadout-hint">Se attivo, all'inizio dell'avventura zaino ed equipaggiamento del giocatore vengono azzerati. Partira solo con gli oggetti del kit sottostante.</p>
+            <label class="checkbox-line" id="restore-loadout-row"><input id="adventure-restore-loadout" type="checkbox"> Ripristina equipaggiamento al termine</label>
+            <p class="hint" id="restore-loadout-hint">Se attivo, l'equipaggiamento originale viene restituito al termine dell'avventura, anche se il kit e stato modificato o perso durante il gioco.</p>
             <div class="subsection-header">
               <button id="add-starter-kit-btn" type="button">Aggiungi oggetto al kit</button>
             </div>
@@ -177,7 +181,10 @@
       <section class="editor-grid single-col">
         <div class="panel editor-panel">
           <div class="panel-header">
-            <h3>Evento selezionato</h3>
+            <div class="panel-header-title">
+              <h3>Evento selezionato</h3>
+              <span id="scene-type-badge" class="scene-type-badge hidden"></span>
+            </div>
             <div class="button-row">
               <button id="add-scene-image-btn" type="button">Aggiungi immagine evento</button>
               <button id="delete-scene-btn" class="danger">Elimina evento</button>
@@ -235,7 +242,15 @@
                 <small>Skill, difficolta ed esiti</small>
               </summary>
               <label>Abilita<select id="scene-check-skill"></select></label>
-              <label>Difficolta<input id="scene-check-difficulty" type="number" min="1" value="10"></label>
+              <label>Difficolta
+                <div class="difficulty-pills">
+                  <button type="button" class="difficulty-pill" data-value="8">Facile 8</button>
+                  <button type="button" class="difficulty-pill" data-value="12">Media 12</button>
+                  <button type="button" class="difficulty-pill" data-value="16">Difficile 16</button>
+                  <button type="button" class="difficulty-pill" data-value="20">Brutale 20</button>
+                </div>
+                <input id="scene-check-difficulty" type="number" min="1" value="10">
+              </label>
             </details>
 
             <details id="scene-combat-config" class="subsection hidden compact-section" open>
@@ -511,29 +526,32 @@
 
   <!-- Node Type Picker — appare su N, click "Nuovo evento" o drag-to-create -->
   <div id="node-picker" class="node-picker hidden" role="dialog" aria-label="Scegli tipo nodo">
-    <div class="node-picker-title">Che tipo di evento?</div>
-    <div class="node-picker-grid">
-      <button class="node-picker-btn node-picker-btn--description" data-kind="description" title="Scena narrativa con scelte libere">
-        <span class="node-picker-icon">&#x1F4D6;</span>
-        <span class="node-picker-label">Descrittiva</span>
-        <span class="node-picker-hint">Testo + scelte libere</span>
-      </button>
-      <button class="node-picker-btn node-picker-btn--check" data-kind="check" title="Prova su attributo con esito successo/fallimento">
-        <span class="node-picker-icon">&#x1F3B2;</span>
-        <span class="node-picker-label">Prova</span>
-        <span class="node-picker-hint">Skill check</span>
-      </button>
-      <button class="node-picker-btn node-picker-btn--combat" data-kind="combat" title="Combattimento — il mostro viene creato automaticamente">
-        <span class="node-picker-icon">&#x2694;&#xFE0F;</span>
-        <span class="node-picker-label">Combattimento</span>
-        <span class="node-picker-hint">Mostro pre-aggiunto</span>
-      </button>
-      <button class="node-picker-btn node-picker-btn--final" data-kind="final" title="Nodo finale — nessuna scelta, fine del percorso">
-        <span class="node-picker-icon">&#x1F3C1;</span>
-        <span class="node-picker-label">Nodo finale</span>
-        <span class="node-picker-hint">Fine percorso</span>
-      </button>
+    <div id="node-picker-step1">
+      <div class="node-picker-title">Che tipo di evento?</div>
+      <div class="node-picker-grid">
+        <button class="node-picker-btn node-picker-btn--description" data-kind="description" title="Scena narrativa con scelte libere">
+          <span class="node-picker-icon">&#x1F4D6;</span>
+          <span class="node-picker-label">Descrittiva</span>
+          <span class="node-picker-hint">Testo + scelte libere</span>
+        </button>
+        <button class="node-picker-btn node-picker-btn--check" data-kind="check" title="Prova su attributo con esito successo/fallimento">
+          <span class="node-picker-icon">&#x1F3B2;</span>
+          <span class="node-picker-label">Prova</span>
+          <span class="node-picker-hint">Skill check &#x2192;</span>
+        </button>
+        <button class="node-picker-btn node-picker-btn--combat" data-kind="combat" title="Combattimento — scegli mostro al passo successivo">
+          <span class="node-picker-icon">&#x2694;</span>
+          <span class="node-picker-label">Combattimento</span>
+          <span class="node-picker-hint">Scegli mostro &#x2192;</span>
+        </button>
+        <button class="node-picker-btn node-picker-btn--final" data-kind="final" title="Nodo finale — nessuna scelta, fine del percorso">
+          <span class="node-picker-icon">&#x1F3C1;</span>
+          <span class="node-picker-label">Nodo finale</span>
+          <span class="node-picker-hint">Fine percorso</span>
+        </button>
+      </div>
     </div>
+    <div id="node-picker-step2" class="hidden"></div>
   </div>
 
   <script src="./app.js"></script>
