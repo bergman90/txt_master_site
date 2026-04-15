@@ -5099,7 +5099,11 @@ function validateAdventure(adventure, cleaned = cleanAdventure(adventure), optio
         const branch = getOutcomeBranch(authoringScene, key);
         const label = key === "success" ? "riuscita" : "fallimento";
         if (!branch.targetSceneId && branch.choices.length === 0) {
-          errors.push(`La scena ${scene.id} non definisce un esito ${label}: serve una destinazione diretta oppure almeno una scelta di esito.`);
+          if (key === "success") {
+            errors.push(`La scena ${scene.id} non definisce un esito ${label}: serve una destinazione diretta oppure almeno una scelta di esito.`);
+          } else {
+            pushWarning(`La scena ${scene.id} non ha un esito fallimento impostato: il runtime rimarra su questa scena.`);
+          }
         }
         if (branch.targetSceneId && !sceneIds.has(branch.targetSceneId)) {
           errors.push(`La scena ${scene.id} ha un esito ${label} che punta a una scena inesistente: ${branch.targetSceneId}.`);
@@ -5116,7 +5120,11 @@ function validateAdventure(adventure, cleaned = cleanAdventure(adventure), optio
         const label = outcomeShortLabel(key).toLowerCase();
         const required = key !== "retreat";
         if (required && !branch.targetSceneId && branch.choices.length === 0) {
-          errors.push(`La scena ${scene.id} non definisce un esito ${label}: serve una destinazione diretta oppure almeno una scelta di esito.`);
+          if (key === "victory") {
+            errors.push(`La scena ${scene.id} non definisce un esito ${label}: serve una destinazione diretta oppure almeno una scelta di esito.`);
+          } else {
+            pushWarning(`La scena ${scene.id} non ha un esito sconfitta impostato: il runtime rimarra su questa scena.`);
+          }
         }
         if (branch.targetSceneId && !sceneIds.has(branch.targetSceneId)) {
           errors.push(`La scena ${scene.id} ha un esito ${label} che punta a una scena inesistente: ${branch.targetSceneId}.`);
