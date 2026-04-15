@@ -1,4 +1,4 @@
-const CACHE_NAME = "txt-master-site-v5";
+const CACHE_NAME = "txt-master-site-v6";
 const ASSETS = [
   "./index.html",
   "./styles.css",

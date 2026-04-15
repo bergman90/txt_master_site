@@ -2790,8 +2790,10 @@ function renderChoiceCards(container, choices, handlers) {
     });
 
     node.querySelector('[data-field="targetSceneId"]').addEventListener("change", (event) => {
-      choice.targetSceneId = normalizeString(event.target.value);
-      delete choice.skillCheck;
+      if (event.target._hydrating) return;
+      const val = normalizeString(event.target.value);
+      choice.targetSceneId = val;
+      if (val) delete choice.skillCheck;
       handlers.onChange();
     });
 
@@ -2857,10 +2859,10 @@ function renderChoiceCards(container, choices, handlers) {
       handlers.onChange();
     });
 
-    node.querySelector('[data-field="checkAttribute"]').addEventListener("change", () => updateChoiceCheck(choice, node, handlers.onChange));
+    node.querySelector('[data-field="checkAttribute"]').addEventListener("change", (e) => { if (!e.target._hydrating) updateChoiceCheck(choice, node, handlers.onChange); });
     node.querySelector('[data-field="checkDifficulty"]').addEventListener("input", () => updateChoiceCheck(choice, node, handlers.onChange));
-    node.querySelector('[data-field="checkSuccess"]').addEventListener("change", () => updateChoiceCheck(choice, node, handlers.onChange));
-    node.querySelector('[data-field="checkFailure"]').addEventListener("change", () => updateChoiceCheck(choice, node, handlers.onChange));
+    node.querySelector('[data-field="checkSuccess"]').addEventListener("change", (e) => { if (!e.target._hydrating) updateChoiceCheck(choice, node, handlers.onChange); });
+    node.querySelector('[data-field="checkFailure"]').addEventListener("change", (e) => { if (!e.target._hydrating) updateChoiceCheck(choice, node, handlers.onChange); });
 
     node.querySelector('[data-action="remove-choice"]').addEventListener("click", () => {
       handlers.onRemove(index);
@@ -3846,6 +3848,7 @@ function buildFallbackCheckConfig(scene) {
 }
 
 function hydrateSceneTargetSelect(select, value = "") {
+  select._hydrating = true;
   select.innerHTML = "";
   const placeholder = document.createElement("option");
   placeholder.value = "";
@@ -3858,9 +3861,11 @@ function hydrateSceneTargetSelect(select, value = "") {
     if (scene.id === value) option.selected = true;
     select.appendChild(option);
   });
+  select._hydrating = false;
 }
 
 function hydrateSkillSelect(select, value = "") {
+  select._hydrating = true;
   select.innerHTML = "";
   const placeholder = document.createElement("option");
   placeholder.value = "";
@@ -3874,6 +3879,7 @@ function hydrateSkillSelect(select, value = "") {
     if (skill.value === value) option.selected = true;
     select.appendChild(option);
   });
+  select._hydrating = false;
 }
 
 function hydrateLootSelect(select, value = "") {
