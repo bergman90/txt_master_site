@@ -775,7 +775,7 @@ const els = {
   adventureForceLoadout: document.getElementById("adventure-force-loadout"),
   adventureRestoreLoadout: document.getElementById("adventure-restore-loadout"),
   restoreLoadoutRow: document.getElementById("restore-loadout-row"),
-  restoreLoadoutHint: document.getElementById("restore-loadout-hint"),
+  loadoutModeSummary: document.getElementById("loadout-mode-summary"),
   alphaStrictValidation: document.getElementById("alpha-strict-validation"),
   restoreLocalBtn: document.getElementById("restore-local-btn"),
   resetProjectBtn: document.getElementById("reset-project-btn"),
@@ -990,6 +990,7 @@ function bindMeta() {
   });
   els.adventureRestoreLoadout.addEventListener("change", (e) => {
     state.adventure.restoreLoadoutOnEnd = Boolean(e.target.checked);
+    syncForceLoadoutUI();
     scheduleJsonRender(90, { syncScene: false });
   });
   els.alphaStrictValidation.addEventListener("change", (e) => {
@@ -2211,12 +2212,33 @@ function renderWorkspace({ skipJson = false } = {}) {
 
 function syncForceLoadoutUI() {
   const forced = Boolean(state.adventure.forceLoadout);
+  const restore = forced && Boolean(state.adventure.restoreLoadoutOnEnd);
   els.restoreLoadoutRow.classList.toggle("hidden", !forced);
-  els.restoreLoadoutHint.classList.toggle("hidden", !forced);
   if (!forced) {
     state.adventure.restoreLoadoutOnEnd = false;
     els.adventureRestoreLoadout.checked = false;
   }
+
+  let icon, label, body, mod;
+  if (!forced) {
+    icon = "🎒";
+    label = "Kit aggiuntivo";
+    body = "Gli oggetti del kit vengono dati al giocatore in aggiunta al suo equipaggiamento pregresso (se consentito dalle impostazioni dell'avventura).";
+    mod = "";
+  } else if (restore) {
+    icon = "🔒";
+    label = "Loadout forzato + ripristino";
+    body = "All'avvio zaino ed equip vengono azzerati: il giocatore parte solo con il kit. Al termine dell'avventura l'equipaggiamento originale viene restituito automaticamente.";
+    mod = "loadout-mode-summary--restore";
+  } else {
+    icon = "⚠️";
+    label = "Loadout forzato";
+    body = "All'avvio zaino ed equip vengono azzerati: il giocatore parte solo con il kit. L'equipaggiamento originale non viene salvato — assicurati che sia intenzionale.";
+    mod = "loadout-mode-summary--warn";
+  }
+
+  els.loadoutModeSummary.className = `loadout-mode-summary${mod ? " " + mod : ""}`;
+  els.loadoutModeSummary.innerHTML = `<span class="loadout-mode-icon">${icon}</span><span><strong>${label}</strong><br><span class="loadout-mode-body">${body}</span></span>`;
 }
 
 function renderAdventureSetup() {

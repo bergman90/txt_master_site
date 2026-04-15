@@ -1297,6 +1297,41 @@ button.small {
   transform: none;
 }
 
+/* ── Riquadro modalità loadout ── */
+.loadout-mode-summary {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-raised, var(--bg));
+  font-size: 0.85rem;
+  line-height: 1.45;
+  margin-bottom: 10px;
+  color: var(--text);
+}
+
+.loadout-mode-summary--warn {
+  border-color: #b94a48;
+  background: color-mix(in srgb, #b94a48 8%, transparent);
+}
+
+.loadout-mode-summary--restore {
+  border-color: #6f8a57;
+  background: color-mix(in srgb, #6f8a57 8%, transparent);
+}
+
+.loadout-mode-icon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.loadout-mode-body {
+  color: var(--muted);
+}
+
 /* ── Testo di transizione esito ── */
 .outcome-transition {
   display: flex;
