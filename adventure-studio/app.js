@@ -2045,10 +2045,11 @@ function syncChoiceCollectionFromContainer(container, choices) {
 
     const attribute = normalizeString(card.querySelector('[data-field="checkAttribute"]')?.value);
     const successSceneId = normalizeString(card.querySelector('[data-field="checkSuccess"]')?.value);
-    const failureSceneId = normalizeString(card.querySelector('[data-field="checkFailure"]')?.value);
+    const failureSceneId = normalizeString(card.querySelector('[data-field="checkFailure"]')?.value)
+      || state.selectedSceneId || "";
     const difficulty = Number(card.querySelector('[data-field="checkDifficulty"]')?.value || 0);
 
-    if (attribute && successSceneId && failureSceneId) {
+    if (attribute && successSceneId) {
       choice.skillCheck = {
         attribute,
         difficulty,
@@ -2945,10 +2946,11 @@ function renderOutcomeEditor(scene) {
 function updateChoiceCheck(choice, node, onChange) {
   const attribute = normalizeString(node.querySelector('[data-field="checkAttribute"]').value);
   const success = normalizeString(node.querySelector('[data-field="checkSuccess"]').value);
-  const failure = normalizeString(node.querySelector('[data-field="checkFailure"]').value);
+  const failure = normalizeString(node.querySelector('[data-field="checkFailure"]').value)
+    || state.selectedSceneId || "";
   const difficulty = Number(node.querySelector('[data-field="checkDifficulty"]').value || 0);
 
-  if (attribute && success && failure) {
+  if (attribute && success) {
     choice.skillCheck = {
       attribute,
       difficulty,
