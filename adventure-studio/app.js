@@ -971,7 +971,7 @@ function bindMeta() {
 }
 
 function bindActions() {
-  els.addSceneBtn.addEventListener("click", createScene);
+  els.addSceneBtn.addEventListener("click", () => showNodePicker({ mode: "toolbar" }));
   els.addStarterKitBtn.addEventListener("click", addStarterKitLoot);
   els.validateAdventureBtn.addEventListener("click", renderJson);
   els.loadExampleBtn.addEventListener("click", loadSelectedExampleAdventure);
@@ -1024,6 +1024,20 @@ function bindActions() {
   els.flowZoomOutBtn?.addEventListener("click", () => changeFlowZoom(-FLOW_ZOOM_STEP));
   els.flowZoomInBtn?.addEventListener("click", () => changeFlowZoom(FLOW_ZOOM_STEP));
   document.getElementById("tutorial-open-btn")?.addEventListener("click", showTutorial);
+
+  // Node picker: click sui bottoni tipo-nodo
+  const picker = document.getElementById("node-picker");
+  if (picker) {
+    picker.querySelectorAll("[data-kind]").forEach((btn) => {
+      btn.addEventListener("click", () => onNodePickerChoose(btn.dataset.kind));
+    });
+    // Chiudi cliccando fuori dal picker
+    document.addEventListener("pointerdown", (e) => {
+      if (_nodePicker && !picker.contains(e.target) && e.target.id !== "add-scene-btn") {
+        hideNodePicker();
+      }
+    }, { capture: true });
+  }
 }
 
 function bindKeyboardShortcuts() {
@@ -1065,14 +1079,21 @@ function handleGlobalHotkeys(event) {
 
   if (!hasModifier && key === "n") {
     event.preventDefault();
-    createScene();
+    showNodePicker({ mode: "keyboard" });
     return;
   }
 
-  if (key === "escape" && state.linkDraft) {
-    event.preventDefault();
-    state.linkDraft = null;
-    renderFlowLinks();
+  if (key === "escape") {
+    if (_nodePicker) {
+      event.preventDefault();
+      hideNodePicker();
+      return;
+    }
+    if (state.linkDraft) {
+      event.preventDefault();
+      state.linkDraft = null;
+      renderFlowLinks();
+    }
   }
 }
 
@@ -1443,6 +1464,10 @@ function onBoardPointerUp(event) {
       state.selectedSceneId = sourceSceneId;
       render();
     }
+  } else if (!targetSceneId) {
+    // Drag-to-create: il link è finito nel vuoto — mostra il picker alla posizione del puntatore
+    const dropPoint = flowBoardPointFromClient({ clientX: event.clientX, clientY: event.clientY });
+    showNodePicker({ mode: "drag", sourceSceneId, dropPoint, clientX: event.clientX, clientY: event.clientY });
   } else {
     renderFlowLinks();
   }
@@ -1536,27 +1561,114 @@ function computeFlowAutoScrollDelta(pointerOffset, size) {
 }
 
 function createScene() {
+  createSceneOfKind("description");
+}
+
+// Crea una scena del tipo specificato, opzionalmente in una posizione precisa (drag-to-create)
+// e opzionalmente collegandola a una scena sorgente.
+function createSceneOfKind(kind, { position = null, sourceSceneId = null } = {}) {
   saveCurrentScene();
   const index = state.adventure.scenes.length + 1;
-  const spawnPosition = findNextScenePosition();
+  const spawnPosition = position || findNextScenePosition();
+  const isFinal = kind === "final";
+  const effectiveKind = isFinal ? "description" : kind;
   const scene = {
     id: createUniqueSceneId(),
-    kind: "description",
-    title: `Evento ${index}`,
+    kind: effectiveKind,
+    title: isFinal ? "Nodo finale" : `Evento ${index}`,
     openingText: "",
     eventImage: null,
-    choices: [],
+    choices: isFinal ? [] : [],
     outcomes: createEmptySceneOutcomes(),
     sceneLoot: [],
     position: spawnPosition
   };
+
+  // Per le scene di combattimento, aggiungi subito un mostro vuoto collegato
+  if (kind === "combat") {
+    scene.combatGroups = [];
+    const monster = {
+      id: createUniqueMonsterId(),
+      name: `Mostro ${state.adventure.encounters.length + 1}`,
+      description: "",
+      hitPoints: 12,
+      attackBonus: 3,
+      defense: 11,
+      damageMin: 2,
+      damageMax: 5,
+      goldReward: 8,
+      abilityIds: [],
+      hasBerserkerPhase: false,
+      loot: [{ itemId: "coins", itemName: "Monete", quantity: 8, category: "treasure", rarity: "common", effectIds: ["trade_value"] }],
+      sourceType: "custom"
+    };
+    state.adventure.encounters.push(monster);
+    scene.combatGroups.push({ monsterId: monster.id, count: 1, composition: "" });
+    state.selectedMonsterId = monster.id;
+  }
+
   state.adventure.scenes.push(scene);
   state.selectedSceneId = scene.id;
   state.ui.lastCreatedSceneId = scene.id;
   if (!state.adventure.startingSceneId) state.adventure.startingSceneId = scene.id;
+
+  // Collega automaticamente alla scena sorgente se arriva da drag-to-create
+  if (sourceSceneId) {
+    const sourceScene = state.adventure.scenes.find((s) => s.id === sourceSceneId);
+    if (sourceScene) addLinkedTargetToScene(sourceScene, scene.id);
+  }
+
   state.ui.sceneDirty = true;
   renderWorkspace({ skipJson: true });
   scheduleJsonRender(320, { syncScene: false });
+  return scene;
+}
+
+// ─── Node Picker ─────────────────────────────────────────────────────────────
+
+// Stato del picker: null quando chiuso, altrimenti { mode, sourceSceneId, dropPoint }
+let _nodePicker = null;
+
+function showNodePicker({ mode = "toolbar", sourceSceneId = null, dropPoint = null, clientX = null, clientY = null } = {}) {
+  _nodePicker = { mode, sourceSceneId, dropPoint };
+  const picker = document.getElementById("node-picker");
+  if (!picker) return;
+
+  // Posizionamento: vicino al pulsante toolbar o dove il mouse ha rilasciato il drag
+  if (mode === "drag" && clientX != null && clientY != null) {
+    picker.style.left = `${Math.min(clientX, window.innerWidth - 220)}px`;
+    picker.style.top = `${Math.min(clientY + 8, window.innerHeight - 220)}px`;
+    picker.style.position = "fixed";
+  } else {
+    // Centrato sotto il pulsante "Nuovo evento" o al centro della viewport
+    const btn = document.getElementById("add-scene-btn");
+    if (btn) {
+      const r = btn.getBoundingClientRect();
+      picker.style.left = `${r.left}px`;
+      picker.style.top = `${r.bottom + 8}px`;
+      picker.style.position = "fixed";
+    } else {
+      picker.style.left = "50%";
+      picker.style.top = "50%";
+      picker.style.transform = "translate(-50%, -50%)";
+      picker.style.position = "fixed";
+    }
+  }
+
+  picker.classList.remove("hidden");
+  picker.querySelector("[data-kind='description']")?.focus();
+}
+
+function hideNodePicker() {
+  _nodePicker = null;
+  const picker = document.getElementById("node-picker");
+  if (picker) picker.classList.add("hidden");
+}
+
+function onNodePickerChoose(kind) {
+  const { sourceSceneId = null, dropPoint = null } = _nodePicker || {};
+  hideNodePicker();
+  createSceneOfKind(kind, { position: dropPoint, sourceSceneId });
 }
 
 function findNextScenePosition() {
