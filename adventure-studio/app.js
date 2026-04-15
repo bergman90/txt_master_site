@@ -1766,6 +1766,7 @@ function clonePresetLoot(lootList) {
     lockId: loot.lockId || "",
     category: loot.category || "",
     rarity: loot.rarity || "common",
+    armorType: loot.armorType || "light",
     effectIds: Array.isArray(loot.effectIds) ? [...loot.effectIds] : [],
     expanded: true
   }));
@@ -3213,6 +3214,8 @@ function renderLootList(container, items, options = {}) {
     const lockIdInput      = node.querySelector('[data-field="lockId"]');
     const lockHint         = node.querySelector('[data-role="lock-hint"]');
     const lockRow          = node.querySelector('[data-role="lock-row"]');
+    const armorTypeRow     = node.querySelector('[data-role="armor-type-row"]');
+    const armorTypeSelect  = node.querySelector('[data-field="armorType"]');
     const questInline      = node.querySelector('[data-field="questItem"]');
     const questAdv         = node.querySelector('[data-field="questItemAdv"]');
     const customRow        = node.querySelector('[data-role="custom-row"]');
@@ -3225,6 +3228,7 @@ function renderLootList(container, items, options = {}) {
     hydrateLootSelect(select, selectedPreset);
     hydrateCategorySelect(categorySelect, loot.category || "");
     hydrateRaritySelect(raritySelect, loot.rarity || "common");
+    if (armorTypeSelect) armorTypeSelect.value = loot.armorType || "light";
     customInput.value    = selectedPreset === "custom" ? loot.itemName || "" : "";
     customInput.disabled = selectedPreset !== "custom";
     lockIdInput.value    = loot.lockId || "";
@@ -3320,6 +3324,8 @@ function renderLootList(container, items, options = {}) {
     function syncVisibility() {
       // lock row: solo se categoria key
       lockRow.style.display = loot.category === "key" ? "" : "none";
+      // armor type row: solo se categoria armor
+      if (armorTypeRow) armorTypeRow.style.display = loot.category === "armor" ? "" : "none";
       // custom row: solo se preset custom
       customRow.style.display = select.value === "custom" ? "" : "none";
     }
@@ -3402,6 +3408,13 @@ function renderLootList(container, items, options = {}) {
       updateLootHeader();
       onChange();
     });
+
+    if (armorTypeSelect) {
+      armorTypeSelect.addEventListener("change", (event) => {
+        loot.armorType = event.target.value || "light";
+        onChange();
+      });
+    }
 
     lockIdInput.addEventListener("input", (event) => {
       loot.lockId = normalizeString(event.target.value) || "";
@@ -3559,6 +3572,7 @@ function cleanAdventure(adventure) {
     questItem: Boolean(loot.questItem),
     category: normalizeString(loot.category),
     rarity: normalizeString(loot.rarity),
+    armorType: loot.category === "armor" ? (loot.armorType || "light") : undefined,
     effectIds: (loot.effectIds || []).filter(Boolean)
   });
   const serializeChoice = (choice) => {
@@ -4177,6 +4191,7 @@ function createLootFromPreset(presetId) {
     lockId: preset.lockId || "",
     category: preset.category || "",
     rarity: preset.rarity || "common",
+    armorType: preset.category === "armor" ? (preset.armorType || "light") : "light",
     effectIds: [...(preset.effectIds || [])],
     expanded: true
   };
@@ -4307,6 +4322,7 @@ function normalizeLoot(loot) {
   normalized.questItem = Boolean(snapshot.questItem);
   normalized.category = snapshot.category || "";
   normalized.rarity = snapshot.rarity || "common";
+  normalized.armorType = snapshot.category === "armor" ? (snapshot.armorType || "light") : "light";
   normalized.effectIds = Array.isArray(snapshot.effectIds) ? snapshot.effectIds.filter(Boolean) : [];
   normalized.expanded = snapshot.expanded !== false;
   return normalized;

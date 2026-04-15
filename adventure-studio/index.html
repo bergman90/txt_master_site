@@ -416,6 +416,17 @@
         <label>Rarita<select data-field="rarity"></select></label>
         <label>Categoria<select data-field="category"></select></label>
 
+        <div data-role="armor-type-row" style="display:none">
+          <label>Peso armatura
+            <select data-field="armorType">
+              <option value="light">Leggera — nessuna penalità</option>
+              <option value="medium">Media — stamina max -1, -1 a survival/precision/dex</option>
+              <option value="heavy">Pesante — stamina max -2, -2 a survival/precision/dex</option>
+            </select>
+          </label>
+          <p class="hint">Il peso viene usato dal runtime per calcolare penalità a stamina e skill check di mobilità.</p>
+        </div>
+
         <div data-role="lock-row">
           <label>Lock ID
             <input data-field="lockId" type="text" placeholder="es. magister_archive">
