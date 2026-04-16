@@ -5314,7 +5314,7 @@ function validateAdventure(adventure, cleaned = cleanAdventure(adventure), optio
         if (!choice.skillCheck.successSceneId || !sceneIds.has(choice.skillCheck.successSceneId)) {
           errors.push(`${ownerLabel} nella scena ${sceneId} ha un ramo successo non valido.`);
         }
-        if (!choice.skillCheck.failureSceneId || !sceneIds.has(choice.skillCheck.failureSceneId)) {
+        if (!choice.skillCheck.failureSceneId || (choice.skillCheck.failureSceneId !== RETRY_SENTINEL && !sceneIds.has(choice.skillCheck.failureSceneId))) {
           errors.push(`${ownerLabel} nella scena ${sceneId} ha un ramo fallimento non valido.`);
         }
       } else if (!choice.nextSceneId) {
