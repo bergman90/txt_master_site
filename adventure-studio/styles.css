@@ -1198,6 +1198,105 @@ button.small {
   color: #c9f0d1;
 }
 
+#json-output.hidden {
+  display: none;
+}
+
+/* ── Flow toolbar extras ── */
+.flow-search-input {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 0.78rem;
+  width: 140px;
+  outline: none;
+}
+.flow-search-input:focus {
+  border-color: var(--accent);
+}
+
+.flow-stats {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  padding: 0 4px;
+}
+
+/* ── Scene status dot ── */
+.scene-status-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  vertical-align: middle;
+  margin-left: 6px;
+  flex-shrink: 0;
+}
+.scene-status-dot--ok    { background: #74a475; }
+.scene-status-dot--warn  { background: #c89a3a; }
+.scene-status-dot--error { background: #ca655b; }
+
+/* ── Navigate-to-node button ── */
+.btn-navigate-node {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  line-height: 1;
+  margin-left: 4px;
+  vertical-align: middle;
+  transition: color 0.15s, border-color 0.15s;
+}
+.btn-navigate-node:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.btn-navigate-node:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+/* ── Orphan card border ── */
+.flow-card--orphan {
+  border-color: rgba(202, 101, 91, 0.5) !important;
+  box-shadow: 0 0 0 1px rgba(202, 101, 91, 0.3);
+}
+
+/* ── Flow card search dim ── */
+.flow-card--dim {
+  opacity: 0.25;
+  pointer-events: none;
+}
+.flow-card--match {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+/* ── Minimap ── */
+.flow-minimap-wrap {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  z-index: 20;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  background: rgba(9, 12, 18, 0.88);
+  backdrop-filter: blur(4px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+#flow-minimap {
+  display: block;
+  cursor: pointer;
+}
+
 /* ── Tutorial overlay ── */
 .tutorial-overlay {
   position: fixed;

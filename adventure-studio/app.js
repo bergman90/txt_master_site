@@ -85,6 +85,14 @@ const EFFECT_PRESETS = [
   { value: "check_bonus", label: "Bonus alle prove", family: "skill_check", trigger: "passive", description: "Concede un bonus alle prove o ai check. Perfetto per pergamene, talismani e bastoni arcani.", categories: ["weapon", "treasure", "relic", "ring", "cloak", "utility", "consumable"] }
 ];
 
+// Valore sentinel usato per indicare "morte immediata" al runtime Android
+// (bypassa la navigazione a una scena e attiva direttamente la schermata di game over)
+const DEATH_SENTINEL = "__death__";
+
+// Valore sentinel usato per indicare "nessuna via di fuga" nella ritirata:
+// il tentativo di ritirata è bloccato e il combattimento continua.
+const NO_ESCAPE_SENTINEL = "__no_escape__";
+
 const MONSTER_PRESETS = [
   {
     id: "skeleton_guard",
@@ -867,7 +875,15 @@ const els = {
   ],
   monsterBerserkerPhase: document.getElementById("monster-berserker-phase"),
   refreshJsonBtn: document.getElementById("refresh-json-btn"),
+  toggleJsonBtn: document.getElementById("toggle-json-btn"),
   jsonOutput: document.getElementById("json-output"),
+  flowSearch: document.getElementById("flow-search"),
+  flowStats: document.getElementById("flow-stats"),
+  minimapToggleBtn: document.getElementById("minimap-toggle-btn"),
+  flowMinimapWrap: document.getElementById("flow-minimap-wrap"),
+  flowMinimap: document.getElementById("flow-minimap"),
+  duplicateSceneBtn: document.getElementById("duplicate-scene-btn"),
+  sceneStatusDot: document.getElementById("scene-status-dot"),
   tutorialOverlay: document.getElementById("tutorial-overlay"),
   tutorialCloseBtn: document.getElementById("tutorial-close-btn"),
   tutorialSkipBtn: document.getElementById("tutorial-skip-btn"),
@@ -888,6 +904,7 @@ function bootstrap() {
   bindBoardPointerSystem();
   bindTutorial();
   bindHotkeyPanel();
+  initMinimap();
   migrateLegacyLocalProjectIfNeeded();
   initializeEmptyWorkspace();
   render();
@@ -1067,6 +1084,30 @@ function bindActions() {
   els.flowZoomInBtn?.addEventListener("click", () => changeFlowZoom(FLOW_ZOOM_STEP));
   document.getElementById("tutorial-open-btn")?.addEventListener("click", showTutorial);
 
+  // Toggle JSON output
+  els.toggleJsonBtn?.addEventListener("click", () => {
+    const isHidden = els.jsonOutput.classList.toggle("hidden");
+    els.toggleJsonBtn.textContent = isHidden ? "Mostra" : "Nascondi";
+  });
+
+  // Duplica evento selezionato
+  els.duplicateSceneBtn?.addEventListener("click", () => {
+    if (!state.selectedSceneId) return;
+    copySelectedSceneToClipboard();
+    pasteCopiedScene();
+  });
+
+  // Ricerca nodi nel flow board
+  els.flowSearch?.addEventListener("input", (e) => filterFlowCards(e.target.value));
+  els.flowSearch?.addEventListener("search", (e) => filterFlowCards(e.target.value));
+
+  // Minimap toggle
+  els.minimapToggleBtn?.addEventListener("click", () => {
+    const isHidden = els.flowMinimapWrap?.classList.toggle("hidden");
+    if (els.minimapToggleBtn) els.minimapToggleBtn.classList.toggle("active", !isHidden);
+    if (!isHidden) renderMinimap();
+  });
+
   // Node picker: click sui bottoni tipo-nodo
   const picker = document.getElementById("node-picker");
   if (picker) {
@@ -1173,6 +1214,7 @@ function bindSceneEditor() {
     markSceneDirty();
     scheduleFlowCardRefresh(scene.id);
     scheduleJsonRender();
+    updateSceneStatusDot();
   });
 
   els.sceneCheckSkill.addEventListener("change", (e) => {
@@ -1638,7 +1680,11 @@ function createSceneOfKind(kind, { position = null, sourceSceneId = null, preset
   const isFinal = kind === "final";
   const effectiveKind = isFinal ? "description" : kind;
   const sourceScene = sourceSceneId ? state.adventure.scenes.find((s) => s.id === sourceSceneId) : null;
-  const defaultTitle = isFinal ? "Nodo finale" : sourceScene ? deriveChildTitle(sourceScene.title) : `Evento ${index}`;
+  const currentScene = !sourceSceneId && state.selectedSceneId
+    ? state.adventure.scenes.find((s) => s.id === state.selectedSceneId)
+    : null;
+  const titleSourceScene = sourceScene || currentScene;
+  const defaultTitle = isFinal ? "Nodo finale" : titleSourceScene ? deriveChildTitle(titleSourceScene.title) : `Evento ${index}`;
   const scene = {
     id: createUniqueSceneId(),
     kind: effectiveKind,
@@ -1674,6 +1720,15 @@ function createSceneOfKind(kind, { position = null, sourceSceneId = null, preset
     scene.checkConfig = { skill: checkConfig.skill || "", difficulty: checkConfig.difficulty ?? 12 };
   }
 
+  // Default: fallimento e sconfitta/fuga puntano alla scena stessa
+  if (kind === "check") {
+    scene.outcomes.failure.targetSceneId = scene.id;
+  }
+  if (kind === "combat") {
+    scene.outcomes.defeat.targetSceneId = scene.id;
+    scene.outcomes.retreat.targetSceneId = scene.id;
+  }
+
   state.adventure.scenes.push(scene);
   state.selectedSceneId = scene.id;
   state.ui.lastCreatedSceneId = scene.id;
@@ -1688,8 +1743,8 @@ function createSceneOfKind(kind, { position = null, sourceSceneId = null, preset
   state.ui.sceneDirty = true;
   renderWorkspace({ skipJson: true });
   scheduleJsonRender(320, { syncScene: false });
-  // Autofocus sul titolo: permette di iniziare a digitare subito
-  setTimeout(() => els.sceneTitle?.focus(), 80);
+  // Autofocus + selezione del titolo: sovrascrivibile subito senza cancellare manualmente
+  setTimeout(() => { if (els.sceneTitle) { els.sceneTitle.focus(); els.sceneTitle.select(); } }, 80);
   return scene;
 }
 
@@ -2518,6 +2573,8 @@ function renderFlowCards(bounds = computeBoardBounds()) {
   });
 
   els.flowCanvas.appendChild(fragment);
+  renderFlowStats();
+  renderMinimap();
 }
 
 function createFlowCard(scene, index, bounds = getCurrentFlowBoardBounds()) {
@@ -2580,7 +2637,13 @@ function bindLinkHandle(card, scene) {
 function syncFlowCard(card, scene, index, bounds = getCurrentFlowBoardBounds()) {
   const metrics = getFlowCardMetrics();
   const boardPoint = logicalToBoardPoint(scene.position, bounds);
-  card.className = `flow-card node-card ${scene.id === state.selectedSceneId ? "active" : ""} ${metrics.compact ? "flow-card--compact" : ""}`;
+  const isOrphanCard = scene.id !== state.adventure.startingSceneId && state.adventure.scenes.length > 1 && !getConnectedSceneIds().has(scene.id);
+  card.className = [
+    "flow-card node-card",
+    scene.id === state.selectedSceneId ? "active" : "",
+    metrics.compact ? "flow-card--compact" : "",
+    isOrphanCard ? "flow-card--orphan" : ""
+  ].filter(Boolean).join(" ");
   card.dataset.sceneId = scene.id;
   card.style.left = `${boardPoint.x}px`;
   card.style.top = `${boardPoint.y}px`;
@@ -2941,6 +3004,191 @@ function changeFlowZoom(delta) {
   applyFlowZoom({ preserveCenter: true });
 }
 
+// ─── Scroll flow board to a given scene ──────────────────────────────────────
+
+function scrollFlowBoardToScene(sceneId) {
+  const scene = state.adventure.scenes.find((s) => s.id === sceneId);
+  if (!scene || !els.flowBoard) return;
+  const bounds = getCurrentFlowBoardBounds();
+  const zoom = state.ui.flowZoom || 1;
+  const bp = logicalToBoardPoint(scene.position, bounds);
+  const metrics = getFlowCardMetrics();
+  els.flowBoard.scrollTo({
+    left: Math.max(0, bp.x * zoom - els.flowBoard.clientWidth / 2 + (metrics.width * zoom) / 2),
+    top: Math.max(0, bp.y * zoom - els.flowBoard.clientHeight / 2 + (metrics.height * zoom) / 2),
+    behavior: "smooth"
+  });
+}
+
+// Helper: aggiungi pulsante → accanto a un select di destinazione scena
+function attachNavigateBtn(container, selector) {
+  const select = container.querySelector(selector);
+  if (!select) return;
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "btn-navigate-node";
+  btn.title = "Vai al nodo nel flusso";
+  btn.textContent = "→";
+  btn.addEventListener("click", () => {
+    const sceneId = select.value;
+    if (!sceneId) return;
+    switchSelectedScene(sceneId);
+    scrollFlowBoardToScene(sceneId);
+  });
+  const parent = select.closest("label") || select.parentElement;
+  parent.after(btn);
+}
+
+// ─── Flow stats counter ───────────────────────────────────────────────────────
+
+function renderFlowStats() {
+  if (!els.flowStats) return;
+  const scenes = state.adventure.scenes.length;
+  const monsters = state.adventure.encounters?.length || 0;
+  els.flowStats.textContent = monsters > 0
+    ? `${scenes} eventi · ${monsters} mostri`
+    : `${scenes} eventi`;
+}
+
+// ─── Flow search / filter ─────────────────────────────────────────────────────
+
+function filterFlowCards(query) {
+  const q = (query || "").trim().toLowerCase();
+  els.flowCanvas.querySelectorAll(".node-card").forEach((card) => {
+    const sceneId = card.dataset.sceneId;
+    const scene = state.adventure.scenes.find((s) => s.id === sceneId);
+    if (!q) {
+      card.classList.remove("flow-card--dim", "flow-card--match");
+      return;
+    }
+    const matches = scene && scene.title.toLowerCase().includes(q);
+    card.classList.toggle("flow-card--dim", !matches);
+    card.classList.toggle("flow-card--match", matches);
+  });
+}
+
+// ─── Minimap ──────────────────────────────────────────────────────────────────
+
+function minimapLogicalBounds() {
+  if (!state.adventure.scenes.length) return { minX: 0, maxX: 400, minY: 0, maxY: 300 };
+  const xs = state.adventure.scenes.map((s) => s.position?.x || 0);
+  const ys = state.adventure.scenes.map((s) => s.position?.y || 0);
+  return {
+    minX: Math.min(...xs) - 80,
+    maxX: Math.max(...xs) + 280,
+    minY: Math.min(...ys) - 60,
+    maxY: Math.max(...ys) + 160
+  };
+}
+
+function renderMinimap() {
+  const canvas = els.flowMinimap;
+  if (!canvas || !els.flowMinimapWrap || els.flowMinimapWrap.classList.contains("hidden")) return;
+  const ctx = canvas.getContext("2d");
+  const W = canvas.width;
+  const H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  if (!state.adventure.scenes.length) return;
+  const { minX, maxX, minY, maxY } = minimapLogicalBounds();
+  const rangeX = maxX - minX;
+  const rangeY = maxY - minY;
+  const toMX = (x) => ((x - minX) / rangeX) * W;
+  const toMY = (y) => ((y - minY) / rangeY) * H;
+  const connectedIds = getConnectedSceneIds();
+  state.adventure.scenes.forEach((scene) => {
+    const mx = toMX(scene.position?.x || 0);
+    const my = toMY(scene.position?.y || 0);
+    const isSelected = scene.id === state.selectedSceneId;
+    const isStart = scene.id === state.adventure.startingSceneId;
+    const isOrphan = !isStart && state.adventure.scenes.length > 1 && !connectedIds.has(scene.id);
+    ctx.fillStyle = isSelected ? "#c89a3a" : isStart ? "#74a475" : isOrphan ? "#ca655b" : "#4a6280";
+    ctx.fillRect(mx - 4, my - 3, 10, 6);
+  });
+  // Rettangolo viewport
+  const zoom = state.ui.flowZoom || 1;
+  const bounds = getCurrentFlowBoardBounds();
+  const board = els.flowBoard;
+  if (board) {
+    const vpLeft = boardToLogicalPoint({ x: board.scrollLeft / zoom, y: board.scrollTop / zoom }, bounds);
+    const vpRight = boardToLogicalPoint({ x: (board.scrollLeft + board.clientWidth) / zoom, y: (board.scrollTop + board.clientHeight) / zoom }, bounds);
+    ctx.strokeStyle = "rgba(200,154,58,0.55)";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(
+      toMX(vpLeft.x), toMY(vpLeft.y),
+      toMX(vpRight.x) - toMX(vpLeft.x),
+      toMY(vpRight.y) - toMY(vpLeft.y)
+    );
+  }
+}
+
+function initMinimap() {
+  const canvas = els.flowMinimap;
+  if (!canvas) return;
+  canvas.addEventListener("click", (e) => {
+    if (!state.adventure.scenes.length) return;
+    const rect = canvas.getBoundingClientRect();
+    const { minX, maxX, minY, maxY } = minimapLogicalBounds();
+    const logX = ((e.clientX - rect.left) / canvas.width) * (maxX - minX) + minX;
+    const logY = ((e.clientY - rect.top) / canvas.height) * (maxY - minY) + minY;
+    let nearest = null;
+    let nearestDist = Infinity;
+    state.adventure.scenes.forEach((scene) => {
+      const dx = (scene.position?.x || 0) - logX;
+      const dy = (scene.position?.y || 0) - logY;
+      const dist = Math.hypot(dx, dy);
+      if (dist < nearestDist) { nearestDist = dist; nearest = scene; }
+    });
+    if (nearest) {
+      switchSelectedScene(nearest.id);
+      scrollFlowBoardToScene(nearest.id);
+    }
+  });
+  // Aggiorna viewport rect durante lo scroll
+  els.flowBoard?.addEventListener("scroll", () => renderMinimap(), { passive: true });
+}
+
+// ─── Scene status dot (validazione live) ─────────────────────────────────────
+
+function computeSceneStatus(scene) {
+  if (!scene) return null;
+  const hasText = Boolean(scene.openingText?.trim());
+  if (scene.kind === "description") {
+    const hasChoice = scene.choices.some((c) => c.targetSceneId || c.skillCheck?.successSceneId);
+    if (!hasText) return { level: "error", msg: "Nessun testo d'apertura." };
+    if (!hasChoice) return { level: "warn", msg: "Nessuna scelta collegata a un evento." };
+    return { level: "ok", msg: "Scena completa." };
+  }
+  if (scene.kind === "check") {
+    const successId = scene.outcomes?.success?.targetSceneId || scene.outcomes?.success?.choices?.some((c) => c.targetSceneId);
+    if (!hasText) return { level: "error", msg: "Nessun testo d'apertura." };
+    if (!successId) return { level: "warn", msg: "Esito successo non collegato." };
+    return { level: "ok", msg: "Scena completa." };
+  }
+  if (scene.kind === "combat") {
+    const hasMonster = scene.combatGroups?.some((g) => g.monsterId);
+    const victoryId = scene.outcomes?.victory?.targetSceneId || scene.outcomes?.victory?.choices?.length;
+    const defeatTarget = scene.outcomes?.defeat?.targetSceneId;
+    const defeatOk = defeatTarget === DEATH_SENTINEL || defeatTarget || scene.outcomes?.defeat?.choices?.length;
+    if (!hasText) return { level: "error", msg: "Nessun testo d'apertura." };
+    if (!hasMonster) return { level: "warn", msg: "Nessun mostro assegnato." };
+    if (!victoryId) return { level: "warn", msg: "Esito vittoria non collegato." };
+    if (!defeatOk) return { level: "warn", msg: "Esito sconfitta non collegato." };
+    return { level: "ok", msg: "Scena completa." };
+  }
+  return null;
+}
+
+function updateSceneStatusDot() {
+  const dot = els.sceneStatusDot;
+  if (!dot) return;
+  const scene = getSelectedScene();
+  const status = computeSceneStatus(scene);
+  if (!status) { dot.classList.add("hidden"); return; }
+  dot.classList.remove("hidden", "scene-status-dot--ok", "scene-status-dot--warn", "scene-status-dot--error");
+  dot.classList.add(`scene-status-dot--${status.level}`);
+  dot.title = status.msg;
+}
+
 function flowCardElement(sceneId) {
   return els.flowCanvas.querySelector(`.node-card[data-scene-id="${sceneId}"]`);
 }
@@ -3062,6 +3310,7 @@ function renderSceneEditor() {
   if (useGenericChoices) renderChoices(scene);
   else renderOutcomeEditor(scene);
   renderCombatGroups(scene);
+  updateSceneStatusDot();
 }
 
 function syncDifficultyPills(value) {
@@ -3187,9 +3436,12 @@ function renderChoiceCards(container, choices, handlers) {
     node.querySelector('[data-field="requiredLockId"]').value = choice.requiredLockId || "";
     node.querySelector('[data-field="requiredLockLabel"]').value = choice.requiredLockLabel || "";
     hydrateSceneTargetSelect(node.querySelector('[data-field="targetSceneId"]'), choice.targetSceneId || "");
+    attachNavigateBtn(node, '[data-field="targetSceneId"]');
     hydrateSkillSelect(node.querySelector('[data-field="checkAttribute"]'), choice.skillCheck?.attribute || "");
     hydrateSceneTargetSelect(node.querySelector('[data-field="checkSuccess"]'), choice.skillCheck?.successSceneId || "");
+    attachNavigateBtn(node, '[data-field="checkSuccess"]');
     hydrateSceneTargetSelect(node.querySelector('[data-field="checkFailure"]'), choice.skillCheck?.failureSceneId || "");
+    attachNavigateBtn(node, '[data-field="checkFailure"]');
     hydrateLootSelect(node.querySelector('[data-field="requiredItemId"]'), choice.requiredItemId || "");
     node.querySelector('[data-field="requiredItemIdCustom"]').value = choice.requiredItemId || "";
     hydrateCategorySelect(node.querySelector('[data-field="requiredItemCategory"]'), choice.requiredItemCategory || "");
@@ -3320,13 +3572,21 @@ function renderOutcomeEditor(scene) {
     `;
 
     const targetSelect = wrapper.querySelector('[data-role="outcome-target"]');
-    hydrateSceneTargetSelect(targetSelect, branch.targetSceneId || "");
+    if (definition.key === "defeat") {
+      hydrateDefeatTargetSelect(targetSelect, branch.targetSceneId || "");
+    } else if (definition.key === "retreat") {
+      hydrateRetreatTargetSelect(targetSelect, branch.targetSceneId || "");
+    } else {
+      hydrateSceneTargetSelect(targetSelect, branch.targetSceneId || "");
+    }
+    if (branch.targetSceneId !== DEATH_SENTINEL && branch.targetSceneId !== NO_ESCAPE_SENTINEL) attachNavigateBtn(wrapper, '[data-role="outcome-target"]');
     targetSelect.addEventListener("change", (event) => {
       setOutcomeTarget(scene, definition.key, event.target.value);
       renderOutcomeEditor(scene);
       refreshFlowCard(scene.id);
       scheduleFlowLinksRender();
       scheduleJsonRender();
+      updateSceneStatusDot();
     });
 
     const transitionTextarea = wrapper.querySelector('[data-role="transition-text"]');
@@ -4377,6 +4637,37 @@ function hydrateSceneTargetSelect(select, value = "") {
   select._hydrating = false;
 }
 
+// Variante per esiti di sconfitta: aggiunge l'opzione "Morte" (sentinel)
+// che bypassa la navigazione a scena e attiva direttamente la schermata di game over.
+function hydrateDefeatTargetSelect(select, value = "") {
+  hydrateSceneTargetSelect(select, value);
+  const deathOpt = document.createElement("option");
+  deathOpt.value = DEATH_SENTINEL;
+  deathOpt.textContent = "☠ Morte — schermata game over";
+  if (value === DEATH_SENTINEL) deathOpt.selected = true;
+  // Inserisci dopo il placeholder (posizione 1)
+  select.insertBefore(deathOpt, select.options[1] || null);
+  if (value === DEATH_SENTINEL) select.value = DEATH_SENTINEL;
+}
+
+// Variante per esiti di ritirata: aggiunge sia "Morte" che "Nessuna via di fuga"
+// (sentinel che blocca la ritirata e fa continuare il combattimento).
+function hydrateRetreatTargetSelect(select, value = "") {
+  hydrateSceneTargetSelect(select, value);
+  const noEscapeOpt = document.createElement("option");
+  noEscapeOpt.value = NO_ESCAPE_SENTINEL;
+  noEscapeOpt.textContent = "⚔ Non hai alcuna via di fuga. — il combattimento continua";
+  if (value === NO_ESCAPE_SENTINEL) noEscapeOpt.selected = true;
+  select.insertBefore(noEscapeOpt, select.options[1] || null);
+  const deathOpt = document.createElement("option");
+  deathOpt.value = DEATH_SENTINEL;
+  deathOpt.textContent = "☠ Morte — schermata game over";
+  if (value === DEATH_SENTINEL) deathOpt.selected = true;
+  select.insertBefore(deathOpt, select.options[1] || null);
+  if (value === DEATH_SENTINEL) select.value = DEATH_SENTINEL;
+  else if (value === NO_ESCAPE_SENTINEL) select.value = NO_ESCAPE_SENTINEL;
+}
+
 function hydrateSkillSelect(select, value = "") {
   select._hydrating = true;
   select.innerHTML = "";
@@ -4559,6 +4850,8 @@ function getSelectedMonster() {
 
 function sceneTitleById(sceneId, fallback = "nessuna destinazione") {
   if (!sceneId) return fallback;
+  if (sceneId === DEATH_SENTINEL) return "☠ Morte";
+  if (sceneId === NO_ESCAPE_SENTINEL) return "⚔ Non hai alcuna via di fuga.";
   const target = state.adventure.scenes.find((scene) => scene.id === sceneId);
   return target ? target.title : fallback;
 }
@@ -4633,8 +4926,8 @@ function outcomeDefinitionsForScene(scene) {
   if (scene.kind === "combat") {
     return [
       { key: "victory", title: "Se il combattimento finisce in vittoria", hint: "Premio, svolta o scelta successiva alla vittoria." },
-      { key: "defeat", title: "Se il combattimento finisce in sconfitta", hint: "Caduta, cattura o ultima scelta prima del memoriale. Se non impostato, il giocatore rimane su questa scena." },
-      { key: "retreat", title: "Se il giocatore si ritira", hint: "Fuga, ripiego o bivio di emergenza. Se vuoto, il runtime ricade sulla sconfitta." }
+      { key: "defeat", title: "Se il combattimento finisce in sconfitta", hint: "Caduta, cattura o ultima scelta prima del memoriale. Scegli ☠ Morte per andare direttamente alla schermata game over senza passare per una scena intermedia." },
+      { key: "retreat", title: "Se il giocatore si ritira", hint: "Fuga, ripiego o bivio di emergenza. Scegli ☠ Morte per game over immediato, oppure ⚔ Non hai alcuna via di fuga. per bloccare la ritirata e far continuare il combattimento. Se vuoto, il runtime ricade sulla sconfitta." }
     ];
   }
   return [];
@@ -5074,10 +5367,10 @@ function validateAdventure(adventure, cleaned = cleanAdventure(adventure), optio
       if (!scene.victorySceneId || !sceneIds.has(scene.victorySceneId)) {
         errors.push(`La scena di combattimento ${scene.id} non ha un evento vittoria valido.`);
       }
-      if (!scene.defeatSceneId || !sceneIds.has(scene.defeatSceneId)) {
+      if (scene.defeatSceneId !== DEATH_SENTINEL && (!scene.defeatSceneId || !sceneIds.has(scene.defeatSceneId))) {
         errors.push(`La scena di combattimento ${scene.id} non ha un evento sconfitta valido.`);
       }
-      if (scene.retreatSceneId && !sceneIds.has(scene.retreatSceneId)) {
+      if (scene.retreatSceneId && scene.retreatSceneId !== DEATH_SENTINEL && scene.retreatSceneId !== NO_ESCAPE_SENTINEL && !sceneIds.has(scene.retreatSceneId)) {
         errors.push(`La scena di combattimento ${scene.id} ha un evento ritirata non valido.`);
       }
       if (!scene.retreatSceneId) {
@@ -5157,8 +5450,8 @@ function validateAdventure(adventure, cleaned = cleanAdventure(adventure), optio
         }
       });
       if (scene.victorySceneId) queue.push(scene.victorySceneId);
-      if (scene.defeatSceneId) queue.push(scene.defeatSceneId);
-      if (scene.retreatSceneId) queue.push(scene.retreatSceneId);
+      if (scene.defeatSceneId && scene.defeatSceneId !== DEATH_SENTINEL) queue.push(scene.defeatSceneId);
+      if (scene.retreatSceneId && scene.retreatSceneId !== DEATH_SENTINEL && scene.retreatSceneId !== NO_ESCAPE_SENTINEL) queue.push(scene.retreatSceneId);
     }
   }
 

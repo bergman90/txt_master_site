@@ -162,9 +162,12 @@
             <button id="add-scene-btn">Nuovo evento</button>
           </div>
           <div class="flow-toolbar">
+            <input id="flow-search" type="search" placeholder="Cerca nodo…" class="flow-search-input" autocomplete="off" aria-label="Cerca nodo per titolo">
+            <span id="flow-stats" class="flow-stats"></span>
             <button id="flow-zoom-out-btn" type="button" class="small" aria-label="Riduci mappa">-</button>
             <span id="flow-zoom-label" class="flow-zoom-label">100%</span>
             <button id="flow-zoom-in-btn" type="button" class="small" aria-label="Aumenta mappa">+</button>
+            <button id="minimap-toggle-btn" type="button" class="small" title="Mappa panoramica">&#x229E;</button>
           </div>
         </div>
         <div id="flow-board" class="flow-board">
@@ -173,6 +176,9 @@
               <svg id="flow-links" class="flow-links"></svg>
               <div id="flow-canvas" class="flow-canvas"></div>
             </div>
+          </div>
+          <div id="flow-minimap-wrap" class="flow-minimap-wrap hidden">
+            <canvas id="flow-minimap" width="180" height="100"></canvas>
           </div>
         </div>
       </section>
@@ -183,9 +189,11 @@
             <div class="panel-header-title">
               <h3>Evento selezionato</h3>
               <span id="scene-type-badge" class="scene-type-badge hidden"></span>
+              <span id="scene-status-dot" class="scene-status-dot hidden" title="Stato scena"></span>
             </div>
             <div class="button-row">
               <button id="add-scene-image-btn" type="button">Aggiungi immagine evento</button>
+              <button id="duplicate-scene-btn" type="button">Duplica evento</button>
               <button id="delete-scene-btn" class="danger">Elimina evento</button>
             </div>
           </div>
@@ -354,7 +362,10 @@
       <section class="panel output-panel">
         <div class="panel-header">
           <h3>JSON Output</h3>
-          <button id="refresh-json-btn">Aggiorna preview</button>
+          <div class="button-row">
+            <button id="refresh-json-btn">Aggiorna preview</button>
+            <button id="toggle-json-btn" type="button" class="small">Nascondi</button>
+          </div>
         </div>
         <textarea id="json-output" rows="18" spellcheck="false"></textarea>
       </section>
