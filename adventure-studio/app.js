@@ -4424,8 +4424,8 @@ function cleanAdventure(adventure) {
     }),
     encounters: adventure.encounters.map((monster) => pruneEmpty({
       id: monster.id,
-      name: monster.name,
-      description: monster.description,
+      name: monster.name || monster.id,
+      description: monster.description || "—",
       hitPoints: monster.hitPoints,
       attackBonus: monster.attackBonus,
       defense: monster.defense,
