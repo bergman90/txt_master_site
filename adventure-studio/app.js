@@ -93,6 +93,10 @@ const DEATH_SENTINEL = "__death__";
 // il tentativo di ritirata è bloccato e il combattimento continua.
 const NO_ESCAPE_SENTINEL = "__no_escape__";
 
+// Valore sentinel per l'esito fallimento di una prova:
+// ri-entra nella stessa scena senza bruciare la scelta (ritenta la prova).
+const RETRY_SENTINEL = "__retry__";
+
 const MONSTER_PRESETS = [
   {
     id: "skeleton_guard",
@@ -2703,7 +2707,7 @@ function getConnectedSceneIds() {
       scene.choices.forEach((choice) => {
         if (choice.skillCheck) {
           if (choice.skillCheck.successSceneId) ids.add(choice.skillCheck.successSceneId);
-          if (choice.skillCheck.failureSceneId) ids.add(choice.skillCheck.failureSceneId);
+          if (choice.skillCheck.failureSceneId && choice.skillCheck.failureSceneId !== RETRY_SENTINEL) ids.add(choice.skillCheck.failureSceneId);
         } else if (choice.targetSceneId) {
           ids.add(choice.targetSceneId);
         }
@@ -3578,10 +3582,13 @@ function renderOutcomeEditor(scene) {
       hydrateDefeatTargetSelect(targetSelect, branch.targetSceneId || "");
     } else if (definition.key === "retreat") {
       hydrateRetreatTargetSelect(targetSelect, branch.targetSceneId || "");
+    } else if (definition.key === "failure") {
+      hydrateFailureTargetSelect(targetSelect, branch.targetSceneId || "");
     } else {
       hydrateSceneTargetSelect(targetSelect, branch.targetSceneId || "");
     }
-    if (branch.targetSceneId !== DEATH_SENTINEL && branch.targetSceneId !== NO_ESCAPE_SENTINEL) attachNavigateBtn(wrapper, '[data-role="outcome-target"]');
+    const isSentinelTarget = branch.targetSceneId === DEATH_SENTINEL || branch.targetSceneId === NO_ESCAPE_SENTINEL || branch.targetSceneId === RETRY_SENTINEL;
+    if (!isSentinelTarget) attachNavigateBtn(wrapper, '[data-role="outcome-target"]');
     targetSelect.addEventListener("change", (event) => {
       setOutcomeTarget(scene, definition.key, event.target.value);
       renderOutcomeEditor(scene);
@@ -4652,6 +4659,18 @@ function hydrateDefeatTargetSelect(select, value = "") {
   if (value === DEATH_SENTINEL) select.value = DEATH_SENTINEL;
 }
 
+// Variante per esiti di fallimento prova: aggiunge l'opzione "Ritenta" (sentinel)
+// che ri-entra nella stessa scena senza bruciare la scelta.
+function hydrateFailureTargetSelect(select, value = "") {
+  hydrateSceneTargetSelect(select, value);
+  const retryOpt = document.createElement("option");
+  retryOpt.value = RETRY_SENTINEL;
+  retryOpt.textContent = "🔄 Ritenta — ripete la prova";
+  if (value === RETRY_SENTINEL) retryOpt.selected = true;
+  select.insertBefore(retryOpt, select.options[1] || null);
+  if (value === RETRY_SENTINEL) select.value = RETRY_SENTINEL;
+}
+
 // Variante per esiti di ritirata: aggiunge sia "Morte" che "Nessuna via di fuga"
 // (sentinel che blocca la ritirata e fa continuare il combattimento).
 function hydrateRetreatTargetSelect(select, value = "") {
@@ -4854,6 +4873,7 @@ function sceneTitleById(sceneId, fallback = "nessuna destinazione") {
   if (!sceneId) return fallback;
   if (sceneId === DEATH_SENTINEL) return "☠ Morte";
   if (sceneId === NO_ESCAPE_SENTINEL) return "⚔ Non hai alcuna via di fuga.";
+  if (sceneId === RETRY_SENTINEL) return "🔄 Ritenta";
   const target = state.adventure.scenes.find((scene) => scene.id === sceneId);
   return target ? target.title : fallback;
 }
@@ -5393,6 +5413,7 @@ function validateAdventure(adventure, cleaned = cleanAdventure(adventure), optio
       ["success", "failure"].forEach((key) => {
         const branch = getOutcomeBranch(authoringScene, key);
         const label = key === "success" ? "riuscita" : "fallimento";
+        const isSentinel = branch.targetSceneId === RETRY_SENTINEL;
         if (!branch.targetSceneId && branch.choices.length === 0) {
           if (key === "success") {
             errors.push(`La scena ${scene.id} non definisce un esito ${label}: serve una destinazione diretta oppure almeno una scelta di esito.`);
@@ -5400,7 +5421,7 @@ function validateAdventure(adventure, cleaned = cleanAdventure(adventure), optio
             pushWarning(`La scena ${scene.id} non ha un esito fallimento impostato: il runtime rimarra su questa scena.`);
           }
         }
-        if (branch.targetSceneId && !sceneIds.has(branch.targetSceneId)) {
+        if (branch.targetSceneId && !isSentinel && !sceneIds.has(branch.targetSceneId)) {
           errors.push(`La scena ${scene.id} ha un esito ${label} che punta a una scena inesistente: ${branch.targetSceneId}.`);
         }
         validateChoiceCollection(scene.id, branch.choices, `Le scelte di ${label}`);
@@ -5447,7 +5468,8 @@ function validateAdventure(adventure, cleaned = cleanAdventure(adventure), optio
       if (!scene) continue;
       (scene.choices || []).forEach((choice) => {
         if (choice.skillCheck) {
-          queue.push(choice.skillCheck.successSceneId, choice.skillCheck.failureSceneId);
+          if (choice.skillCheck.successSceneId) queue.push(choice.skillCheck.successSceneId);
+          if (choice.skillCheck.failureSceneId && choice.skillCheck.failureSceneId !== RETRY_SENTINEL) queue.push(choice.skillCheck.failureSceneId);
         } else if (choice.nextSceneId) {
           queue.push(choice.nextSceneId);
         }
