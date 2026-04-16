@@ -5414,6 +5414,7 @@ function validateAdventure(adventure, cleaned = cleanAdventure(adventure), optio
         const branch = getOutcomeBranch(authoringScene, key);
         const label = outcomeShortLabel(key).toLowerCase();
         const required = key !== "retreat";
+        const isSentinel = branch.targetSceneId === DEATH_SENTINEL || branch.targetSceneId === NO_ESCAPE_SENTINEL;
         if (required && !branch.targetSceneId && branch.choices.length === 0) {
           if (key === "victory") {
             errors.push(`La scena ${scene.id} non definisce un esito ${label}: serve una destinazione diretta oppure almeno una scelta di esito.`);
@@ -5421,7 +5422,7 @@ function validateAdventure(adventure, cleaned = cleanAdventure(adventure), optio
             pushWarning(`La scena ${scene.id} non ha un esito sconfitta impostato: il runtime rimarra su questa scena.`);
           }
         }
-        if (branch.targetSceneId && !sceneIds.has(branch.targetSceneId)) {
+        if (branch.targetSceneId && !isSentinel && !sceneIds.has(branch.targetSceneId)) {
           errors.push(`La scena ${scene.id} ha un esito ${label} che punta a una scena inesistente: ${branch.targetSceneId}.`);
         }
         if (!required && !branch.targetSceneId && branch.choices.length === 0) {
