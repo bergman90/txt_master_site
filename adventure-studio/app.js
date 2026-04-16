@@ -2642,7 +2642,9 @@ function syncFlowCard(card, scene, index, bounds = getCurrentFlowBoardBounds()) 
     "flow-card node-card",
     scene.id === state.selectedSceneId ? "active" : "",
     metrics.compact ? "flow-card--compact" : "",
-    isOrphanCard ? "flow-card--orphan" : ""
+    isOrphanCard ? "flow-card--orphan" : "",
+    scene.kind === "combat" ? "flow-card--combat" : "",
+    scene.kind === "check" ? "flow-card--check" : ""
   ].filter(Boolean).join(" ");
   card.dataset.sceneId = scene.id;
   card.style.left = `${boardPoint.x}px`;

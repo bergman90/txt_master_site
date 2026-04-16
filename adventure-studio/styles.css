@@ -1270,6 +1270,24 @@ button.small {
   box-shadow: 0 0 0 1px rgba(202, 101, 91, 0.3);
 }
 
+/* ── Scene-kind borders ── */
+.flow-card--combat {
+  border-color: rgba(210, 70, 60, 0.75);
+  box-shadow: 0 0 0 1px rgba(210, 70, 60, 0.35), var(--shadow);
+}
+.flow-card--combat.active {
+  border-color: rgba(230, 80, 70, 1);
+  box-shadow: 0 0 0 2px rgba(230, 80, 70, 0.55), var(--shadow);
+}
+.flow-card--check {
+  border-color: rgba(210, 130, 40, 0.75);
+  box-shadow: 0 0 0 1px rgba(210, 130, 40, 0.35), var(--shadow);
+}
+.flow-card--check.active {
+  border-color: rgba(230, 150, 50, 1);
+  box-shadow: 0 0 0 2px rgba(230, 150, 50, 0.55), var(--shadow);
+}
+
 /* ── Flow card search dim ── */
 .flow-card--dim {
   opacity: 0.25;
