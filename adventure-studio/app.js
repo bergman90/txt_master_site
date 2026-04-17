@@ -4526,7 +4526,11 @@ function cleanAdventure(adventure) {
       } else if (scene.kind === "combat") {
         const combatGroups = (scene.combatGroups || []).filter((group) => group.monsterId);
         const firstGroup = combatGroups[0];
-        if (firstGroup) output.encounterId = firstGroup.monsterId;
+        if (firstGroup) {
+          output.encounterId = firstGroup.monsterId;
+          const count = parseInt(firstGroup.count) || 1;
+          if (count > 1) output.encounterCount = count;
+        }
         output.victorySceneId = outcomeTargetForExport("victory");
         output.victoryTransitionText = getOutcomeBranch(scene, "victory").transitionText || "";
         output.defeatSceneId = outcomeTargetForExport("defeat");
