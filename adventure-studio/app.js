@@ -3439,8 +3439,6 @@ function renderChoiceCards(container, choices, handlers) {
     const node = document.getElementById("choice-template").content.firstElementChild.cloneNode(true);
     node.querySelector('[data-field="text"]').value = choice.text || "";
     node.querySelector('[data-field="endingText"]').value = choice.endingText || "";
-    node.querySelector('[data-field="requiredLockId"]').value = choice.requiredLockId || "";
-    node.querySelector('[data-field="requiredLockLabel"]').value = choice.requiredLockLabel || "";
     hydrateSceneTargetSelect(node.querySelector('[data-field="targetSceneId"]'), choice.targetSceneId || "");
     attachNavigateBtn(node, '[data-field="targetSceneId"]');
     hydrateSkillSelect(node.querySelector('[data-field="checkAttribute"]'), choice.skillCheck?.attribute || "");
@@ -3448,12 +3446,91 @@ function renderChoiceCards(container, choices, handlers) {
     attachNavigateBtn(node, '[data-field="checkSuccess"]');
     hydrateSceneTargetSelect(node.querySelector('[data-field="checkFailure"]'), choice.skillCheck?.failureSceneId || "");
     attachNavigateBtn(node, '[data-field="checkFailure"]');
-    hydrateLootSelect(node.querySelector('[data-field="requiredItemId"]'), choice.requiredItemId || "");
-    node.querySelector('[data-field="requiredItemIdCustom"]').value = choice.requiredItemId || "";
-    hydrateCategorySelect(node.querySelector('[data-field="requiredItemCategory"]'), choice.requiredItemCategory || "");
-    hydrateEffectSelect(node.querySelector('[data-field="requiredEffectId"]'), choice.requiredEffectId || "");
     node.querySelector('[data-field="checkDifficulty"]').value = choice.skillCheck?.difficulty ?? "";
     node.querySelector('[data-field="consumeOnUse"]').checked = Boolean(choice.consumeOnUse);
+
+    // ── requirements: mode-switch UI ─────────────────────────────────────────
+    const reqModeSelect   = node.querySelector('[data-field="reqMode"]');
+    const reqSections     = node.querySelectorAll("[data-req-section]");
+    const reqSummaryHint  = node.querySelector('[data-role="req-summary-hint"]');
+    const reqKeyHint      = node.querySelector('[data-role="req-key-hint"]');
+    const reqKeySelect    = node.querySelector('[data-field="requiredLockId"]');
+    const reqItemSelect   = node.querySelector('[data-field="requiredItemId"]');
+    const reqItemCustom   = node.querySelector('[data-field="requiredItemIdCustom"]');
+    const reqCatSelect    = node.querySelector('[data-field="requiredItemCategory"]');
+    const reqEffectSelect = node.querySelector('[data-field="requiredEffectId"]');
+
+    function detectMode() {
+      if (choice.requiredLockId)       return "key";
+      if (choice.requiredItemId)       return "item";
+      if (choice.requiredItemCategory) return "category";
+      if (choice.requiredEffectId)     return "effect";
+      return "";
+    }
+
+    function showSection(mode) {
+      reqSections.forEach((s) => { s.style.display = s.dataset.reqSection === mode ? "" : "none"; });
+    }
+
+    function updateKeyHint() {
+      if (!reqKeyHint) return;
+      const lockId = choice.requiredLockId;
+      if (!lockId) { reqKeyHint.textContent = ""; return; }
+      const allLoot = [
+        ...(state.adventure?.starterKitItems || []),
+        ...(state.adventure?.scenes || []).flatMap((s) => s.sceneLoot || []),
+        ...(state.adventure?.encounters || []).flatMap((e) => e.loot || [])
+      ];
+      const match = allLoot.find((l) => normalizeString(l.lockId) === lockId);
+      const preset = LOOT_PRESETS.find((p) => p.lockId === lockId);
+      const name = match?.itemName || preset?.name;
+      reqKeyHint.textContent = name
+        ? `Chiave: "${name}" — lockId ${lockId}`
+        : `⚠ Nessuna chiave con lockId "${lockId}" trovata nell'avventura.`;
+    }
+
+    function updateSummaryHint() {
+      if (!reqSummaryHint) return;
+      if (choice.requiredLockId) {
+        const allLoot = [
+          ...(state.adventure?.starterKitItems || []),
+          ...(state.adventure?.scenes || []).flatMap((s) => s.sceneLoot || []),
+          ...(state.adventure?.encounters || []).flatMap((e) => e.loot || [])
+        ];
+        const key = allLoot.find((l) => normalizeString(l.lockId) === choice.requiredLockId);
+        const preset = LOOT_PRESETS.find((p) => p.lockId === choice.requiredLockId);
+        reqSummaryHint.textContent = `🔑 ${key?.itemName || preset?.name || choice.requiredLockId}`;
+      } else if (choice.requiredItemId) {
+        reqSummaryHint.textContent = `📦 ${lootPresetById(choice.requiredItemId)?.name || choice.requiredItemId}`;
+      } else if (choice.requiredItemCategory) {
+        const cat = ITEM_CATEGORIES.find((c) => c.value === choice.requiredItemCategory);
+        reqSummaryHint.textContent = `🗂 ${cat?.label || choice.requiredItemCategory}`;
+      } else if (choice.requiredEffectId) {
+        reqSummaryHint.textContent = `✨ ${effectPresetLabel(choice.requiredEffectId)}`;
+      } else {
+        reqSummaryHint.textContent = "Nessuno";
+      }
+    }
+
+    function clearAllReqFields() {
+      choice.requiredLockId = "";
+      choice.requiredLockLabel = "";
+      choice.requiredItemId = "";
+      choice.requiredItemCategory = "";
+      choice.requiredEffectId = "";
+    }
+
+    // initial hydration
+    const initialMode = detectMode();
+    reqModeSelect.value = initialMode;
+    showSection(initialMode);
+    hydrateKeySelect(reqKeySelect, choice.requiredLockId || "");
+    hydrateLootSelect(reqItemSelect, choice.requiredItemId || "");
+    reqItemCustom.value = choice.requiredItemId || "";
+    hydrateCategorySelect(reqCatSelect, choice.requiredItemCategory || "");
+    hydrateEffectSelect(reqEffectSelect, choice.requiredEffectId || "");
+    updateKeyHint();
+    updateSummaryHint();
 
     node.querySelector('[data-field="text"]').addEventListener("input", (event) => {
       choice.text = event.target.value;
@@ -3473,60 +3550,63 @@ function renderChoiceCards(container, choices, handlers) {
       handlers.onChange();
     });
 
-    node.querySelector('[data-field="requiredLockId"]').addEventListener("input", (event) => {
+    // ── requirement event listeners ───────────────────────────────────────────
+    reqModeSelect.addEventListener("change", (event) => {
+      const mode = event.target.value;
+      clearAllReqFields();
+      // reset all selects/inputs to blank
+      reqKeySelect.value = "";
+      reqItemSelect.value = "";
+      reqItemCustom.value = "";
+      reqCatSelect.value = "";
+      reqEffectSelect.value = "";
+      // re-hydrate key select when switching to key mode (may have new items)
+      if (mode === "key") hydrateKeySelect(reqKeySelect, "");
+      showSection(mode);
+      updateKeyHint();
+      updateSummaryHint();
+      handlers.onChange();
+    });
+
+    reqKeySelect.addEventListener("change", (event) => {
       choice.requiredLockId = normalizeString(event.target.value) || "";
+      // auto-fill lockLabel from key name for export annotation
+      const allLoot = [
+        ...(state.adventure?.starterKitItems || []),
+        ...(state.adventure?.scenes || []).flatMap((s) => s.sceneLoot || []),
+        ...(state.adventure?.encounters || []).flatMap((e) => e.loot || [])
+      ];
+      const key = allLoot.find((l) => normalizeString(l.lockId) === choice.requiredLockId);
+      const preset = LOOT_PRESETS.find((p) => p.lockId === choice.requiredLockId);
+      choice.requiredLockLabel = key?.itemName || preset?.name || "";
+      updateKeyHint();
+      updateSummaryHint();
       handlers.onChange();
     });
 
-    node.querySelector('[data-field="requiredLockLabel"]').addEventListener("input", (event) => {
-      choice.requiredLockLabel = event.target.value;
-      handlers.onChange();
-    });
-
-    node.querySelector('[data-field="requiredItemId"]').addEventListener("change", (event) => {
+    reqItemSelect.addEventListener("change", (event) => {
       choice.requiredItemId = normalizeString(event.target.value) || "";
-      if (choice.requiredItemId) {
-        choice.requiredItemCategory = "";
-        choice.requiredEffectId = "";
-        node.querySelector('[data-field="requiredItemIdCustom"]').value = choice.requiredItemId;
-        node.querySelector('[data-field="requiredItemCategory"]').value = "";
-        node.querySelector('[data-field="requiredEffectId"]').value = "";
-      }
+      reqItemCustom.value = choice.requiredItemId;
+      updateSummaryHint();
       handlers.onChange();
     });
 
-    node.querySelector('[data-field="requiredItemIdCustom"]').addEventListener("input", (event) => {
+    reqItemCustom.addEventListener("input", (event) => {
       choice.requiredItemId = normalizeString(event.target.value) || "";
-      if (choice.requiredItemId) {
-        choice.requiredItemCategory = "";
-        choice.requiredEffectId = "";
-        node.querySelector('[data-field="requiredItemCategory"]').value = "";
-        node.querySelector('[data-field="requiredEffectId"]').value = "";
-      }
+      reqItemSelect.value = "";
+      updateSummaryHint();
       handlers.onChange();
     });
 
-    node.querySelector('[data-field="requiredItemCategory"]').addEventListener("change", (event) => {
+    reqCatSelect.addEventListener("change", (event) => {
       choice.requiredItemCategory = normalizeString(event.target.value) || "";
-      if (choice.requiredItemCategory) {
-        choice.requiredItemId = "";
-        node.querySelector('[data-field="requiredItemIdCustom"]').value = "";
-        choice.requiredEffectId = "";
-        node.querySelector('[data-field="requiredItemId"]').value = "";
-        node.querySelector('[data-field="requiredEffectId"]').value = "";
-      }
+      updateSummaryHint();
       handlers.onChange();
     });
 
-    node.querySelector('[data-field="requiredEffectId"]').addEventListener("change", (event) => {
+    reqEffectSelect.addEventListener("change", (event) => {
       choice.requiredEffectId = normalizeString(event.target.value) || "";
-      if (choice.requiredEffectId) {
-        choice.requiredItemId = "";
-        choice.requiredItemCategory = "";
-        node.querySelector('[data-field="requiredItemIdCustom"]').value = "";
-        node.querySelector('[data-field="requiredItemId"]').value = "";
-        node.querySelector('[data-field="requiredItemCategory"]').value = "";
-      }
+      updateSummaryHint();
       handlers.onChange();
     });
 
@@ -4119,7 +4199,21 @@ function renderLootList(container, items, options = {}) {
       loot.category  = preset?.category || loot.category || "";
       loot.rarity    = preset?.rarity   || loot.rarity   || "common";
       loot.effectIds = [...(preset?.effectIds || [])];
-      if (preset?.lockId) loot.lockId = preset.lockId;
+      if (preset?.lockId) {
+        loot.lockId = preset.lockId;
+      } else if (loot.category === "key" && !loot.lockId) {
+        const base = slugify(loot.itemName || "key");
+        const usedIds = new Set(
+          (state.adventure?.scenes || []).flatMap((s) => s.sceneLoot || [])
+            .concat(state.adventure?.encounters?.flatMap((e) => e.loot || []) || [])
+            .concat(state.adventure?.starterKitItems || [])
+            .map((l) => normalizeString(l.lockId)).filter(Boolean)
+        );
+        let candidate = base; let n = 1;
+        while (usedIds.has(candidate)) { candidate = `${base}_${n}`; n++; }
+        loot.lockId = candidate;
+        lockIdInput.value = loot.lockId;
+      }
       hydrateCategorySelect(categorySelect, loot.category || "");
       hydrateRaritySelect(raritySelect, loot.rarity || "common");
       customInput.disabled = nextPreset !== "custom";
@@ -4145,6 +4239,20 @@ function renderLootList(container, items, options = {}) {
     categorySelect.addEventListener("change", (event) => {
       loot.category  = normalizeString(event.target.value) || "";
       loot.effectIds = (loot.effectIds || []).filter((id) => effectAllowedForCategory(id, loot.category));
+      // auto-generate lockId when switching to key and none is set
+      if (loot.category === "key" && !loot.lockId) {
+        const base = slugify(loot.itemName || loot.itemId || "key");
+        const usedIds = new Set(
+          (state.adventure?.scenes || []).flatMap((s) => s.sceneLoot || [])
+            .concat(state.adventure?.encounters?.flatMap((e) => e.loot || []) || [])
+            .concat(state.adventure?.starterKitItems || [])
+            .map((l) => normalizeString(l.lockId)).filter(Boolean)
+        );
+        let candidate = base; let n = 1;
+        while (usedIds.has(candidate)) { candidate = `${base}_${n}`; n++; }
+        loot.lockId = candidate;
+        lockIdInput.value = loot.lockId;
+      }
       renderEffectChips();
       updateEffectHelp();
       updateLootError();
@@ -4707,6 +4815,50 @@ function hydrateSkillSelect(select, value = "") {
   select._hydrating = false;
 }
 
+function hydrateKeySelect(select, value = "") {
+  select.innerHTML = "";
+  const noneOpt = document.createElement("option");
+  noneOpt.value = "";
+  noneOpt.textContent = "— Seleziona chiave —";
+  if (!value) noneOpt.selected = true;
+  select.appendChild(noneOpt);
+
+  // collect all keys: presets + adventure custom loot
+  const seen = new Set();
+  const addOption = (lockId, label) => {
+    if (!lockId || seen.has(lockId)) return;
+    seen.add(lockId);
+    const opt = document.createElement("option");
+    opt.value = lockId;
+    opt.textContent = `${label} (${lockId})`;
+    if (lockId === value) opt.selected = true;
+    select.appendChild(opt);
+  };
+
+  LOOT_PRESETS.filter((p) => p.category === "key" && p.lockId).forEach((p) => addOption(p.lockId, p.name));
+
+  const adventure = state?.adventure;
+  if (adventure) {
+    const allLoot = [
+      ...(adventure.starterKitItems || []),
+      ...(adventure.scenes || []).flatMap((s) => s.sceneLoot || []),
+      ...(adventure.encounters || []).flatMap((e) => e.loot || [])
+    ];
+    allLoot.filter((l) => l.category === "key" && l.lockId).forEach((l) => {
+      addOption(normalizeString(l.lockId), l.itemName || l.itemId || l.lockId);
+    });
+  }
+
+  // if current value not in list, add it as orphan
+  if (value && !seen.has(value)) {
+    const opt = document.createElement("option");
+    opt.value = value;
+    opt.textContent = `${value} ⚠ chiave non trovata nell'avventura`;
+    opt.selected = true;
+    select.appendChild(opt);
+  }
+}
+
 function hydrateLootSelect(select, value = "") {
   select.innerHTML = "";
   const noneOpt = document.createElement("option");
@@ -5151,9 +5303,16 @@ function normalizeChoice(choice, index = 1) {
   normalized.targetSceneId = normalizeString(snapshot.targetSceneId) || null;
   normalized.requiredLockId = snapshot.requiredLockId || defaults.requiredLockId;
   normalized.requiredLockLabel = snapshot.requiredLockLabel || defaults.requiredLockLabel;
-  normalized.requiredItemId = snapshot.requiredItemId || defaults.requiredItemId;
-  normalized.requiredItemCategory = snapshot.requiredItemCategory || defaults.requiredItemCategory;
-  normalized.requiredEffectId = snapshot.requiredEffectId || defaults.requiredEffectId;
+  // backward compat: if lockId is set, clear requiredItemId to avoid "multiple requirements" error
+  if (normalized.requiredLockId) {
+    normalized.requiredItemId = "";
+    normalized.requiredItemCategory = "";
+    normalized.requiredEffectId = "";
+  } else {
+    normalized.requiredItemId = snapshot.requiredItemId || defaults.requiredItemId;
+    normalized.requiredItemCategory = snapshot.requiredItemCategory || defaults.requiredItemCategory;
+    normalized.requiredEffectId = snapshot.requiredEffectId || defaults.requiredEffectId;
+  }
   normalized.consumeOnUse = Boolean(snapshot.consumeOnUse);
   if (snapshot.skillCheck) {
     normalized.skillCheck = {
@@ -5265,18 +5424,20 @@ function validateAdventure(adventure, cleaned = cleanAdventure(adventure), optio
 
   function validateChoiceCollection(sceneId, choices, ownerLabel) {
     (choices || []).forEach((choice) => {
-      const requirementCount = [
+      // exactly one of these groups must be set — they are mutually exclusive
+      const reqGroups = [
         choice.requiredLockId,
         choice.requiredItemId,
         choice.requiredItemCategory,
         choice.requiredEffectId
-      ].filter(Boolean).length;
+      ].filter(Boolean);
+      const requirementCount = reqGroups.length;
 
       if (!choice.text?.trim()) {
         errors.push(`${ownerLabel} nella scena ${sceneId} ha una scelta senza testo.`);
       }
       if (requirementCount > 1) {
-        errors.push(`${ownerLabel} nella scena ${sceneId} ha requirement multipli non supportati.`);
+        errors.push(`${ownerLabel} nella scena ${sceneId} ha requisiti multipli: usa un solo tipo (chiave, oggetto, categoria o effetto).`);
       }
       if (choice.consumeOnUse && requirementCount === 0) {
         warnings.push(`${ownerLabel} nella scena ${sceneId} consuma un requisito, ma nessun requisito e impostato.`);

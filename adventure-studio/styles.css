@@ -1178,6 +1178,24 @@ button.small {
   gap: 12px;
 }
 
+.req-mode-row {
+  margin-bottom: 10px;
+}
+
+.req-section {
+  padding: 10px 0 4px;
+  border-top: 1px solid var(--border);
+}
+
+.req-section .full-width {
+  grid-column: 1 / -1;
+}
+
+.req-consume-row {
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
 .checkbox-line {
   justify-content: center;
 }

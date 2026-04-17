@@ -380,15 +380,37 @@
       <details class="compact-section nested-section">
         <summary class="panel-summary compact-summary">
           <span>Requisiti</span>
-          <small>Oggetti, chiavi, effetti</small>
+          <small data-role="req-summary-hint">Nessuno</small>
         </summary>
-        <div class="choice-check-grid">
-          <label>Lock ID<input data-field="requiredLockId" type="text" placeholder="es. magister_archive"></label>
-          <label>Etichetta lock<input data-field="requiredLockLabel" type="text" placeholder="Chiave dell'archivio"></label>
-          <label>Richiede oggetto<select data-field="requiredItemId"></select></label>
+        <div class="req-mode-row">
+          <label>Tipo requisito
+            <select data-field="reqMode">
+              <option value="">— Nessuno —</option>
+              <option value="key">🔑 Chiave</option>
+              <option value="item">📦 Oggetto specifico</option>
+              <option value="category">🗂 Categoria</option>
+              <option value="effect">✨ Effetto</option>
+            </select>
+          </label>
+        </div>
+        <div data-req-section="key" class="req-section choice-check-grid" style="display:none">
+          <label class="full-width">Chiave richiesta<select data-field="requiredLockId"></select></label>
+          <p class="hint full-width" data-role="req-key-hint"></p>
+        </div>
+        <div data-req-section="item" class="req-section choice-check-grid" style="display:none">
+          <label>Oggetto (preset)<select data-field="requiredItemId"></select></label>
           <label>ItemId runtime<input data-field="requiredItemIdCustom" type="text" placeholder="es. ancient_seal"></label>
-          <label>Richiede categoria<select data-field="requiredItemCategory"></select></label>
-          <label>Richiede effetto<select data-field="requiredEffectId"></select></label>
+          <p class="hint full-width">Scegli dal preset o scrivi l'itemId direttamente se è un oggetto personalizzato. Il giocatore deve averlo in inventario.</p>
+        </div>
+        <div data-req-section="category" class="req-section choice-check-grid" style="display:none">
+          <label class="full-width">Categoria richiesta<select data-field="requiredItemCategory"></select></label>
+          <p class="hint full-width">Il giocatore deve avere almeno un oggetto di questa categoria.</p>
+        </div>
+        <div data-req-section="effect" class="req-section choice-check-grid" style="display:none">
+          <label class="full-width">Effetto richiesto<select data-field="requiredEffectId"></select></label>
+          <p class="hint full-width">Il giocatore deve possedere un oggetto con questo effetto attivo.</p>
+        </div>
+        <div class="req-consume-row">
           <label class="checkbox-line"><input data-field="consumeOnUse" type="checkbox"> Consuma il requisito all'uso</label>
         </div>
       </details>
