@@ -216,7 +216,7 @@
               </label>
               <label>Titolo evento<input id="scene-title" type="text"></label>
             </div>
-            <label>Testo iniziale<textarea id="scene-opening-text" rows="7"></textarea></label>
+            <label class="scene-text-section">Testo iniziale<textarea id="scene-opening-text" rows="7"></textarea></label>
             <div id="scene-image-preview" class="scene-image-preview hidden">
               <div class="scene-image-stage">
                 <div class="scene-image-stage-label">Anteprima card app</div>
@@ -263,7 +263,7 @@
             <details id="scene-combat-config" class="subsection hidden compact-section" open>
               <summary class="panel-summary compact-summary">
                 <span>Mostri della scena</span>
-                <small>Esiti + roster</small>
+                <small id="scene-combat-summary">Esiti + roster</small>
               </summary>
               <p class="hint">Aggiungi qui i mostri realmente presenti nello scontro. Ogni voce resta comprimibile e modificabile quando serve.</p>
               <div id="combat-group-list"></div>
@@ -279,10 +279,10 @@
               <div id="scene-outcomes-list"></div>
             </details>
 
-            <details class="subsection compact-section">
+            <details id="scene-loot-section" class="subsection compact-section">
               <summary class="panel-summary compact-summary">
                 <span>Loot evento</span>
-                <small>Ricompense e oggetti</small>
+                <small id="scene-loot-summary">Ricompense e oggetti</small>
               </summary>
               <div class="subsection-header">
                 <button id="add-scene-loot-btn">Aggiungi loot</button>

@@ -3395,6 +3395,11 @@ function renderSceneLoot(scene) {
   renderLootList(els.sceneLootList, scene.sceneLoot, {
     rerender: () => renderSceneLoot(scene)
   });
+  const lootSummary = document.getElementById("scene-loot-summary");
+  if (lootSummary) {
+    const n = (scene.sceneLoot || []).length;
+    lootSummary.textContent = n > 0 ? `${n} oggett${n === 1 ? "o" : "i"}` : "Ricompense e oggetti";
+  }
 }
 
 function renderSceneImagePreview(scene) {
@@ -3439,6 +3444,10 @@ function renderChoices(scene) {
       scheduleJsonRender();
     }
   });
+  if (els.sceneChoicesSummary) {
+    const n = (scene.choices || []).length;
+    els.sceneChoicesSummary.textContent = n > 0 ? `${n} scelt${n === 1 ? "a" : "e"}` : "Scelte del nodo";
+  }
 }
 
 function renderChoiceCards(container, choices, handlers) {
@@ -4027,6 +4036,11 @@ function renderCombatGroups(scene) {
 
     els.combatGroupList.appendChild(node);
   });
+  const combatSummary = document.getElementById("scene-combat-summary");
+  if (combatSummary) {
+    const n = (scene.combatGroups || []).length;
+    combatSummary.textContent = n > 0 ? `${n} mostro${n === 1 ? "" : "i"}` : "Esiti + roster";
+  }
 }
 
 function renderMonsterList() {
