@@ -1,19 +1,22 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap');
+
 :root {
-  --bg: #0f1116;
-  --bg-2: #161a22;
-  --panel: #1a202b;
-  --panel-2: #242d3a;
-  --panel-3: #303b4d;
-  --text: #eef3f7;
-  --muted: #9fb0c3;
-  --accent: #d19052;
-  --accent-2: #74a475;
-  --danger: #ca655b;
-  --border: #39465d;
-  --glow: rgba(209, 144, 82, 0.24);
-  --shadow: 0 22px 50px rgba(0, 0, 0, 0.36);
-  --radius: 20px;
+  --bg: #0c0e15;
+  --bg-2: #131720;
+  --panel: #1a2030;
+  --panel-2: #222a3a;
+  --panel-3: #2c3648;
+  --text: #e8e0d4;
+  --muted: #8a9ab0;
+  --accent: #c8823a;
+  --accent-2: #4a7a5a;
+  --danger: #8a3535;
+  --border: #2e3d52;
+  --glow: rgba(200, 130, 58, 0.22);
+  --shadow: 0 22px 50px rgba(0, 0, 0, 0.42);
+  --radius: 12px;
   --mono: "IBM Plex Mono", "Courier New", monospace;
+  --display: "Cinzel", "Palatino Linotype", serif;
   --sidebar-width: 400px;
   --save-bar-height: 72px;
 }
@@ -26,9 +29,8 @@ body {
   margin: 0;
   font-family: var(--mono);
   background:
-    radial-gradient(circle at top left, rgba(209, 144, 82, 0.16), transparent 28%),
-    radial-gradient(circle at top right, rgba(116, 164, 117, 0.12), transparent 24%),
-    linear-gradient(180deg, #0c0f14 0%, var(--bg) 45%, var(--bg-2) 100%);
+    radial-gradient(circle at top left, rgba(200, 130, 58, 0.11), transparent 28%),
+    linear-gradient(180deg, #09090f 0%, var(--bg) 45%, var(--bg-2) 100%);
   color: var(--text);
 }
 
@@ -140,7 +142,7 @@ select {
   padding: 24px;
   padding-bottom: 12px;
   scrollbar-width: thin;
-  scrollbar-color: rgba(209, 144, 82, 0.3) transparent;
+  scrollbar-color: rgba(200, 130, 58, 0.3) transparent;
 }
 
 .sidebar-scroll-area::-webkit-scrollbar {
@@ -152,14 +154,14 @@ select {
 }
 
 .sidebar-scroll-area::-webkit-scrollbar-thumb {
-  background: rgba(209, 144, 82, 0.28);
+  background: rgba(200, 130, 58, 0.28);
   border-radius: 4px;
 }
 
 .sidebar-footer {
   flex-shrink: 0;
   padding: 12px 16px;
-  border-top: 1px solid rgba(209, 144, 82, 0.16);
+  border-top: 1px solid rgba(200, 130, 58, 0.16);
   background:
     linear-gradient(180deg, rgba(30, 38, 50, 0.97), rgba(18, 22, 30, 0.99)),
     rgba(18, 13, 11, 0.98);
@@ -181,7 +183,7 @@ select {
   align-items: center;
   margin-bottom: 12px;
   padding-bottom: 14px;
-  border-bottom: 1px solid rgba(209, 144, 82, 0.16);
+  border-bottom: 1px solid rgba(200, 130, 58, 0.16);
 }
 
 .brand h1,
@@ -190,6 +192,18 @@ select {
 .panel h3,
 .subsection h4 {
   margin: 0;
+}
+
+/* Cinzel per tutti i titoli visibili */
+.brand h1,
+.panel h2,
+.panel h3,
+.panel-header h3,
+.subsection h4,
+.tutorial-card h2,
+.node-picker-title {
+  font-family: var(--display);
+  letter-spacing: 0.04em;
 }
 
 .brand p,
@@ -224,10 +238,11 @@ select {
 }
 
 .panel {
-  background: linear-gradient(180deg, rgba(39, 47, 61, 0.96), rgba(24, 30, 40, 0.98));
-  border: 1px solid var(--border);
+  background: var(--panel);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-top-color: rgba(255, 255, 255, 0.13);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow), inset 0 1px 0 rgba(255, 255, 255, 0.04);
   padding: 18px;
   margin-bottom: 18px;
   min-width: 0;
@@ -351,9 +366,9 @@ select {
   gap: 14px;
   margin-bottom: 14px;
   padding: 14px;
-  border: 1px solid rgba(209, 144, 82, 0.24);
+  border: 1px solid rgba(200, 130, 58, 0.24);
   border-radius: 16px;
-  background: rgba(209, 144, 82, 0.05);
+  background: rgba(200, 130, 58, 0.05);
 }
 
 .scene-image-stage {
@@ -401,7 +416,7 @@ select {
   display: grid;
   gap: 10px;
   padding: 14px;
-  border: 1px solid rgba(209, 144, 82, 0.18);
+  border: 1px solid rgba(200, 130, 58, 0.18);
   border-radius: 14px;
   background: rgba(10, 14, 20, 0.36);
 }
@@ -459,13 +474,13 @@ textarea {
 
 button {
   border: none;
-  border-radius: 12px;
+  border-radius: 10px;
   padding: 10px 14px;
-  background: linear-gradient(180deg, var(--accent), #936039);
-  color: #10131a;
+  background: linear-gradient(180deg, var(--accent), #7a4e22);
+  color: #0e0a06;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
   transition: transform 120ms ease, filter 120ms ease;
 }
 
@@ -524,7 +539,7 @@ button:hover {
   border: none;
   background: var(--accent);
   color: #1a1006;
-  box-shadow: 0 6px 24px rgba(209, 144, 82, 0.45), 0 2px 6px rgba(0,0,0,0.4);
+  box-shadow: 0 6px 24px rgba(200, 130, 58, 0.45), 0 2px 6px rgba(0,0,0,0.4);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -534,7 +549,7 @@ button:hover {
 
 .save-fab:hover {
   transform: scale(1.1);
-  box-shadow: 0 10px 32px rgba(209, 144, 82, 0.6), 0 2px 8px rgba(0,0,0,0.4);
+  box-shadow: 0 10px 32px rgba(200, 130, 58, 0.6), 0 2px 8px rgba(0,0,0,0.4);
 }
 
 .save-fab:active {
@@ -549,7 +564,7 @@ button:hover {
 
 .save-fab.is-saved {
   background: var(--accent-2);
-  box-shadow: 0 6px 24px rgba(116, 164, 117, 0.5), 0 2px 6px rgba(0,0,0,0.4);
+  box-shadow: 0 6px 24px rgba(74, 122, 90, 0.5), 0 2px 6px rgba(0,0,0,0.4);
 }
 
 /* ── Save toast ─────────────────────────────────────────────────────────── */
@@ -601,8 +616,8 @@ button:disabled {
 }
 
 button.danger {
-  background: linear-gradient(180deg, var(--danger), #8a3d35);
-  color: #fff7f6;
+  background: linear-gradient(180deg, #a04040, var(--danger));
+  color: #fff0ef;
 }
 
 button.small {
@@ -630,8 +645,8 @@ button.small {
 .list li:hover,
 .list li.active {
   border-color: var(--accent);
-  background: rgba(209, 144, 82, 0.14);
-  box-shadow: 0 0 0 2px rgba(209, 144, 82, 0.08);
+  background: rgba(200, 130, 58, 0.14);
+  box-shadow: 0 0 0 2px rgba(200, 130, 58, 0.08);
 }
 
 .list li strong {
@@ -752,11 +767,10 @@ button.small {
 .loot-card {
   padding: 14px;
   margin-bottom: 10px;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background:
-    linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02)),
-    rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-top-color: rgba(255, 255, 255, 0.11);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .combat-group-card {
@@ -908,8 +922,8 @@ button.small {
   gap: 5px;
   padding: 3px 8px 3px 10px;
   border-radius: 20px;
-  background: rgba(209, 144, 82, 0.18);
-  border: 1px solid rgba(209, 144, 82, 0.35);
+  background: rgba(200, 130, 58, 0.18);
+  border: 1px solid rgba(200, 130, 58, 0.35);
   font-size: 0.80rem;
   color: #e8c98a;
   white-space: nowrap;
@@ -986,8 +1000,8 @@ button.small {
   margin: 6px 0 2px;
   padding: 8px 10px;
   border-radius: 10px;
-  border: 1px solid rgba(209, 144, 82, 0.2);
-  background: rgba(209, 144, 82, 0.08);
+  border: 1px solid rgba(200, 130, 58, 0.2);
+  background: rgba(200, 130, 58, 0.08);
 }
 
 .outcome-card {
@@ -1004,8 +1018,8 @@ button.small {
   margin: 10px 0;
   padding: 12px 14px;
   border-radius: 12px;
-  border: 1px solid rgba(209, 144, 82, 0.3);
-  background: rgba(209, 144, 82, 0.08);
+  border: 1px solid rgba(200, 130, 58, 0.3);
+  background: rgba(200, 130, 58, 0.08);
   color: var(--muted);
 }
 
@@ -1042,7 +1056,7 @@ button.small {
   border-radius: 18px;
   border: 1px solid var(--border);
   background:
-    radial-gradient(circle at top, rgba(209, 144, 82, 0.06), transparent 28%),
+    radial-gradient(circle at top, rgba(200, 130, 58, 0.06), transparent 28%),
     linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px),
     rgba(11, 15, 22, 0.82);
@@ -1112,7 +1126,7 @@ button.small {
   width: 16px;
   height: 16px;
   right: -8px;
-  box-shadow: 0 0 0 3px rgba(209, 144, 82, 0.18);
+  box-shadow: 0 0 0 3px rgba(200, 130, 58, 0.18);
 }
 
 .flow-card-mini-index {
@@ -1146,7 +1160,7 @@ button.small {
   border-radius: 999px;
   border: 2px solid #f5e9d0;
   background: var(--accent);
-  box-shadow: 0 0 0 4px rgba(209, 144, 82, 0.18);
+  box-shadow: 0 0 0 4px rgba(200, 130, 58, 0.18);
   cursor: crosshair;
 }
 
@@ -1154,7 +1168,7 @@ button.small {
   border-color: var(--accent);
   background:
     linear-gradient(180deg, rgba(72, 58, 40, 0.98), rgba(39, 47, 61, 0.98)),
-    rgba(209, 144, 82, 0.12);
+    rgba(200, 130, 58, 0.12);
 }
 
 .flow-card-head {
@@ -1252,7 +1266,7 @@ button.small {
 
 .validation-item.warning {
   border-color: var(--accent);
-  background: rgba(209, 144, 82, 0.14);
+  background: rgba(200, 130, 58, 0.14);
 }
 
 .validation-item.ok {
@@ -1438,9 +1452,9 @@ button.small {
 .tutorial-card {
   width: min(560px, 100%);
   background: linear-gradient(180deg, rgba(39, 47, 61, 0.98), rgba(22, 28, 38, 0.99));
-  border: 1px solid rgba(209, 144, 82, 0.36);
+  border: 1px solid rgba(200, 130, 58, 0.36);
   border-radius: var(--radius);
-  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(209, 144, 82, 0.06);
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(200, 130, 58, 0.06);
   padding: 28px 28px 22px;
   display: flex;
   flex-direction: column;
@@ -1482,8 +1496,8 @@ button.small {
   width: 28px;
   height: 28px;
   border-radius: 8px;
-  background: rgba(209, 144, 82, 0.18);
-  border: 1px solid rgba(209, 144, 82, 0.28);
+  background: rgba(200, 130, 58, 0.18);
+  border: 1px solid rgba(200, 130, 58, 0.28);
   display: grid;
   place-items: center;
   font-size: 0.85rem;
@@ -1723,7 +1737,7 @@ button.small {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 16px;
-  box-shadow: var(--shadow), 0 0 0 1px rgba(209, 144, 82, 0.12);
+  box-shadow: var(--shadow), 0 0 0 1px rgba(200, 130, 58, 0.12);
   padding: 16px;
   min-width: 200px;
   max-width: 240px;
@@ -1861,7 +1875,7 @@ button.small {
   max-height: 320px;
   overflow-y: auto;
   scrollbar-width: thin;
-  scrollbar-color: rgba(209, 144, 82, 0.3) transparent;
+  scrollbar-color: rgba(200, 130, 58, 0.3) transparent;
 }
 
 .node-picker-preset-btn {
@@ -1974,7 +1988,7 @@ button.small {
   transform: none;
 }
 .difficulty-pill--active {
-  background: rgba(209, 144, 82, 0.2);
+  background: rgba(200, 130, 58, 0.2);
   border-color: var(--accent);
   color: var(--accent);
 }
@@ -2016,7 +2030,7 @@ button.small {
   margin-bottom: 12px;
   padding: 12px;
   border-radius: 12px;
-  border: 1px solid rgba(209, 144, 82, 0.2);
+  border: 1px solid rgba(200, 130, 58, 0.2);
   background: rgba(10, 14, 20, 0.4);
 }
 
