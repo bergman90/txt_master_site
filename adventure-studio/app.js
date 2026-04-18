@@ -3447,6 +3447,7 @@ function renderChoiceCards(container, choices, handlers) {
     const node = document.getElementById("choice-template").content.firstElementChild.cloneNode(true);
     node.querySelector('[data-field="text"]').value = choice.text || "";
     node.querySelector('[data-field="endingText"]').value = choice.endingText || "";
+    const targetLabel = node.querySelector('[data-field="targetSceneId"]').closest("label");
     hydrateSceneTargetSelect(node.querySelector('[data-field="targetSceneId"]'), choice.targetSceneId || "");
     attachNavigateBtn(node, '[data-field="targetSceneId"]');
     hydrateSkillSelect(node.querySelector('[data-field="checkAttribute"]'), choice.skillCheck?.attribute || "");
@@ -3457,6 +3458,13 @@ function renderChoiceCards(container, choices, handlers) {
     node.querySelector('[data-field="checkDifficulty"]').value = choice.skillCheck?.difficulty ?? "";
     node.querySelector('[data-field="consumeOnUse"]').checked = Boolean(choice.consumeOnUse);
     node.querySelector('[data-field="burnOnFailure"]').checked = Boolean(choice.skillCheck?.burnOnFailure);
+
+    // ── nascondi "Collega a evento" quando il skill check è attivo ────────────
+    function syncTargetVisibility() {
+      const hasCheck = Boolean(choice.skillCheck?.attribute && choice.skillCheck?.successSceneId);
+      if (targetLabel) targetLabel.style.display = hasCheck ? "none" : "";
+    }
+    syncTargetVisibility();
 
     // ── success loot section (visibile solo quando successSceneId == __stay__) ─
     // Usiamo choice._successLootDraft come riferimento stabile: non viene mai
@@ -3593,6 +3601,7 @@ function renderChoiceCards(container, choices, handlers) {
       const val = normalizeString(event.target.value);
       choice.targetSceneId = val;
       if (val) delete choice.skillCheck;
+      syncTargetVisibility();
       handlers.onChange();
     });
 
@@ -3677,6 +3686,7 @@ function renderChoiceCards(container, choices, handlers) {
     function syncCheck() {
       updateChoiceCheck(choice, node, handlers.onChange);
       updateCheckSummaryHint();
+      syncTargetVisibility();
     }
 
     node.querySelector('[data-field="checkAttribute"]').addEventListener("change", (e) => { if (!e.target._hydrating) syncCheck(); });
