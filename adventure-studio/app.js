@@ -97,6 +97,11 @@ const NO_ESCAPE_SENTINEL = "__no_escape__";
 // ri-entra nella stessa scena senza bruciare la scelta (ritenta la prova).
 const RETRY_SENTINEL = "__retry__";
 
+// Valore sentinel per successSceneId/failureSceneId di una prova:
+// resta sulla scena corrente senza navigare. Su successo assegna successLoot
+// e brucia la scelta (non ripetibile). Su fallimento la scelta rimane disponibile.
+const STAY_SENTINEL = "__stay__";
+
 const MONSTER_PRESETS = [
   {
     id: "skeleton_guard",
@@ -2447,11 +2452,14 @@ function syncChoiceCollectionFromContainer(container, choices) {
     const difficulty = Number(card.querySelector('[data-field="checkDifficulty"]')?.value || 0);
 
     if (attribute && successSceneId) {
+      const successLootEl = card.querySelector('[data-role="success-loot-list"]');
+      const successLoot = successLootEl ? (choice.skillCheck?.successLoot || []) : [];
       choice.skillCheck = {
         attribute,
         difficulty,
         successSceneId,
-        failureSceneId
+        failureSceneId,
+        successLoot
       };
       choice.targetSceneId = "";
     } else {
@@ -2706,8 +2714,8 @@ function getConnectedSceneIds() {
     if (scene.kind === "description") {
       scene.choices.forEach((choice) => {
         if (choice.skillCheck) {
-          if (choice.skillCheck.successSceneId) ids.add(choice.skillCheck.successSceneId);
-          if (choice.skillCheck.failureSceneId && choice.skillCheck.failureSceneId !== RETRY_SENTINEL) ids.add(choice.skillCheck.failureSceneId);
+          if (choice.skillCheck.successSceneId && choice.skillCheck.successSceneId !== STAY_SENTINEL) ids.add(choice.skillCheck.successSceneId);
+          if (choice.skillCheck.failureSceneId && choice.skillCheck.failureSceneId !== RETRY_SENTINEL && choice.skillCheck.failureSceneId !== STAY_SENTINEL) ids.add(choice.skillCheck.failureSceneId);
         } else if (choice.targetSceneId) {
           ids.add(choice.targetSceneId);
         }
@@ -3442,12 +3450,45 @@ function renderChoiceCards(container, choices, handlers) {
     hydrateSceneTargetSelect(node.querySelector('[data-field="targetSceneId"]'), choice.targetSceneId || "");
     attachNavigateBtn(node, '[data-field="targetSceneId"]');
     hydrateSkillSelect(node.querySelector('[data-field="checkAttribute"]'), choice.skillCheck?.attribute || "");
-    hydrateSceneTargetSelect(node.querySelector('[data-field="checkSuccess"]'), choice.skillCheck?.successSceneId || "");
+    hydrateSuccessTargetSelect(node.querySelector('[data-field="checkSuccess"]'), choice.skillCheck?.successSceneId || "");
     attachNavigateBtn(node, '[data-field="checkSuccess"]');
-    hydrateSceneTargetSelect(node.querySelector('[data-field="checkFailure"]'), choice.skillCheck?.failureSceneId || "");
+    hydrateFailureTargetSelect(node.querySelector('[data-field="checkFailure"]'), choice.skillCheck?.failureSceneId || "");
     attachNavigateBtn(node, '[data-field="checkFailure"]');
     node.querySelector('[data-field="checkDifficulty"]').value = choice.skillCheck?.difficulty ?? "";
     node.querySelector('[data-field="consumeOnUse"]').checked = Boolean(choice.consumeOnUse);
+
+    // ── success loot section (visibile solo quando successSceneId == __stay__) ─
+    const successLootSection = node.querySelector('[data-role="success-loot-section"]');
+    const successLootList    = node.querySelector('[data-role="success-loot-list"]');
+
+    function syncSuccessLootVisibility() {
+      const val = node.querySelector('[data-field="checkSuccess"]').value;
+      successLootSection.style.display = (val === STAY_SENTINEL) ? "" : "none";
+    }
+    syncSuccessLootVisibility();
+
+    if (!choice.skillCheck) choice.skillCheck = { attribute: "", difficulty: 10, successSceneId: "", failureSceneId: "" };
+    if (!choice.skillCheck.successLoot) choice.skillCheck.successLoot = [];
+
+    function rerenderSuccessLoot() {
+      renderLootList(successLootList, choice.skillCheck.successLoot, {
+        rerender: rerenderSuccessLoot,
+        onChange: () => { markSceneDirty(); scheduleJsonRender(); }
+      });
+    }
+    rerenderSuccessLoot();
+
+    node.querySelector('[data-field="checkSuccess"]').addEventListener("change", () => {
+      syncSuccessLootVisibility();
+    });
+
+    node.querySelector('[data-action="add-success-loot"]').addEventListener("click", () => {
+      choice.skillCheck.successLoot = choice.skillCheck.successLoot || [];
+      choice.skillCheck.successLoot.push(createLootFromPreset("coins"));
+      rerenderSuccessLoot();
+      markSceneDirty();
+      scheduleJsonRender();
+    });
 
     // ── requirements: mode-switch UI ─────────────────────────────────────────
     const reqModeSelect   = node.querySelector('[data-field="reqMode"]');
@@ -4448,8 +4489,18 @@ function cleanAdventure(adventure) {
     };
     const editorMeta = buildChoiceEditorMetadata(choice);
     if (editorMeta) base._editor = editorMeta;
-    if (choice.skillCheck) base.skillCheck = choice.skillCheck;
-    else base.nextSceneId = choice.targetSceneId;
+    if (choice.skillCheck) {
+      const sc = choice.skillCheck;
+      base.skillCheck = pruneEmpty({
+        attribute: sc.attribute,
+        difficulty: sc.difficulty,
+        successSceneId: sc.successSceneId,
+        failureSceneId: sc.failureSceneId,
+        successLoot: (sc.successLoot || []).filter((l) => l.itemName).map(serializeLoot).length > 0
+          ? (sc.successLoot || []).filter((l) => l.itemName).map(serializeLoot)
+          : undefined
+      });
+    } else base.nextSceneId = choice.targetSceneId;
     return pruneEmpty(base);
   };
 
@@ -4771,6 +4822,18 @@ function hydrateDefeatTargetSelect(select, value = "") {
   if (value === DEATH_SENTINEL) select.value = DEATH_SENTINEL;
 }
 
+// Variante per esito successo prova: aggiunge l'opzione "Resta qui" (sentinel)
+// che assegna loot e brucia la scelta senza navigare a un'altra scena.
+function hydrateSuccessTargetSelect(select, value = "") {
+  hydrateSceneTargetSelect(select, value);
+  const stayOpt = document.createElement("option");
+  stayOpt.value = STAY_SENTINEL;
+  stayOpt.textContent = "📦 Resta qui — assegna loot al successo";
+  if (value === STAY_SENTINEL) stayOpt.selected = true;
+  select.insertBefore(stayOpt, select.options[1] || null);
+  if (value === STAY_SENTINEL) select.value = STAY_SENTINEL;
+}
+
 // Variante per esiti di fallimento prova: aggiunge l'opzione "Ritenta" (sentinel)
 // che ri-entra nella stessa scena senza bruciare la scelta.
 function hydrateFailureTargetSelect(select, value = "") {
@@ -5030,6 +5093,7 @@ function sceneTitleById(sceneId, fallback = "nessuna destinazione") {
   if (sceneId === DEATH_SENTINEL) return "☠ Morte";
   if (sceneId === NO_ESCAPE_SENTINEL) return "⚔ Non hai alcuna via di fuga.";
   if (sceneId === RETRY_SENTINEL) return "🔄 Ritenta";
+  if (sceneId === STAY_SENTINEL) return "📦 Resta qui";
   const target = state.adventure.scenes.find((scene) => scene.id === sceneId);
   return target ? target.title : fallback;
 }
@@ -5476,10 +5540,10 @@ function validateAdventure(adventure, cleaned = cleanAdventure(adventure), optio
         if (!choice.skillCheck.attribute) {
           errors.push(`${ownerLabel} nella scena ${sceneId} ha una skill check senza attributo.`);
         }
-        if (!choice.skillCheck.successSceneId || !sceneIds.has(choice.skillCheck.successSceneId)) {
+        if (!choice.skillCheck.successSceneId || (choice.skillCheck.successSceneId !== STAY_SENTINEL && !sceneIds.has(choice.skillCheck.successSceneId))) {
           errors.push(`${ownerLabel} nella scena ${sceneId} ha un ramo successo non valido.`);
         }
-        if (!choice.skillCheck.failureSceneId || (choice.skillCheck.failureSceneId !== RETRY_SENTINEL && !sceneIds.has(choice.skillCheck.failureSceneId))) {
+        if (!choice.skillCheck.failureSceneId || (choice.skillCheck.failureSceneId !== RETRY_SENTINEL && choice.skillCheck.failureSceneId !== STAY_SENTINEL && !sceneIds.has(choice.skillCheck.failureSceneId))) {
           errors.push(`${ownerLabel} nella scena ${sceneId} ha un ramo fallimento non valido.`);
         }
       } else if (!choice.nextSceneId) {

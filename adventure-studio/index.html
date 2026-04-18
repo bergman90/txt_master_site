@@ -425,6 +425,11 @@
           <label>Evento se successo<select data-field="checkSuccess"></select></label>
           <label>Evento se fallisce <small>(vuoto = rimane qui)</small><select data-field="checkFailure"></select></label>
         </div>
+        <div data-role="success-loot-section" style="display:none">
+          <p class="hint">Oggetti ottenuti al successo — la scelta diventa non ripetibile.</p>
+          <div data-role="success-loot-list"></div>
+          <button data-action="add-success-loot" type="button" class="small">+ Aggiungi oggetto</button>
+        </div>
       </details>
       <button data-action="remove-choice" class="danger small">Rimuovi scelta</button>
     </div>
