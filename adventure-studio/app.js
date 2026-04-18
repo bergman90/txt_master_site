@@ -2452,12 +2452,14 @@ function syncChoiceCollectionFromContainer(container, choices) {
     const difficulty = Number(card.querySelector('[data-field="checkDifficulty"]')?.value || 0);
 
     if (attribute && successSceneId) {
+      const burnOnFailure = Boolean(card.querySelector('[data-field="burnOnFailure"]')?.checked);
       choice.skillCheck = {
         attribute,
         difficulty,
         successSceneId,
         failureSceneId,
-        successLoot: choice._successLootDraft || []
+        successLoot: choice._successLootDraft || [],
+        burnOnFailure: burnOnFailure || undefined
       };
       choice.targetSceneId = "";
     } else {
@@ -3454,6 +3456,7 @@ function renderChoiceCards(container, choices, handlers) {
     attachNavigateBtn(node, '[data-field="checkFailure"]');
     node.querySelector('[data-field="checkDifficulty"]').value = choice.skillCheck?.difficulty ?? "";
     node.querySelector('[data-field="consumeOnUse"]').checked = Boolean(choice.consumeOnUse);
+    node.querySelector('[data-field="burnOnFailure"]').checked = Boolean(choice.skillCheck?.burnOnFailure);
 
     // ── success loot section (visibile solo quando successSceneId == __stay__) ─
     // Usiamo choice._successLootDraft come riferimento stabile: non viene mai
@@ -3662,6 +3665,7 @@ function renderChoiceCards(container, choices, handlers) {
     node.querySelector('[data-field="checkDifficulty"]').addEventListener("input", () => updateChoiceCheck(choice, node, handlers.onChange));
     node.querySelector('[data-field="checkSuccess"]').addEventListener("change", (e) => { if (!e.target._hydrating) updateChoiceCheck(choice, node, handlers.onChange); });
     node.querySelector('[data-field="checkFailure"]').addEventListener("change", (e) => { if (!e.target._hydrating) updateChoiceCheck(choice, node, handlers.onChange); });
+    node.querySelector('[data-field="burnOnFailure"]').addEventListener("change", () => updateChoiceCheck(choice, node, handlers.onChange));
 
     node.querySelector('[data-action="remove-choice"]').addEventListener("click", () => {
       handlers.onRemove(index);
@@ -4501,7 +4505,8 @@ function cleanAdventure(adventure) {
         difficulty: sc.difficulty,
         successSceneId: sc.successSceneId,
         failureSceneId: sc.failureSceneId,
-        successLoot: rawSuccessLoot.length > 0 ? rawSuccessLoot : undefined
+        successLoot: rawSuccessLoot.length > 0 ? rawSuccessLoot : undefined,
+        burnOnFailure: sc.burnOnFailure || undefined
       });
     } else base.nextSceneId = choice.targetSceneId;
     return pruneEmpty(base);
@@ -4715,7 +4720,8 @@ function normalizeImportedChoice(choice, index) {
       difficulty: Number(choice.skillCheck.difficulty || 0),
       successSceneId: normalizeString(choice.skillCheck.successSceneId),
       failureSceneId: normalizeString(choice.skillCheck.failureSceneId),
-      successLoot: (choice.skillCheck.successLoot || []).map((l) => normalizeLoot(l))
+      successLoot: (choice.skillCheck.successLoot || []).map((l) => normalizeLoot(l)),
+      burnOnFailure: Boolean(choice.skillCheck.burnOnFailure) || undefined
     } : null,
     _successLootDraft: choice.skillCheck?.successLoot
       ? (choice.skillCheck.successLoot || []).map((l) => normalizeLoot(l))
