@@ -1096,7 +1096,7 @@ function bindActions() {
   // Toggle JSON output
   els.toggleJsonBtn?.addEventListener("click", () => {
     const isHidden = els.jsonOutput.classList.toggle("hidden");
-    els.toggleJsonBtn.textContent = isHidden ? "Mostra" : "Nascondi";
+    els.toggleJsonBtn.textContent = isHidden ? "Espandi" : "Comprimi";
   });
 
   // Duplica evento selezionato
