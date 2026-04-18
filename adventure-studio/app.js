@@ -3661,11 +3661,29 @@ function renderChoiceCards(container, choices, handlers) {
       handlers.onChange();
     });
 
-    node.querySelector('[data-field="checkAttribute"]').addEventListener("change", (e) => { if (!e.target._hydrating) updateChoiceCheck(choice, node, handlers.onChange); });
-    node.querySelector('[data-field="checkDifficulty"]').addEventListener("input", () => updateChoiceCheck(choice, node, handlers.onChange));
-    node.querySelector('[data-field="checkSuccess"]').addEventListener("change", (e) => { if (!e.target._hydrating) updateChoiceCheck(choice, node, handlers.onChange); });
-    node.querySelector('[data-field="checkFailure"]').addEventListener("change", (e) => { if (!e.target._hydrating) updateChoiceCheck(choice, node, handlers.onChange); });
-    node.querySelector('[data-field="burnOnFailure"]').addEventListener("change", () => updateChoiceCheck(choice, node, handlers.onChange));
+    // ── skill check summary badge ─────────────────────────────────────────────
+    const checkSummaryHint = node.querySelector('[data-role="check-summary-hint"]');
+    function updateCheckSummaryHint() {
+      if (!checkSummaryHint) return;
+      if (choice.skillCheck?.attribute && choice.skillCheck?.successSceneId) {
+        const skillLabel = SKILLS.find((s) => s.value === choice.skillCheck.attribute)?.label || choice.skillCheck.attribute;
+        checkSummaryHint.textContent = `⚀ ${skillLabel} dif. ${choice.skillCheck.difficulty || 0}`;
+      } else {
+        checkSummaryHint.textContent = "Solo se serve";
+      }
+    }
+    updateCheckSummaryHint();
+
+    function syncCheck() {
+      updateChoiceCheck(choice, node, handlers.onChange);
+      updateCheckSummaryHint();
+    }
+
+    node.querySelector('[data-field="checkAttribute"]').addEventListener("change", (e) => { if (!e.target._hydrating) syncCheck(); });
+    node.querySelector('[data-field="checkDifficulty"]').addEventListener("input", () => syncCheck());
+    node.querySelector('[data-field="checkSuccess"]').addEventListener("change", (e) => { if (!e.target._hydrating) syncCheck(); });
+    node.querySelector('[data-field="checkFailure"]').addEventListener("change", (e) => { if (!e.target._hydrating) syncCheck(); });
+    node.querySelector('[data-field="burnOnFailure"]').addEventListener("change", () => syncCheck());
 
     node.querySelector('[data-action="remove-choice"]').addEventListener("click", () => {
       handlers.onRemove(index);
@@ -3831,10 +3849,13 @@ function renderCombatGroups(scene) {
 
     function updateGroupHeader() {
       const monster = resolveMonster();
-      title.textContent = monster?.name || "Mostro della scena";
+      const count = group.count ?? 1;
+      title.textContent = monster?.name
+        ? (count > 1 ? `${count}× ${monster.name}` : monster.name)
+        : "Mostro della scena";
       meta.textContent = monster
-        ? `Quantita ${group.count ?? 1} | HP ${monster.hitPoints} | Loot ${(monster.loot || []).length}`
-        : `Quantita ${group.count ?? 1}`;
+        ? `HP ${monster.hitPoints} | ATK +${monster.attackBonus} | DEF ${monster.defense} | DMG ${monster.damageMin}–${monster.damageMax}`
+        : `Quantita ${count}`;
       const srcLabel = monster?.sourceType === "preset" ? "Preset" : monster?.sourceType === "archetype" ? "Archetipo" : "Custom";
       tag.textContent = srcLabel;
       mode.textContent = node.open ? "Vista compatta" : "Modifica mostro";
@@ -4094,7 +4115,6 @@ function renderLootList(container, items, options = {}) {
     const armorTypeRow     = node.querySelector('[data-role="armor-type-row"]');
     const armorTypeSelect  = node.querySelector('[data-field="armorType"]');
     const questInline      = node.querySelector('[data-field="questItem"]');
-    const questAdv         = node.querySelector('[data-field="questItemAdv"]');
     const customRow        = node.querySelector('[data-role="custom-row"]');
     const chipsContainer   = node.querySelector('[data-role="effect-chips"]');
     const effectHelp       = node.querySelector('[data-role="effect-help"]');
@@ -4110,7 +4130,6 @@ function renderLootList(container, items, options = {}) {
     customInput.disabled = selectedPreset !== "custom";
     lockIdInput.value    = loot.lockId || "";
     questInline.checked  = Boolean(loot.questItem);
-    questAdv.checked     = Boolean(loot.questItem);
     quantityField.value  = loot.quantity ?? 1;
 
     // ── helpers ──────────────────────────────────────────────────────────────
@@ -4224,6 +4243,11 @@ function renderLootList(container, items, options = {}) {
     syncVisibility();
     node.open = loot.expanded !== false;
     updateLootHeader();
+    // Auto-espandi opzioni avanzate per categorie che le richiedono
+    const lootAdvanced = node.querySelector(".loot-advanced");
+    if (lootAdvanced && (loot.category === "key" || loot.category === "armor" || loot.questItem)) {
+      lootAdvanced.open = true;
+    }
 
     // ── events ────────────────────────────────────────────────────────────────
     node.addEventListener("toggle", () => {
@@ -4305,6 +4329,10 @@ function renderLootList(container, items, options = {}) {
       updateLootError();
       syncVisibility();
       updateLockHint();
+      // Auto-espandi opzioni avanzate quando si seleziona key o armor
+      if (lootAdvanced && (loot.category === "key" || loot.category === "armor")) {
+        lootAdvanced.open = true;
+      }
       onChange();
     });
 
@@ -4328,14 +4356,7 @@ function renderLootList(container, items, options = {}) {
     });
 
     questInline.addEventListener("change", (event) => {
-      loot.questItem  = Boolean(event.target.checked);
-      questAdv.checked = loot.questItem;
-      updateLootHeader();
-      onChange();
-    });
-    questAdv.addEventListener("change", (event) => {
-      loot.questItem   = Boolean(event.target.checked);
-      questInline.checked = loot.questItem;
+      loot.questItem = Boolean(event.target.checked);
       updateLootHeader();
       onChange();
     });

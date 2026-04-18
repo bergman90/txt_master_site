@@ -348,10 +348,10 @@
                 <button id="add-monster-loot-btn">Aggiungi loot</button>
               </div>
               <div class="loot-quick-btns">
-                <button type="button" data-quick-loot="coins" class="small">+ Monete</button>
-                <button type="button" data-quick-loot="healing_potion" class="small">+ Pozione</button>
-                <button type="button" data-quick-loot="rusted_blade" class="small">+ Arma drop</button>
-                <button type="button" data-quick-loot="wolf_pelt" class="small">+ Tesoro</button>
+                <button type="button" data-quick-loot="coins" class="small" title="Aggiunge monete come loot (treasure, trade_value)">+ Monete</button>
+                <button type="button" data-quick-loot="healing_potion" class="small" title="Aggiunge una pozione curativa (consumable, restore_hp)">+ Pozione</button>
+                <button type="button" data-quick-loot="rusted_blade" class="small" title="Aggiunge un'arma di scarto come drop (weapon)">+ Arma drop</button>
+                <button type="button" data-quick-loot="wolf_pelt" class="small" title="Aggiunge un oggetto tesoro generico (treasure)">+ Tesoro</button>
               </div>
               <div id="monster-loot-list"></div>
             </div>
@@ -417,7 +417,7 @@
       <details class="compact-section nested-section">
         <summary class="panel-summary compact-summary">
           <span>Skill check</span>
-          <small>Solo se serve</small>
+          <small data-role="check-summary-hint">Solo se serve</small>
         </summary>
         <div class="choice-check-grid">
           <label>Abilita check<select data-field="checkAttribute"></select></label>
@@ -427,7 +427,7 @@
         </div>
         <label class="checkbox-line"><input data-field="burnOnFailure" type="checkbox"> Brucia scelta al fallimento — scompare dopo un tentativo fallito</label>
         <div data-role="success-loot-section" style="display:none">
-          <p class="hint">Oggetti ottenuti al successo — la scelta diventa non ripetibile.</p>
+          <p class="hint">Visibile solo con esito "📦 Resta qui". Loot assegnato al successo: la scelta si brucia e non è ripetibile.</p>
           <div data-role="success-loot-list"></div>
           <button data-action="add-success-loot" type="button" class="small">+ Aggiungi oggetto</button>
         </div>
@@ -492,10 +492,7 @@
           <label>Nome personalizzato<input data-field="customName" type="text" placeholder="Solo se scegli Personalizzato"></label>
         </div>
 
-        <label class="checkbox-line hint quest-hint">
-          <input data-field="questItemAdv" type="checkbox">
-          Quest item — questo oggetto è richiesto da una scelta narrativa (requiredItemId). Il giocatore non può scartarlo. Usalo solo se una scelta nell'avventura ha lo stesso itemId come requisito.
-        </label>
+        <p class="hint quest-hint">Il flag Quest si imposta dalla riga del titolo della card (checkbox "Quest"). Il giocatore non potrà scartarlo; usalo solo se una scelta nell'avventura ha lo stesso itemId come requisito.</p>
       </details>
 
       <div class="button-row loot-actions">
