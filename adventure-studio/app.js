@@ -2452,14 +2452,12 @@ function syncChoiceCollectionFromContainer(container, choices) {
     const difficulty = Number(card.querySelector('[data-field="checkDifficulty"]')?.value || 0);
 
     if (attribute && successSceneId) {
-      const successLootEl = card.querySelector('[data-role="success-loot-list"]');
-      const successLoot = successLootEl ? (choice.skillCheck?.successLoot || []) : [];
       choice.skillCheck = {
         attribute,
         difficulty,
         successSceneId,
         failureSceneId,
-        successLoot
+        successLoot: choice._successLootDraft || []
       };
       choice.targetSceneId = "";
     } else {
@@ -3458,8 +3456,16 @@ function renderChoiceCards(container, choices, handlers) {
     node.querySelector('[data-field="consumeOnUse"]').checked = Boolean(choice.consumeOnUse);
 
     // ── success loot section (visibile solo quando successSceneId == __stay__) ─
+    // Usiamo choice._successLootDraft come riferimento stabile: non viene mai
+    // distrutto da updateChoiceCheck che ricostruisce choice.skillCheck ad ogni sync.
     const successLootSection = node.querySelector('[data-role="success-loot-section"]');
     const successLootList    = node.querySelector('[data-role="success-loot-list"]');
+
+    if (!choice._successLootDraft) {
+      choice._successLootDraft = Array.isArray(choice.skillCheck?.successLoot)
+        ? choice.skillCheck.successLoot
+        : [];
+    }
 
     function syncSuccessLootVisibility() {
       const val = node.querySelector('[data-field="checkSuccess"]').value;
@@ -3467,11 +3473,8 @@ function renderChoiceCards(container, choices, handlers) {
     }
     syncSuccessLootVisibility();
 
-    if (!choice.skillCheck) choice.skillCheck = { attribute: "", difficulty: 10, successSceneId: "", failureSceneId: "" };
-    if (!choice.skillCheck.successLoot) choice.skillCheck.successLoot = [];
-
     function rerenderSuccessLoot() {
-      renderLootList(successLootList, choice.skillCheck.successLoot, {
+      renderLootList(successLootList, choice._successLootDraft, {
         rerender: rerenderSuccessLoot,
         onChange: () => { markSceneDirty(); scheduleJsonRender(); }
       });
@@ -3483,8 +3486,7 @@ function renderChoiceCards(container, choices, handlers) {
     });
 
     node.querySelector('[data-action="add-success-loot"]').addEventListener("click", () => {
-      choice.skillCheck.successLoot = choice.skillCheck.successLoot || [];
-      choice.skillCheck.successLoot.push(createLootFromPreset("coins"));
+      choice._successLootDraft.push(createLootFromPreset("coins"));
       rerenderSuccessLoot();
       markSceneDirty();
       scheduleJsonRender();
@@ -4491,14 +4493,15 @@ function cleanAdventure(adventure) {
     if (editorMeta) base._editor = editorMeta;
     if (choice.skillCheck) {
       const sc = choice.skillCheck;
+      const rawSuccessLoot = (choice._successLootDraft || sc.successLoot || [])
+        .filter((l) => l.itemName)
+        .map(serializeLoot);
       base.skillCheck = pruneEmpty({
         attribute: sc.attribute,
         difficulty: sc.difficulty,
         successSceneId: sc.successSceneId,
         failureSceneId: sc.failureSceneId,
-        successLoot: (sc.successLoot || []).filter((l) => l.itemName).map(serializeLoot).length > 0
-          ? (sc.successLoot || []).filter((l) => l.itemName).map(serializeLoot)
-          : undefined
+        successLoot: rawSuccessLoot.length > 0 ? rawSuccessLoot : undefined
       });
     } else base.nextSceneId = choice.targetSceneId;
     return pruneEmpty(base);
@@ -4711,8 +4714,12 @@ function normalizeImportedChoice(choice, index) {
       attribute: normalizeString(choice.skillCheck.attribute),
       difficulty: Number(choice.skillCheck.difficulty || 0),
       successSceneId: normalizeString(choice.skillCheck.successSceneId),
-      failureSceneId: normalizeString(choice.skillCheck.failureSceneId)
+      failureSceneId: normalizeString(choice.skillCheck.failureSceneId),
+      successLoot: (choice.skillCheck.successLoot || []).map((l) => normalizeLoot(l))
     } : null,
+    _successLootDraft: choice.skillCheck?.successLoot
+      ? (choice.skillCheck.successLoot || []).map((l) => normalizeLoot(l))
+      : [],
     requiredLockId: normalizeString(choice.requiredLockId),
     requiredLockLabel: normalizeString(choice.requiredLockLabel),
     requiredItemId: normalizeString(choice.requiredItemId),

@@ -681,6 +681,13 @@ button.small {
   padding-top: 12px;
 }
 
+.choice-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 12px 0 10px;
+  opacity: 0.4;
+}
+
 .combat-group-summary {
   align-items: center;
 }
