@@ -695,8 +695,8 @@ button.small {
   margin-top: 16px;
   padding: 12px 14px 14px;
   border-radius: 12px;
-  border: 1px solid rgba(196, 122, 74, 0.55);
-  border-left: 3px solid #c47a4a;
+  border: 2px solid #c47a4a;
+  border-left: 4px solid #c47a4a;
   background: rgba(196, 122, 74, 0.07);
   font-size: 0.82rem;
   font-weight: 700;
@@ -725,41 +725,44 @@ button.small {
 /* ─── Palette sezioni ────────────────────────────────────────────────────── */
 
 /* Prova — runico */
+/* I bordi usano i colori chiari (alta luminanza) per garantire contrasto
+   sullo sfondo scuro #1a2030. border-left 4px come accento dominante. */
+
 #scene-check-config {
-  border: 1px solid rgba(140, 104, 192, 0.55);
-  border-left: 3px solid #8c68c0;
+  border: 2px solid #b090d8;
+  border-left: 4px solid #b090d8;
   background: rgba(140, 104, 192, 0.08);
 }
 #scene-check-config > summary > span { color: #b090d8; }
 
-/* Mostri — sangue secco */
+/* Mostri — sangue */
 #scene-combat-config {
-  border: 1px solid rgba(158, 63, 63, 0.55);
-  border-left: 3px solid #9e3f3f;
+  border: 2px solid #c46060;
+  border-left: 4px solid #c46060;
   background: rgba(158, 63, 63, 0.08);
 }
 #scene-combat-config > summary > span { color: #c46060; }
 
 /* Esiti — verderame */
 #scene-outcomes-section {
-  border: 1px solid rgba(74, 138, 106, 0.55);
-  border-left: 3px solid #4a8a6a;
+  border: 2px solid #66aa88;
+  border-left: 4px solid #66aa88;
   background: rgba(74, 138, 106, 0.08);
 }
 #scene-outcomes-section > summary > span { color: #66aa88; }
 
 /* Loot — oro coniato */
 #scene-loot-section {
-  border: 1px solid rgba(201, 165, 32, 0.55);
-  border-left: 3px solid #c9a520;
+  border: 2px solid #dfc040;
+  border-left: 4px solid #dfc040;
   background: rgba(201, 165, 32, 0.07);
 }
 #scene-loot-section > summary > span { color: #dfc040; }
 
 /* Scelte — acciaio freddo */
 #scene-choices-section {
-  border: 1px solid rgba(78, 139, 171, 0.55);
-  border-left: 3px solid #4e8bab;
+  border: 2px solid #70adc8;
+  border-left: 4px solid #70adc8;
   background: rgba(78, 139, 171, 0.08);
 }
 #scene-choices-section > summary > span { color: #70adc8; }
