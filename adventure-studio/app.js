@@ -454,21 +454,20 @@ const TUTORIAL_SEEN_KEY = "adventure_studio_tutorial_seen_v1";
 const state = {
   adventure: {
     id: "new-adventure",
+    version: 2,
     title: "Nuova Avventura",
     description: "",
     tags: [],
     adaptivePowerMultiplier: 0.12,
-    startingSceneId: "",
+    startingDescriptionId: "",
     allowCarryOverLoadout: true,
     allowFreshStart: true,
     forceLoadout: false,
     restoreLoadoutOnEnd: false,
     starterKitItems: [],
-    scenes: [],
-    encounters: []
+    descriptions: []
   },
-  selectedSceneId: null,
-  selectedMonsterId: null,
+  selectedDescriptionId: null,
   drag: null,
   linkDraft: null,
   ui: {
@@ -479,7 +478,6 @@ const state = {
     jsonRenderTimer: null,
     jsonRenderOptions: { syncScene: true },
     flowCardRefreshTimer: null,
-    monsterListRenderTimer: null,
     flowLinksFrame: null,
     lastFlowLinksDragRenderAt: 0,
     flowAutoScrollFrame: null,
@@ -489,26 +487,26 @@ const state = {
     currentProjectId: null,
     projectPickerOpen: false,
     flowBoardBounds: null,
-    copiedScenePayload: null,
-    lastCreatedSceneId: null
+    copiedDescriptionPayload: null,
+    lastCreatedDescriptionId: null
   }
 };
 
 function createEmptyAdventure() {
   return {
     id: "new-adventure",
+    version: 2,
     title: "Nuova Avventura",
     description: "",
     tags: [],
     adaptivePowerMultiplier: 0.12,
-    startingSceneId: "",
+    startingDescriptionId: "",
     allowCarryOverLoadout: true,
     allowFreshStart: true,
     forceLoadout: false,
     restoreLoadoutOnEnd: false,
     starterKitItems: [],
-    scenes: [],
-    encounters: []
+    descriptions: []
   };
 }
 
@@ -553,8 +551,7 @@ function projectSummaryFromPayload(projectId, payload) {
     projectId,
     title: normalizeString(adventure.title) || "Nuova Avventura",
     description: normalizeString(adventure.description) || "",
-    sceneCount: Array.isArray(adventure.scenes) ? adventure.scenes.length : 0,
-    encounterCount: Array.isArray(adventure.encounters) ? adventure.encounters.length : 0,
+    sceneCount: Array.isArray(adventure.descriptions) ? adventure.descriptions.length : 0,
     updatedAt: payload?.ui?.autosaveAt || new Date().toISOString()
   };
 }
@@ -577,8 +574,8 @@ function removeProjectSummary(projectId) {
 
 function initializeEmptyWorkspace() {
   state.adventure = createEmptyAdventure();
-  state.selectedSceneId = null;
-  state.selectedMonsterId = null;
+  state.selectedDescriptionId = null;
+  state.selectedDescriptionId = null;
   state.drag = null;
   state.linkDraft = null;
   state.ui.autosaveAt = null;
@@ -586,7 +583,7 @@ function initializeEmptyWorkspace() {
   state.ui.sceneSavedAt = null;
   state.ui.flowZoom = 1;
   state.ui.currentProjectId = null;
-  state.ui.lastCreatedSceneId = null;
+  state.ui.lastCreatedDescriptionId = null;
 }
 
 function openAdventureProject(payload, {
@@ -594,13 +591,11 @@ function openAdventureProject(payload, {
   autosaveAt = null,
   strictAlpha = true,
   flowZoom = 1,
-  selectedSceneId = null,
-  selectedMonsterId = null,
+  selectedDescriptionId = null,
   persist = true
 } = {}) {
   state.adventure = normalizeAdventureImport(payload);
-  state.selectedSceneId = selectedSceneId || state.adventure.startingSceneId || state.adventure.scenes[0]?.id || null;
-  state.selectedMonsterId = selectedMonsterId || state.adventure.encounters[0]?.id || null;
+  state.selectedDescriptionId = selectedDescriptionId || state.adventure.startingDescriptionId || state.adventure.descriptions[0]?.id || null;
   state.drag = null;
   state.linkDraft = null;
   state.ui.autosaveAt = autosaveAt;
@@ -609,7 +604,7 @@ function openAdventureProject(payload, {
   state.ui.strictAlpha = strictAlpha;
   state.ui.flowZoom = Math.min(FLOW_ZOOM_MAX, Math.max(FLOW_ZOOM_MIN, Number(flowZoom || 1)));
   state.ui.currentProjectId = projectId;
-  state.ui.lastCreatedSceneId = state.adventure.scenes[state.adventure.scenes.length - 1]?.id || null;
+  state.ui.lastCreatedDescriptionId = state.adventure.descriptions[state.adventure.descriptions.length - 1]?.id || null;
   if (persist) {
     persistLocalProject({ syncScene: false });
   }
@@ -638,8 +633,7 @@ function restoreProjectById(projectId) {
       autosaveAt: payload.ui?.autosaveAt || null,
       strictAlpha: payload.ui?.strictAlpha ?? true,
       flowZoom: payload.ui?.flowZoom || 1,
-      selectedSceneId: payload.selectedSceneId || null,
-      selectedMonsterId: payload.selectedMonsterId || null,
+      selectedDescriptionId: payload.selectedDescriptionId || payload.selectedSceneId || null,
       persist: false
     });
     setLastProjectId(projectId);
@@ -658,9 +652,8 @@ function createFreshProjectFromScratch() {
   const baseAdventure = createEmptyAdventure();
   baseAdventure.id = projectId;
   baseAdventure.title = "Nuova Avventura";
-  baseAdventure.scenes = [];
   openAdventureProject(baseAdventure, { projectId, persist: false });
-  createScene();
+  createDescription();
   saveAdventureProject();
 }
 
@@ -711,8 +704,7 @@ function migrateLegacyLocalProjectIfNeeded() {
     const projectId = createProjectId();
     const nextPayload = {
       adventure: normalizeAdventureImport(payload.adventure),
-      selectedSceneId: payload.selectedSceneId || null,
-      selectedMonsterId: payload.selectedMonsterId || null,
+      selectedDescriptionId: payload.selectedDescriptionId || payload.selectedSceneId || null,
       ui: {
         strictAlpha: payload.ui?.strictAlpha ?? true,
         autosaveAt: payload.ui?.autosaveAt || new Date().toISOString(),
@@ -751,7 +743,6 @@ function renderProjectPicker() {
       <p class="hint">${entry.description || "Nessuna descrizione ancora."}</p>
       <div class="project-picker-meta">
         <span>${entry.sceneCount || 0} nodi</span>
-        <span>${entry.encounterCount || 0} mostri</span>
         <span>Aggiornato ${formatAutosaveTime(entry.updatedAt)}</span>
       </div>
       <div class="project-picker-actions-row">
@@ -1054,7 +1045,7 @@ function bindActions() {
   els.deleteSceneBtn.addEventListener("click", deleteScene);
   els.deleteMonsterBtn.addEventListener("click", deleteMonster);
   els.addChoiceBtn.addEventListener("click", addChoice);
-  els.addSceneLootBtn.addEventListener("click", addSceneLoot);
+  if (els.addSceneLootBtn) els.addSceneLootBtn.addEventListener("click", () => {}); // v2: il loot è sugli eventi delle scelte
   els.addMonsterLootBtn.addEventListener("click", addMonsterLoot);
   document.querySelectorAll("[data-quick-loot]").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -1086,7 +1077,7 @@ function bindActions() {
 
   // Duplica evento selezionato
   els.duplicateSceneBtn?.addEventListener("click", () => {
-    if (!state.selectedSceneId) return;
+    if (!state.selectedDescriptionId) return;
     copySelectedSceneToClipboard();
     pasteCopiedScene();
   });
@@ -1134,7 +1125,7 @@ function handleGlobalHotkeys(event) {
   if (shouldIgnoreGlobalHotkeys(event)) return;
 
   if (hasModifier && key === "c") {
-    if (!state.selectedSceneId) return;
+    if (!state.selectedDescriptionId) return;
     event.preventDefault();
     copySelectedSceneToClipboard();
     return;
@@ -1148,7 +1139,7 @@ function handleGlobalHotkeys(event) {
   }
 
   if (key === "delete") {
-    if (!state.selectedSceneId) return;
+    if (!state.selectedDescriptionId) return;
     event.preventDefault();
     deleteScene();
     return;
@@ -1183,32 +1174,9 @@ function shouldIgnoreGlobalHotkeys(event) {
 }
 
 function bindSceneEditor() {
-  els.sceneKind.addEventListener("change", (e) => {
-    const scene = getSelectedScene();
-    if (!scene) return;
-    const newKind = e.target.value;
-    // Il "kind" non è più un campo memorizzato: il cambio tipo modifica il contenuto.
-    if (newKind === "combat" && !isCombatScene(scene)) {
-      scene.combatGroups = [{ monsterId: "", count: 1, composition: "" }];
-      scene.outcomes.defeat.targetSceneId = scene.id;
-      scene.outcomes.retreat.targetSceneId = scene.id;
-    } else if (newKind === "description" && isCombatScene(scene)) {
-      scene.combatGroups = [];
-    } else if (newKind === "check" && !isCheckScene(scene)) {
-      const gateId = `${scene.id}__gate`;
-      if (!scene.choices.some((c) => c.isCheckGate)) {
-        scene.choices.unshift({
-          id: gateId,
-          text: "Affronta la prova",
-          isCheckGate: true,
-          skillCheck: { attribute: "", difficulty: 12, successSceneId: "", failureSceneId: scene.id }
-        });
-      }
-    }
-    normalizeScene(scene);
-    markSceneDirty();
-    render();
-  });
+  // scene-kind selector è nascosto in v2: le Description non hanno un tipo esplicito.
+  // Il listener è mantenuto come no-op per sicurezza (l'elemento esiste ancora nell'HTML).
+  if (els.sceneKind) els.sceneKind.addEventListener("change", () => {});
 
   els.sceneTitle.addEventListener("input", (e) => {
     const scene = getSelectedScene();
@@ -1222,7 +1190,7 @@ function bindSceneEditor() {
   els.sceneOpeningText.addEventListener("input", (e) => {
     const scene = getSelectedScene();
     if (!scene) return;
-    scene.openingText = e.target.value;
+    scene.text = e.target.value;
     markSceneDirty();
     scheduleFlowCardRefresh(scene.id);
     scheduleJsonRender();
@@ -1255,6 +1223,7 @@ async function onSceneImageSelected(event) {
       focusY: 50
     });
     scene.eventImage = framedImage;
+    scene.image = framedImage.dataUrl || null;
     markSceneDirty();
     renderSceneEditor();
     scheduleJsonRender(90);
@@ -1282,6 +1251,7 @@ function scheduleSceneImageFrameUpdate(scene) {
     state.ui.sceneImageFrameTimer = null;
     const updated = await buildFramedSceneImage(scene.eventImage);
     scene.eventImage = updated;
+    scene.image = updated.dataUrl || null;
     renderSceneImagePreview(scene);
     markSceneDirty();
     scheduleJsonRender();
@@ -1389,6 +1359,7 @@ function removeSceneImage() {
   const scene = getSelectedScene();
   if (!scene) return;
   scene.eventImage = null;
+  scene.image = null;
   markSceneDirty();
   renderSceneEditor();
   scheduleJsonRender(90);
@@ -1539,10 +1510,10 @@ function onBoardPointerUp(event) {
   state.linkDraft = null;
 
   if (targetSceneId && targetSceneId !== sourceSceneId) {
-    const sourceScene = state.adventure.scenes.find((scene) => scene.id === sourceSceneId);
+    const sourceScene = state.adventure.descriptions.find((d) => d.id === sourceSceneId);
     if (sourceScene) {
       addLinkedTargetToScene(sourceScene, targetSceneId);
-      state.selectedSceneId = sourceSceneId;
+      state.selectedDescriptionId = sourceSceneId;
       render();
     }
   } else if (!targetSceneId) {
@@ -1559,7 +1530,7 @@ function updateDraggedScenePosition(clientX, clientY) {
   if (!drag) return;
   const dragBounds = drag.bounds || getCurrentFlowBoardBounds();
   const point = flowBoardPointFromClient({ clientX, clientY }, dragBounds);
-  const scene = state.adventure.scenes.find((entry) => entry.id === drag.sceneId);
+  const scene = state.adventure.descriptions.find((d) => d.id === drag.sceneId);
   if (!scene) return;
   scene.position.x = clamp(point.x - drag.offsetX, -FLOW_COORD_LIMIT, FLOW_COORD_LIMIT);
   scene.position.y = clamp(point.y - drag.offsetY, -FLOW_COORD_LIMIT, FLOW_COORD_LIMIT);
@@ -1641,24 +1612,20 @@ function computeFlowAutoScrollDelta(pointerOffset, size) {
   return 0;
 }
 
-function createScene() {
-  createSceneOfKind("description");
-}
-
-// Dato il titolo di una scena sorgente, restituisce il prossimo titolo disponibile
+// Dato il titolo di una description sorgente, restituisce il prossimo titolo disponibile
 // nella forma "<base> <n>". Strappa il numero finale per trovare la base, poi cerca
-// il massimo numero gia usato tra tutte le scene con quella base.
+// il massimo numero gia usato tra tutte le descriptions con quella base.
 function deriveChildTitle(sourceTitle) {
-  const base = (sourceTitle || "").replace(/\s+\d+$/, "").trim() || sourceTitle || "Evento";
+  const base = (sourceTitle || "").replace(/\s+\d+$/, "").trim() || sourceTitle || "Scena";
   let max = 1;
-  state.adventure.scenes.forEach((s) => {
-    if (!s.title) return;
-    if (s.title === base) {
+  state.adventure.descriptions.forEach((d) => {
+    if (!d.title) return;
+    if (d.title === base) {
       max = Math.max(max, 1);
     } else {
-      const lastSpace = s.title.lastIndexOf(" ");
-      if (lastSpace !== -1 && s.title.slice(0, lastSpace) === base) {
-        const num = parseInt(s.title.slice(lastSpace + 1), 10);
+      const lastSpace = d.title.lastIndexOf(" ");
+      if (lastSpace !== -1 && d.title.slice(0, lastSpace) === base) {
+        const num = parseInt(d.title.slice(lastSpace + 1), 10);
         if (!isNaN(num)) max = Math.max(max, num);
       }
     }
@@ -1666,84 +1633,51 @@ function deriveChildTitle(sourceTitle) {
   return `${base} ${max + 1}`;
 }
 
-// Crea una scena del tipo specificato, opzionalmente in una posizione precisa (drag-to-create),
-// collegandola a una scena sorgente, con un preset mostro o con checkConfig pre-compilato.
-function createSceneOfKind(kind, { position = null, sourceSceneId = null, presetId = null, checkConfig = null } = {}) {
-  saveCurrentScene();
-  const index = state.adventure.scenes.length + 1;
+// Crea una nuova Description (nodo narrativo puro).
+// Opzionalmente collegata a una description sorgente (drag-to-create) e/o marcata come ending.
+function createDescription({ position = null, sourceDescriptionId = null, isEnding = false } = {}) {
+  saveCurrentDescription();
+  const index = state.adventure.descriptions.length + 1;
   const spawnPosition = position || findNextScenePosition();
-  const isFinal = kind === "final";
-  const effectiveKind = isFinal ? "description" : kind;
-  const sourceScene = sourceSceneId ? state.adventure.scenes.find((s) => s.id === sourceSceneId) : null;
-  const currentScene = !sourceSceneId && state.selectedSceneId
-    ? state.adventure.scenes.find((s) => s.id === state.selectedSceneId)
-    : null;
-  const titleSourceScene = sourceScene || currentScene;
-  const defaultTitle = isFinal ? "Nodo finale" : titleSourceScene ? deriveChildTitle(titleSourceScene.title) : `Evento ${index}`;
-  const scene = {
+  const sourceDesc = sourceDescriptionId
+    ? state.adventure.descriptions.find((d) => d.id === sourceDescriptionId) : null;
+  const currentDesc = !sourceDescriptionId && state.selectedDescriptionId
+    ? state.adventure.descriptions.find((d) => d.id === state.selectedDescriptionId) : null;
+  const titleSource = sourceDesc || currentDesc;
+  const defaultTitle = isEnding
+    ? "Epilogo"
+    : titleSource ? deriveChildTitle(titleSource.title) : `Scena ${index}`;
+  const desc = {
     id: createUniqueSceneId(),
     title: defaultTitle,
-    openingText: "",
-    eventImage: null,
+    text: "",
+    image: null,
+    isEnding,
     choices: [],
-    combatGroups: [],
-    outcomes: createEmptySceneOutcomes(),
-    sceneLoot: [],
     position: spawnPosition
   };
 
-  // Per le scene di combattimento: crea gruppo con preset oppure lascia vuoto (apre l'archetype picker)
-  if (kind === "combat") {
-    if (presetId) {
-      const preset = monsterPresetById(presetId);
-      if (preset) {
-        const monster = createMonsterFromPresetData(preset, createUniqueMonsterId());
-        state.adventure.encounters.push(monster);
-        scene.combatGroups.push({ monsterId: monster.id, count: 1, composition: "" });
-        state.selectedMonsterId = monster.id;
-      }
-    }
-    if (!scene.combatGroups.length) {
-      scene.combatGroups.push({ monsterId: "", count: 1, composition: "" });
-    }
-    scene.outcomes.defeat.targetSceneId = scene.id;
-    scene.outcomes.retreat.targetSceneId = scene.id;
-  }
+  state.adventure.descriptions.push(desc);
+  state.selectedDescriptionId = desc.id;
+  state.ui.lastCreatedDescriptionId = desc.id;
+  if (!state.adventure.startingDescriptionId) state.adventure.startingDescriptionId = desc.id;
 
-  // Per le scene check: crea un gate choice con skill check scheletro
-  if (kind === "check") {
-    const gateSkill = checkConfig?.skill || "";
-    const gateDifficulty = checkConfig?.difficulty ?? 12;
-    scene.choices.push({
-      id: `${scene.id}__gate`,
-      text: "Affronta la prova",
-      isCheckGate: true,
-      skillCheck: {
-        attribute: gateSkill,
-        difficulty: gateDifficulty,
-        successSceneId: "",
-        failureSceneId: scene.id
-      }
-    });
-  }
-
-  state.adventure.scenes.push(scene);
-  state.selectedSceneId = scene.id;
-  state.ui.lastCreatedSceneId = scene.id;
-  if (!state.adventure.startingSceneId) state.adventure.startingSceneId = scene.id;
-
-  // Collega automaticamente alla scena sorgente se arriva da drag-to-create
-  if (sourceSceneId) {
-    const sourceScene = state.adventure.scenes.find((s) => s.id === sourceSceneId);
-    if (sourceScene) addLinkedTargetToScene(sourceScene, scene.id);
+  // Collega automaticamente alla description sorgente se arriva da drag-to-create
+  if (sourceDescriptionId) {
+    const src = state.adventure.descriptions.find((d) => d.id === sourceDescriptionId);
+    if (src) addLinkedTarget(src, desc.id);
   }
 
   state.ui.sceneDirty = true;
   renderWorkspace({ skipJson: true });
   scheduleJsonRender(320, { syncScene: false });
-  // Autofocus + selezione del titolo: sovrascrivibile subito senza cancellare manualmente
   setTimeout(() => { if (els.sceneTitle) { els.sceneTitle.focus(); els.sceneTitle.select(); } }, 80);
-  return scene;
+  return desc;
+}
+
+// Wrapper retrocompatibile usato da hotkey N e toolbar
+function createScene() {
+  createDescription();
 }
 
 // ─── Node Picker ─────────────────────────────────────────────────────────────
@@ -1916,8 +1850,8 @@ function renderNodePickerStep2Check(container) {
 }
 
 function findNextScenePosition() {
-  const anchor = state.adventure.scenes.find((scene) => scene.id === state.ui.lastCreatedSceneId)
-    || state.adventure.scenes[state.adventure.scenes.length - 1]
+  const anchor = state.adventure.descriptions.find((d) => d.id === state.ui.lastCreatedDescriptionId)
+    || state.adventure.descriptions[state.adventure.descriptions.length - 1]
     || null;
   if (!anchor) {
     return { x: 32, y: 32 };
@@ -1941,9 +1875,9 @@ function findNextScenePosition() {
 }
 
 function isScenePositionOccupied(x, y) {
-  return state.adventure.scenes.some((scene) =>
-    Math.abs((scene.position?.x || 0) - x) < 80
-    && Math.abs((scene.position?.y || 0) - y) < 80
+  return state.adventure.descriptions.some((d) =>
+    Math.abs((d.position?.x || 0) - x) < 80
+    && Math.abs((d.position?.y || 0) - y) < 80
   );
 }
 
@@ -1951,149 +1885,85 @@ function copySelectedSceneToClipboard() {
   const scene = getSelectedScene();
   if (!scene) return;
   saveCurrentScene({ renderFlow: false });
-  state.ui.copiedScenePayload = cloneValue(scene);
+  state.ui.copiedDescriptionPayload = cloneValue(scene);
   updateSceneSaveStatus();
 }
 
 function pasteCopiedScene() {
-  if (!state.ui.copiedScenePayload) return;
-  saveCurrentScene({ renderFlow: false });
-  const scene = cloneValue(state.ui.copiedScenePayload);
-  const duplicated = preparePastedScene(scene);
-  state.adventure.scenes.push(duplicated);
-  const previousSceneId = state.selectedSceneId;
-  state.selectedSceneId = duplicated.id;
-  state.ui.lastCreatedSceneId = duplicated.id;
-  updateFlowCardSelection(previousSceneId, duplicated.id);
+  if (!state.ui.copiedDescriptionPayload) return;
+  saveCurrentDescription({ renderFlow: false });
+  const desc = cloneValue(state.ui.copiedDescriptionPayload);
+  const duplicated = preparePastedDescription(desc);
+  state.adventure.descriptions.push(duplicated);
+  const previousId = state.selectedDescriptionId;
+  state.selectedDescriptionId = duplicated.id;
+  state.ui.lastCreatedDescriptionId = duplicated.id;
+  updateFlowCardSelection(previousId, duplicated.id);
   renderWorkspace({ skipJson: true });
   scheduleJsonRender(320, { syncScene: false });
 }
 
-function preparePastedScene(scene) {
-  const duplicated = cloneValue(scene);
-  normalizeScene(duplicated);
+function preparePastedDescription(desc) {
+  const duplicated = cloneValue(desc);
   duplicated.id = createUniqueSceneId();
-  duplicated.title = uniqueSceneCopyTitle(duplicated.title || "Evento");
+  duplicated.title = uniqueSceneCopyTitle(duplicated.title || "Scena");
   duplicated.position = {
     x: clamp((duplicated.position?.x || 0) + 72, -FLOW_COORD_LIMIT, FLOW_COORD_LIMIT),
     y: clamp((duplicated.position?.y || 0) + 72, -FLOW_COORD_LIMIT, FLOW_COORD_LIMIT)
   };
-  duplicated.choices = (duplicated.choices || []).map((choice, index) =>
-    normalizeChoice({ ...choice, id: `choice_${index + 1}` }, index + 1)
-  );
-  outcomeKeysForScene(duplicated).forEach((key) => {
-    const branch = getOutcomeBranch(duplicated, key);
-    branch.choices = (branch.choices || []).map((choice, index) =>
-      normalizeChoice({ ...choice, id: `choice_${index + 1}` }, index + 1)
-    );
-  });
-  duplicateCombatMonstersForScene(duplicated);
+  // Rigenera ID scelte per evitare collisioni
+  duplicated.choices = (duplicated.choices || []).map((choice, index) => ({
+    ...choice,
+    id: `${duplicated.id}_c${index + 1}`
+  }));
   return duplicated;
 }
 
-function duplicateCombatMonstersForScene(scene) {
-  if (!Array.isArray(scene.combatGroups) || !scene.combatGroups.length) return;
-  const duplicatedMonsterIds = new Map();
-  scene.combatGroups = scene.combatGroups.map((group) => {
-    const monsterId = normalizeString(group.monsterId);
-    if (!monsterId) return { ...group };
-    if (!duplicatedMonsterIds.has(monsterId)) {
-      const monster = state.adventure.encounters.find((entry) => entry.id === monsterId);
-      if (!monster) {
-        duplicatedMonsterIds.set(monsterId, monsterId);
-      } else {
-        const copy = cloneValue(monster);
-        copy.id = createUniqueMonsterId();
-        copy.name = uniqueMonsterName(monster.name);
-        copy.loot = (copy.loot || []).map((loot) => normalizeLoot(loot));
-        state.adventure.encounters.push(copy);
-        duplicatedMonsterIds.set(monsterId, copy.id);
-      }
-    }
-    return {
-      ...group,
-      monsterId: duplicatedMonsterIds.get(monsterId)
-    };
-  });
-}
+// Stub retrocompatibile — la logica dei mostri è ora inline nei CombatGroup
+function duplicateCombatMonstersForScene(_scene) {}
 
 function deleteScene() {
-  if (!state.selectedSceneId) return;
-  state.adventure.scenes = state.adventure.scenes.filter((scene) => scene.id !== state.selectedSceneId);
-  state.adventure.scenes.forEach((scene) => {
-    scene.choices = scene.choices.filter((choice) =>
-      choice.targetSceneId !== state.selectedSceneId &&
-      choice.skillCheck?.successSceneId !== state.selectedSceneId &&
-      choice.skillCheck?.failureSceneId !== state.selectedSceneId
-    );
-    normalizeScene(scene);
-    outcomeKeysForScene(scene).forEach((key) => {
-      const branch = getOutcomeBranch(scene, key);
-      if (branch.targetSceneId === state.selectedSceneId) branch.targetSceneId = "";
-      branch.choices = branch.choices.filter((choice) =>
-        choice.targetSceneId !== state.selectedSceneId &&
-        choice.skillCheck?.successSceneId !== state.selectedSceneId &&
-        choice.skillCheck?.failureSceneId !== state.selectedSceneId
-      );
+  if (!state.selectedDescriptionId) return;
+  const deletedId = state.selectedDescriptionId;
+  state.adventure.descriptions = state.adventure.descriptions.filter((d) => d.id !== deletedId);
+
+  // Ripulisce i targetId che puntano alla description eliminata
+  state.adventure.descriptions.forEach((d) => {
+    d.choices = (d.choices || []).map((choice) => {
+      const cleaned = { ...choice };
+      if (cleaned.targetId === deletedId) cleaned.targetId = null;
+      if (cleaned.event) {
+        const ev = cleaned.event;
+        const clearBranch = (branch) => {
+          if (branch && branch.targetId === deletedId) branch.targetId = null;
+        };
+        if (ev.victoryBranch) clearBranch(ev.victoryBranch);
+        if (ev.defeatBranch) clearBranch(ev.defeatBranch);
+        if (ev.retreatBranch) clearBranch(ev.retreatBranch);
+        if (ev.successBranch) clearBranch(ev.successBranch);
+        if (ev.failureBranch) clearBranch(ev.failureBranch);
+        if (ev.metBranch) clearBranch(ev.metBranch);
+        if (ev.unmetBranch) clearBranch(ev.unmetBranch);
+        if (ev.branch) clearBranch(ev.branch);
+      }
+      return cleaned;
     });
   });
-  if (state.adventure.startingSceneId === state.selectedSceneId) {
-    state.adventure.startingSceneId = state.adventure.scenes[0]?.id || "";
+
+  if (state.adventure.startingDescriptionId === deletedId) {
+    state.adventure.startingDescriptionId = state.adventure.descriptions[0]?.id || "";
   }
-  state.selectedSceneId = state.adventure.scenes[0]?.id || null;
+  state.selectedDescriptionId = state.adventure.descriptions[0]?.id || null;
   render();
 }
 
-function createMonster({ renderAfter = true } = {}) {
-  const index = state.adventure.encounters.length + 1;
-  const monster = {
-    id: createUniqueMonsterId(),
-    name: `Mostro ${index}`,
-    description: "",
-    hitPoints: 10,
-    attackBonus: 2,
-    defense: 10,
-    damageMin: 1,
-    damageMax: 4,
-    goldReward: 0,
-    abilityIds: [],
-    hasBerserkerPhase: false,
-    loot: [],
-    sourceType: "custom"
-  };
-  state.adventure.encounters.push(monster);
-  state.selectedMonsterId = monster.id;
-  if (renderAfter) render();
-  return monster;
-}
+// ─── Monster CRUD — dead code: i mostri sono ora inline nei CombatGroup ──────
+// Le funzioni seguenti sono stub per evitare crash da event listener legacy.
 
-function createMonsterForCombatScene(scene) {
-  const monster = createMonster({ renderAfter: false });
-  if (scene?.combatGroups) {
-    const group = scene.combatGroups.find((entry) => !entry.monsterId);
-    if (group) group.monsterId = monster.id;
-  }
-  state.selectedMonsterId = monster.id;
-  return monster;
-}
+function createMonster({ renderAfter = true } = {}) { return null; }
 
-function createMonsterFromPreset() {
-  const presetId = els.monsterPresetSelect.value;
-  if (!presetId || presetId === "custom") {
-    return createMonster();
-  }
-
-  const preset = monsterPresetById(presetId);
-  if (!preset) {
-    return createMonster();
-  }
-
-  const monster = createMonsterFromPresetData(preset, createUniqueMonsterId());
-  state.adventure.encounters.push(monster);
-  state.selectedMonsterId = monster.id;
-  render();
-  return monster;
-}
+function createMonsterForCombatScene(_scene) { return null; }
+function createMonsterFromPreset() {}
 
 function createMonsterFromPresetData(preset, fallbackId) {
   return {
@@ -2201,52 +2071,23 @@ function randomInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-function applyPresetToSelectedMonster() {
-  const monster = getSelectedMonster();
-  if (!monster) return;
-  const presetId = els.monsterEditorPresetSelect.value;
-  if (!presetId || presetId === "custom") return;
-  const preset = monsterPresetById(presetId);
-  if (!preset) return;
-
-  monster.name = uniqueMonsterName(preset.name);
-  monster.description = preset.description;
-  monster.hitPoints = preset.hitPoints;
-  monster.attackBonus = preset.attackBonus;
-  monster.defense = preset.defense;
-  monster.damageMin = preset.damageMin;
-  monster.damageMax = preset.damageMax;
-  monster.goldReward = preset.goldReward;
-  monster.loot = buildMonsterLootFromPreset(preset);
-  render();
-}
-
-function deleteMonster() {
-  if (!state.selectedMonsterId) return;
-  state.adventure.encounters = state.adventure.encounters.filter((monster) => monster.id !== state.selectedMonsterId);
-  state.adventure.scenes.forEach((scene) => {
-    if (scene.combatGroups) {
-      scene.combatGroups = scene.combatGroups.filter((group) => group.monsterId !== state.selectedMonsterId);
-    }
-  });
-  state.selectedMonsterId = state.adventure.encounters[0]?.id || null;
-  render();
-}
+function applyPresetToSelectedMonster() {}
+function deleteMonster() {}
 
 function addChoice() {
-  const scene = getSelectedScene();
-  if (!scene) return;
-  if (isCombatScene(scene)) return;
-  scene.choices.push(createEmptyChoice(scene.choices.length + 1));
-  render();
-}
-
-function addSceneLoot() {
-  const scene = getSelectedScene();
-  if (!scene) return;
-  scene.sceneLoot.push(createLootFromPreset(els.lootPresetSelect.value));
+  const desc = getSelectedScene();
+  if (!desc) return;
+  desc.choices = desc.choices || [];
+  desc.choices.push({
+    id: createUniqueChoiceId(desc),
+    text: `Scelta ${desc.choices.length + 1}`,
+    hidden: false,
+    burnAfterUse: false,
+    targetId: null,
+    event: null
+  });
   markSceneDirty();
-  renderSceneLoot(scene);
+  renderSceneEditor();
   scheduleJsonRender(180);
 }
 
@@ -2255,23 +2096,8 @@ function addStarterKitLoot() {
   render();
 }
 
-function addMonsterLoot() {
-  const monster = getSelectedMonster();
-  if (!monster) return;
-  monster.loot.push(createLootFromPreset(els.lootPresetSelect.value));
-  markSceneDirty();
-  renderMonsterLootEditor(monster);
-  scheduleMonsterListRender();
-  scheduleJsonRender(180);
-}
-
-function addCombatGroup() {
-  const scene = getSelectedScene();
-  if (!scene) return;
-  scene.combatGroups = scene.combatGroups || [];
-  scene.combatGroups.push({ monsterId: "", count: 1 });
-  render();
-}
+function addMonsterLoot() {}
+function addCombatGroup() {}
 
 function render() {
   return renderWorkspace();
@@ -2280,9 +2106,7 @@ function render() {
 function renderWorkspace({ skipJson = false } = {}) {
   renderAdventureSetup();
   renderFlowBoard();
-  renderMonsterList();
   renderSceneEditor();
-  renderMonsterEditor();
   if (!skipJson) renderJson();
 }
 
@@ -2351,8 +2175,7 @@ function persistLocalProject({ syncScene = true } = {}) {
     if (syncScene) syncCurrentSceneEditorStateFromDom();
     const payload = {
       adventure: state.adventure,
-      selectedSceneId: state.selectedSceneId,
-      selectedMonsterId: state.selectedMonsterId,
+      selectedDescriptionId: state.selectedDescriptionId,
       ui: {
         strictAlpha: Boolean(state.ui.strictAlpha),
         autosaveAt: new Date().toISOString(),
@@ -2437,7 +2260,7 @@ function syncChoiceCollectionFromContainer(container, choices) {
     const attribute = normalizeString(card.querySelector('[data-field="checkAttribute"]')?.value);
     const successSceneId = normalizeString(card.querySelector('[data-field="checkSuccess"]')?.value);
     const failureSceneId = normalizeString(card.querySelector('[data-field="checkFailure"]')?.value)
-      || state.selectedSceneId || "";
+      || state.selectedDescriptionId || "";
     const difficulty = Number(card.querySelector('[data-field="checkDifficulty"]')?.value || 0);
 
     if (attribute && successSceneId) {
@@ -2459,30 +2282,16 @@ function syncChoiceCollectionFromContainer(container, choices) {
 }
 
 function syncCurrentSceneEditorStateFromDom() {
-  const scene = getSelectedScene();
-  if (!scene) return;
-
-  normalizeScene(scene);
-  scene.title = els.sceneTitle?.value ?? scene.title;
-  scene.openingText = els.sceneOpeningText?.value ?? scene.openingText;
-
-  // Description e check scene condividono la stessa lista choice nel pannello
-  if (!isCombatScene(scene)) {
-    syncChoiceCollectionFromContainer(els.choiceList, scene.choices);
-    return;
-  }
-
-  outcomeDefinitionsForScene(scene).forEach((definition, index) => {
-    const branch = getOutcomeBranch(scene, definition.key);
-    const wrapper = els.sceneOutcomesList?.children[index];
-    if (!wrapper) return;
-    branch.targetSceneId = normalizeString(wrapper.querySelector('[data-role="outcome-target"]')?.value);
-    syncChoiceCollectionFromContainer(wrapper.querySelector('[data-role="outcome-choice-list"]'), branch.choices);
-  });
+  const desc = getSelectedScene();
+  if (!desc) return;
+  desc.title = els.sceneTitle?.value ?? desc.title;
+  desc.text = els.sceneOpeningText?.value ?? desc.text;
+  desc.isEnding = els.sceneIsEnding?.checked ?? desc.isEnding;
+  // Le scelte sono già sincronizzate live tramite i listener nei choice card
 }
 
-function saveCurrentScene({ announce = false, renderFlow = true } = {}) {
-  if (!state.selectedSceneId) return;
+function saveCurrentDescription({ announce = false, renderFlow = true } = {}) {
+  if (!state.selectedDescriptionId) return;
   syncCurrentSceneEditorStateFromDom();
   if (state.ui.jsonRenderTimer) {
     window.clearTimeout(state.ui.jsonRenderTimer);
@@ -2494,6 +2303,9 @@ function saveCurrentScene({ announce = false, renderFlow = true } = {}) {
   if (renderFlow) renderFlowBoard();
   renderJson();
 }
+
+// Alias usato in molti punti del codice
+function saveCurrentScene(opts) { saveCurrentDescription(opts); }
 
 function saveAdventureProject() {
   saveCurrentScene({ announce: true, renderFlow: true });
@@ -2540,10 +2352,10 @@ function updateSceneSaveStatus() {
 }
 
 function switchSelectedScene(nextSceneId) {
-  if (!nextSceneId || nextSceneId === state.selectedSceneId) return;
-  const previousSceneId = state.selectedSceneId;
+  if (!nextSceneId || nextSceneId === state.selectedDescriptionId) return;
+  const previousSceneId = state.selectedDescriptionId;
   saveCurrentScene({ renderFlow: false });
-  state.selectedSceneId = nextSceneId;
+  state.selectedDescriptionId = nextSceneId;
   updateFlowCardSelection(previousSceneId, nextSceneId);
   renderSceneEditor();
 }
@@ -2563,8 +2375,8 @@ function renderFlowCards(bounds = computeBoardBounds()) {
   els.flowCanvas.style.height = `${bounds.height}px`;
   const fragment = document.createDocumentFragment();
 
-  state.adventure.scenes.forEach((scene, index) => {
-    fragment.appendChild(createFlowCard(scene, index, bounds));
+  state.adventure.descriptions.forEach((desc, index) => {
+    fragment.appendChild(createFlowCard(desc, index, bounds));
   });
 
   els.flowCanvas.appendChild(fragment);
@@ -2572,16 +2384,43 @@ function renderFlowCards(bounds = computeBoardBounds()) {
   renderMinimap();
 }
 
-function createFlowCard(scene, index, bounds = getCurrentFlowBoardBounds()) {
+function createFlowCard(desc, index, bounds = getCurrentFlowBoardBounds()) {
   const card = document.createElement("div");
-  syncFlowCard(card, scene, index, bounds);
+  syncFlowCard(card, desc, index, bounds);
 
   card.addEventListener("click", (event) => {
     if (event.target.closest(".link-handle")) return;
+
+    // Pulsante "+ scelta" (nel footer o nell'empty state delle scelte)
+    if (event.target.closest('[data-action="add-choice"]')) {
+      event.stopPropagation();
+      switchSelectedScene(card.dataset.sceneId);
+      addChoice();
+      return;
+    }
+
+    // Click su una riga scelta → picker tipo evento
+    const choiceRow = event.target.closest('[data-choice-id]');
+    if (choiceRow) {
+      switchSelectedScene(card.dataset.sceneId);
+      showChoiceEventPicker(card.dataset.sceneId, choiceRow.dataset.choiceId, choiceRow.getBoundingClientRect());
+      return;
+    }
+
     switchSelectedScene(card.dataset.sceneId);
   });
 
-  card.addEventListener("dblclick", () => {
+  card.addEventListener("dblclick", (event) => {
+    if (event.target.closest(".link-handle")) return;
+    if (event.target.closest('[data-action="add-choice"]')) return;
+
+    // Doppio clic sul titolo → modifica inline
+    if (event.target.closest(".flow-card-title")) {
+      event.stopPropagation();
+      startInlineTitleEdit(card, desc);
+      return;
+    }
+
     switchSelectedScene(card.dataset.sceneId);
     els.sceneEditor.scrollIntoView({ behavior: "smooth", block: "start" });
   });
@@ -2591,33 +2430,32 @@ function createFlowCard(scene, index, bounds = getCurrentFlowBoardBounds()) {
     if (event.target.closest(".link-handle")) return;
     event.preventDefault();
     const sceneId = card.dataset.sceneId;
-    const currentScene = state.adventure.scenes.find((entry) => entry.id === sceneId);
-    if (!currentScene) return;
+    const currentDesc = state.adventure.descriptions.find((d) => d.id === sceneId);
+    if (!currentDesc) return;
     card.setPointerCapture?.(event.pointerId);
     const point = flowBoardPointFromClient(event);
     state.drag = {
       sceneId,
-      offsetX: point.x - currentScene.position.x,
-      offsetY: point.y - currentScene.position.y,
+      offsetX: point.x - currentDesc.position.x,
+      offsetY: point.y - currentDesc.position.y,
       bounds: getCurrentFlowBoardBounds(),
       pointerId: event.pointerId
     };
   });
 
-  // Link-handle listener bound once per card creation, not on every sync
-  bindLinkHandle(card, scene);
+  bindLinkHandle(card, desc);
 
   return card;
 }
 
-function bindLinkHandle(card, scene) {
+function bindLinkHandle(card, desc) {
   card.addEventListener("pointerdown", (event) => {
     if (!event.target.closest(".link-handle")) return;
     event.stopPropagation();
     const sceneId = card.dataset.sceneId;
-    const currentScene = state.adventure.scenes.find((entry) => entry.id === sceneId);
-    if (!currentScene) return;
-    const start = nodeAnchor(currentScene);
+    const currentDesc = state.adventure.descriptions.find((d) => d.id === sceneId);
+    if (!currentDesc) return;
+    const start = nodeAnchor(currentDesc);
     state.linkDraft = {
       sceneId,
       start,
@@ -2629,39 +2467,41 @@ function bindLinkHandle(card, scene) {
   }, { capture: false });
 }
 
-function syncFlowCard(card, scene, index, bounds = getCurrentFlowBoardBounds()) {
+function syncFlowCard(card, desc, index, bounds = getCurrentFlowBoardBounds()) {
+  if (card.dataset.editing === "title") return; // non ricostruire durante edit inline
   const metrics = getFlowCardMetrics();
-  const boardPoint = logicalToBoardPoint(scene.position, bounds);
-  const isOrphanCard = scene.id !== state.adventure.startingSceneId && state.adventure.scenes.length > 1 && !getConnectedSceneIds().has(scene.id);
+  const boardPoint = logicalToBoardPoint(desc.position, bounds);
+  const isOrphanCard = desc.id !== state.adventure.startingDescriptionId
+    && state.adventure.descriptions.length > 1
+    && !getConnectedSceneIds().has(desc.id);
   card.className = [
     "flow-card node-card",
-    scene.id === state.selectedSceneId ? "active" : "",
+    desc.id === state.selectedDescriptionId ? "active" : "",
     metrics.compact ? "flow-card--compact" : "",
     isOrphanCard ? "flow-card--orphan" : "",
-    isCombatScene(scene) ? "flow-card--combat" : "",
-    isCheckScene(scene) ? "flow-card--check" : ""
+    desc.isEnding ? "flow-card--ending" : ""
   ].filter(Boolean).join(" ");
-  card.dataset.sceneId = scene.id;
+  card.dataset.sceneId = desc.id;
   card.style.left = `${boardPoint.x}px`;
   card.style.top = `${boardPoint.y}px`;
   card.style.width = `${metrics.width}px`;
   card.style.height = metrics.compact ? `${metrics.height}px` : "";
   card.style.minHeight = metrics.compact ? "" : `${metrics.height}px`;
-  card.title = `${index + 1}. ${scene.title || "Evento"} (${sceneLabel(derivedSceneKind(scene))})`;
-  card.innerHTML = buildFlowCardMarkup(scene, index);
+  card.title = `${index + 1}. ${desc.title || "Senza titolo"}`;
+  card.innerHTML = buildFlowCardMarkup(desc, index);
 }
 
-function buildFlowCardMarkup(scene, index) {
+function buildFlowCardMarkup(desc, index) {
   const metrics = getFlowCardMetrics();
   const connectedIds = getConnectedSceneIds();
-  const isStart = scene.id === state.adventure.startingSceneId;
-  const isOrphan = !isStart && state.adventure.scenes.length > 1 && !connectedIds.has(scene.id);
+  const isStart = desc.id === state.adventure.startingDescriptionId;
+  const isOrphan = !isStart && state.adventure.descriptions.length > 1 && !connectedIds.has(desc.id);
   if (metrics.compact) {
     return `
       <button class="link-handle" title="Trascina per collegare"></button>
       <div class="flow-card-mini-index">${index + 1}</div>
       <div class="flow-card-mini-meta">
-        <span>${sceneKindShortLabel(derivedSceneKind(scene))}</span>
+        <span>${desc.isEnding ? "FIN" : "DESC"}</span>
         <span>${isStart ? "IN" : ""}${isOrphan ? "!" : ""}</span>
       </div>
     `;
@@ -2669,49 +2509,43 @@ function buildFlowCardMarkup(scene, index) {
   return `
     <button class="link-handle" title="Trascina per collegare"></button>
     <div class="flow-card-head">
-      <strong>${index + 1}. [${sceneLabel(derivedSceneKind(scene))}] ${scene.title || "Senza titolo"}</strong>
-      <span class="flow-card-badges">${isStart ? '<span class="flow-badge flow-badge--start">INIZIO</span>' : ""}${isOrphan ? '<span class="flow-badge flow-badge--orphan" title="Nessuna scena collega a questo nodo">&#x26A0; orfano</span>' : ""}</span>
+      <strong class="flow-card-title" title="Doppio clic per modificare il titolo">${index + 1}. ${esc(desc.title || "Senza titolo")}</strong>
+      <span class="flow-card-badges">
+        ${isStart ? '<span class="flow-badge flow-badge--start">INIZIO</span>' : ""}
+        ${desc.isEnding ? '<span class="flow-badge flow-badge--ending">FINE</span>' : ""}
+        ${isOrphan ? '<span class="flow-badge flow-badge--orphan" title="Nessuna descrizione collega a questo nodo">&#x26A0; orfano</span>' : ""}
+      </span>
     </div>
     <div class="flow-choices">
-      ${renderFlowChoiceSummary(scene)}
+      ${renderFlowChoiceSummary(desc)}
     </div>
+    ${!desc.isEnding ? `<div class="flow-card-footer"><button class="flow-add-btn" data-action="add-choice" title="Aggiungi scelta (Invio)">+ scelta</button></div>` : ""}
   `;
 }
 
-function renderFlowChoiceSummary(scene) {
-  if (isCombatScene(scene)) return renderOutcomeSummary(scene);
-  return scene.choices.length
-    ? scene.choices.map((choice, idx) => {
-        const icon = choice.skillCheck ? "&#x2694;" : choice.requiredLockId ? "&#x1F512;" : "&#x2192;";
-        const dest = choice.skillCheck
-          ? `${sceneTitleById(choice.skillCheck.successSceneId, "?")} / ${sceneTitleById(choice.skillCheck.failureSceneId, "?")}`
-          : sceneTitleById(choice.targetSceneId);
-        return `<div class="flow-choice-row">${choiceLabel(idx)} ${icon} ${dest}</div>`;
+function renderFlowChoiceSummary(desc) {
+  const choices = desc.choices || [];
+  return choices.length
+    ? choices.map((choice, index) => {
+        const eventType = choice.event?.type;
+        const icon = eventType === "combat" ? "&#x2694;"
+          : eventType === "skillcheck" ? "&#x1F3B2;"
+          : eventType === "requirement" ? "&#x1F511;"
+          : eventType === "dialogue" ? "&#x1F4AC;"
+          : eventType === "shop" ? "&#x1F6D2;"
+          : "&#x2192;";
+        const dest = resolveChoiceDisplayTarget(choice);
+        return `<div class="flow-choice-row" data-choice-id="${esc(choice.id)}">${choiceLabel(index)} ${icon} <span class="flow-choice-dest">${dest}</span></div>`;
       }).join("")
-    : '<div class="flow-empty">Nessuna scelta ancora.</div>';
+    : '<div class="flow-empty" data-action="add-choice">+ aggiungi scelta</div>';
 }
 
 function getConnectedSceneIds() {
   const ids = new Set();
-  state.adventure.scenes.forEach((scene) => {
-    if (!isCombatScene(scene)) {
-      scene.choices.forEach((choice) => {
-        if (choice.skillCheck) {
-          if (choice.skillCheck.successSceneId && choice.skillCheck.successSceneId !== STAY_SENTINEL) ids.add(choice.skillCheck.successSceneId);
-          if (choice.skillCheck.failureSceneId && choice.skillCheck.failureSceneId !== RETRY_SENTINEL && choice.skillCheck.failureSceneId !== STAY_SENTINEL) ids.add(choice.skillCheck.failureSceneId);
-        } else if (choice.targetSceneId) {
-          ids.add(choice.targetSceneId);
-        }
-      });
-    } else {
-      outcomeDefinitionsForScene(scene).forEach((definition) => {
-        const branch = getOutcomeBranch(scene, definition.key);
-        if (branch.targetSceneId) ids.add(branch.targetSceneId);
-        branch.choices.forEach((choice) => {
-          if (choice.targetSceneId) ids.add(choice.targetSceneId);
-        });
-      });
-    }
+  state.adventure.descriptions.forEach((desc) => {
+    (desc.choices || []).forEach((choice) => {
+      resolveChoiceTargetIds(choice).forEach((id) => ids.add(id));
+    });
   });
   return ids;
 }
@@ -2730,27 +2564,12 @@ function renderFlowLinks(bounds = computeBoardBounds()) {
 function buildLinkMarkup(bounds = getCurrentFlowBoardBounds()) {
   const lines = [];
   const visibleBounds = shouldVirtualizeFlowLinks() ? getVisibleFlowBounds(bounds) : null;
-  state.adventure.scenes.forEach((scene) => {
-    const source = nodeAnchor(scene, bounds);
-    if (!isCombatScene(scene)) {
-      scene.choices.forEach((choice) => appendChoiceLinks(lines, source, choice, "#b56d39", visibleBounds, bounds));
-    } else {
-      outcomeDefinitionsForScene(scene).forEach((definition) => {
-        const branch = getOutcomeBranch(scene, definition.key);
-        const color = outcomeLinkColor(definition.key);
-        if (branch.choices.length) {
-          branch.choices.forEach((choice) => appendChoiceLinks(lines, source, choice, color, visibleBounds, bounds));
-        } else if (branch.targetSceneId) {
-          const target = state.adventure.scenes.find((entry) => entry.id === branch.targetSceneId);
-          if (target) {
-            const targetEntry = nodeEntry(target, bounds);
-            if (shouldRenderFlowLink(source, targetEntry, visibleBounds)) {
-              lines.push(linkPath(source, targetEntry, color, definition.key === "retreat"));
-            }
-          }
-        }
-      });
-    }
+  state.adventure.descriptions.forEach((desc) => {
+    const source = nodeAnchor(desc, bounds);
+    (desc.choices || []).forEach((choice) => {
+      const color = choiceLinkColor(choice);
+      appendDescriptionChoiceLinks(lines, source, choice, color, visibleBounds, bounds);
+    });
   });
 
   if (state.linkDraft) {
@@ -2780,30 +2599,83 @@ function renderOutcomeSummary(scene) {
   }).join("");
 }
 
-function appendChoiceLinks(lines, source, choice, defaultColor, visibleBounds = null, bounds = getCurrentFlowBoardBounds()) {
-  if (choice.skillCheck) {
-    const success = state.adventure.scenes.find((entry) => entry.id === choice.skillCheck.successSceneId);
-    const failure = state.adventure.scenes.find((entry) => entry.id === choice.skillCheck.failureSceneId);
-    if (success) {
-      const successEntry = nodeEntry(success, bounds);
-      if (shouldRenderFlowLink(source, successEntry, visibleBounds)) {
-        lines.push(linkPath(source, successEntry, "#6f8a57"));
-      }
+// Colore del link in base al tipo di evento sulla scelta
+function choiceLinkColor(choice) {
+  const type = choice.event?.type;
+  if (type === "combat")     return "#b94a48"; // rosso
+  if (type === "skillcheck") return "#c8a84b"; // giallo
+  if (type === "requirement") return "#6d84b5"; // blu
+  if (type === "dialogue")   return "#7a5fa0"; // viola
+  if (type === "shop")       return "#5a9e6a"; // verde scuro
+  if (type === "loot")       return "#6f8a57"; // verde
+  if (type === "condition")  return "#8a6d5a"; // marrone caldo
+  if (type === "transition") return "#888";    // grigio
+  return "#b56d39"; // arancione default (navigazione diretta)
+}
+
+// Restituisce il/i target visibili di una choice per la card summary
+function resolveChoiceDisplayTarget(choice) {
+  if (!choice.event) return sceneTitleById(choice.targetId);
+  const ev = choice.event;
+  if (ev.type === "skillcheck")
+    return `${sceneTitleById(ev.successBranch?.targetId, "?")} / ${sceneTitleById(ev.failureBranch?.targetId, "?")}`;
+  if (ev.type === "combat")
+    return `${sceneTitleById(ev.victoryBranch?.targetId, "V?")} / ${sceneTitleById(ev.defeatBranch?.targetId, "D?")}`;
+  if (ev.type === "requirement")
+    return `${sceneTitleById(ev.metBranch?.targetId, "Si")} / ${sceneTitleById(ev.unmetBranch?.targetId, "No")}`;
+  const branch = ev.branch || ev.victoryBranch;
+  return sceneTitleById(branch?.targetId);
+}
+
+// Raccoglie i targetId di una choice (tutti i rami di un evento)
+function resolveChoiceTargetIds(choice) {
+  if (!choice.event) return choice.targetId ? [choice.targetId] : [];
+  const ev = choice.event;
+  const ids = [];
+  const addBranch = (b) => { if (b?.targetId && b.targetId !== DEATH_SENTINEL && b.targetId !== STAY_SENTINEL) ids.push(b.targetId); };
+  if (ev.type === "skillcheck")  { addBranch(ev.successBranch); addBranch(ev.failureBranch); }
+  else if (ev.type === "combat") { addBranch(ev.victoryBranch); addBranch(ev.defeatBranch); if (ev.retreatBranch) addBranch(ev.retreatBranch); }
+  else if (ev.type === "requirement") { addBranch(ev.metBranch); addBranch(ev.unmetBranch); }
+  else                            { addBranch(ev.branch); }
+  return ids;
+}
+
+function appendDescriptionChoiceLinks(lines, source, choice, color, visibleBounds = null, bounds = getCurrentFlowBoardBounds()) {
+  if (choice.event) {
+    const ev = choice.event;
+    // Per eventi ramificati disegna una linea per ramo
+    if (ev.type === "skillcheck") {
+      appendBranchLink(lines, source, ev.successBranch, "#6f8a57", visibleBounds, bounds);
+      appendBranchLink(lines, source, ev.failureBranch, "#b94a48", visibleBounds, bounds);
+    } else if (ev.type === "combat") {
+      appendBranchLink(lines, source, ev.victoryBranch, "#6f8a57", visibleBounds, bounds);
+      appendBranchLink(lines, source, ev.defeatBranch, "#b94a48", visibleBounds, bounds);
+      if (ev.retreatBranch) appendBranchLink(lines, source, ev.retreatBranch, "#6d84b5", visibleBounds, bounds, true);
+    } else if (ev.type === "requirement") {
+      appendBranchLink(lines, source, ev.metBranch, "#6f8a57", visibleBounds, bounds);
+      appendBranchLink(lines, source, ev.unmetBranch, "#b94a48", visibleBounds, bounds);
+    } else {
+      const branch = ev.branch;
+      if (branch) appendBranchLink(lines, source, branch, color, visibleBounds, bounds);
     }
-    if (failure) {
-      const failureEntry = nodeEntry(failure, bounds);
-      if (shouldRenderFlowLink(source, failureEntry, visibleBounds)) {
-        lines.push(linkPath(source, failureEntry, "#b94a48"));
-      }
-    }
-  } else if (choice.targetSceneId) {
-    const target = state.adventure.scenes.find((entry) => entry.id === choice.targetSceneId);
+  } else if (choice.targetId && choice.targetId !== DEATH_SENTINEL && choice.targetId !== STAY_SENTINEL) {
+    const target = state.adventure.descriptions.find((d) => d.id === choice.targetId);
     if (target) {
       const targetEntry = nodeEntry(target, bounds);
       if (shouldRenderFlowLink(source, targetEntry, visibleBounds)) {
-        lines.push(linkPath(source, targetEntry, defaultColor));
+        lines.push(linkPath(source, targetEntry, color));
       }
     }
+  }
+}
+
+function appendBranchLink(lines, source, branch, color, visibleBounds, bounds, dashed = false) {
+  if (!branch?.targetId || branch.targetId === DEATH_SENTINEL || branch.targetId === STAY_SENTINEL) return;
+  const target = state.adventure.descriptions.find((d) => d.id === branch.targetId);
+  if (!target) return;
+  const targetEntry = nodeEntry(target, bounds);
+  if (shouldRenderFlowLink(source, targetEntry, visibleBounds)) {
+    lines.push(linkPath(source, targetEntry, color, dashed));
   }
 }
 
@@ -2831,7 +2703,7 @@ function linkPath(source, target, color, dashed = false) {
 
 function computeBoardBounds() {
   const metrics = getFlowCardMetrics();
-  const scenePositions = state.adventure.scenes.map((scene) => scene.position || { x: 0, y: 0 });
+  const scenePositions = state.adventure.descriptions.map((d) => d.position || { x: 0, y: 0 });
   const minX = scenePositions.length ? Math.min(...scenePositions.map((point) => point.x), 0) : 0;
   const minY = scenePositions.length ? Math.min(...scenePositions.map((point) => point.y), 0) : 0;
   const maxX = scenePositions.length ? Math.max(...scenePositions.map((point) => point.x + metrics.width), metrics.width) : metrics.width;
@@ -2884,19 +2756,13 @@ function boardToLogicalPoint(point, bounds = getCurrentFlowBoardBounds()) {
 }
 
 function estimateFlowLinkCount() {
-  return state.adventure.scenes.reduce((total, scene) => {
-    if (!isCombatScene(scene)) {
-      return total + (scene.choices?.length || 0);
-    }
-    return total + outcomeDefinitionsForScene(scene).reduce((branchTotal, definition) => {
-      const branch = getOutcomeBranch(scene, definition.key);
-      return branchTotal + (branch.choices?.length || 0) + (branch.targetSceneId ? 1 : 0);
-    }, 0);
+  return state.adventure.descriptions.reduce((total, desc) => {
+    return total + (desc.choices?.length || 0);
   }, state.linkDraft ? 1 : 0);
 }
 
 function shouldVirtualizeFlowLinks() {
-  return state.adventure.scenes.length >= FLOW_LINK_VIRTUALIZE_SCENE_THRESHOLD
+  return state.adventure.descriptions.length >= FLOW_LINK_VIRTUALIZE_SCENE_THRESHOLD
     || estimateFlowLinkCount() >= FLOW_LINK_VIRTUALIZE_COUNT_THRESHOLD;
 }
 
@@ -3004,7 +2870,7 @@ function changeFlowZoom(delta) {
 // ─── Scroll flow board to a given scene ──────────────────────────────────────
 
 function scrollFlowBoardToScene(sceneId) {
-  const scene = state.adventure.scenes.find((s) => s.id === sceneId);
+  const scene = state.adventure.descriptions.find((d) => d.id === sceneId);
   if (!scene || !els.flowBoard) return;
   const bounds = getCurrentFlowBoardBounds();
   const zoom = state.ui.flowZoom || 1;
@@ -3040,11 +2906,11 @@ function attachNavigateBtn(container, selector) {
 
 function renderFlowStats() {
   if (!els.flowStats) return;
-  const scenes = state.adventure.scenes.length;
-  const monsters = state.adventure.encounters?.length || 0;
-  els.flowStats.textContent = monsters > 0
-    ? `${scenes} eventi · ${monsters} mostri`
-    : `${scenes} eventi`;
+  const count = state.adventure.descriptions.length;
+  const endings = state.adventure.descriptions.filter((d) => d.isEnding).length;
+  els.flowStats.textContent = endings > 0
+    ? `${count} nodi · ${endings} fin${endings === 1 ? "e" : "i"}`
+    : `${count} nodi`;
 }
 
 // ─── Flow search / filter ─────────────────────────────────────────────────────
@@ -3052,13 +2918,16 @@ function renderFlowStats() {
 function filterFlowCards(query) {
   const q = (query || "").trim().toLowerCase();
   els.flowCanvas.querySelectorAll(".node-card").forEach((card) => {
-    const sceneId = card.dataset.sceneId;
-    const scene = state.adventure.scenes.find((s) => s.id === sceneId);
+    const descId = card.dataset.sceneId;
+    const desc = state.adventure.descriptions.find((d) => d.id === descId);
     if (!q) {
       card.classList.remove("flow-card--dim", "flow-card--match");
       return;
     }
-    const matches = scene && scene.title.toLowerCase().includes(q);
+    const matches = desc && (
+      desc.title.toLowerCase().includes(q) ||
+      (desc.text || "").toLowerCase().includes(q)
+    );
     card.classList.toggle("flow-card--dim", !matches);
     card.classList.toggle("flow-card--match", matches);
   });
@@ -3067,9 +2936,9 @@ function filterFlowCards(query) {
 // ─── Minimap ──────────────────────────────────────────────────────────────────
 
 function minimapLogicalBounds() {
-  if (!state.adventure.scenes.length) return { minX: 0, maxX: 400, minY: 0, maxY: 300 };
-  const xs = state.adventure.scenes.map((s) => s.position?.x || 0);
-  const ys = state.adventure.scenes.map((s) => s.position?.y || 0);
+  if (!state.adventure.descriptions.length) return { minX: 0, maxX: 400, minY: 0, maxY: 300 };
+  const xs = state.adventure.descriptions.map((d) => d.position?.x || 0);
+  const ys = state.adventure.descriptions.map((d) => d.position?.y || 0);
   return {
     minX: Math.min(...xs) - 80,
     maxX: Math.max(...xs) + 280,
@@ -3085,20 +2954,21 @@ function renderMinimap() {
   const W = canvas.width;
   const H = canvas.height;
   ctx.clearRect(0, 0, W, H);
-  if (!state.adventure.scenes.length) return;
+  if (!state.adventure.descriptions.length) return;
   const { minX, maxX, minY, maxY } = minimapLogicalBounds();
   const rangeX = maxX - minX;
   const rangeY = maxY - minY;
   const toMX = (x) => ((x - minX) / rangeX) * W;
   const toMY = (y) => ((y - minY) / rangeY) * H;
   const connectedIds = getConnectedSceneIds();
-  state.adventure.scenes.forEach((scene) => {
-    const mx = toMX(scene.position?.x || 0);
-    const my = toMY(scene.position?.y || 0);
-    const isSelected = scene.id === state.selectedSceneId;
-    const isStart = scene.id === state.adventure.startingSceneId;
-    const isOrphan = !isStart && state.adventure.scenes.length > 1 && !connectedIds.has(scene.id);
-    ctx.fillStyle = isSelected ? "#c89a3a" : isStart ? "#74a475" : isOrphan ? "#ca655b" : "#4a6280";
+  state.adventure.descriptions.forEach((desc) => {
+    const mx = toMX(desc.position?.x || 0);
+    const my = toMY(desc.position?.y || 0);
+    const isSelected = desc.id === state.selectedDescriptionId;
+    const isStart = desc.id === state.adventure.startingDescriptionId;
+    const isEnding = desc.isEnding;
+    const isOrphan = !isStart && state.adventure.descriptions.length > 1 && !connectedIds.has(desc.id);
+    ctx.fillStyle = isSelected ? "#c89a3a" : isStart ? "#74a475" : isEnding ? "#9b74a4" : isOrphan ? "#ca655b" : "#4a6280";
     ctx.fillRect(mx - 4, my - 3, 10, 6);
   });
   // Rettangolo viewport
@@ -3122,18 +2992,18 @@ function initMinimap() {
   const canvas = els.flowMinimap;
   if (!canvas) return;
   canvas.addEventListener("click", (e) => {
-    if (!state.adventure.scenes.length) return;
+    if (!state.adventure.descriptions.length) return;
     const rect = canvas.getBoundingClientRect();
     const { minX, maxX, minY, maxY } = minimapLogicalBounds();
     const logX = ((e.clientX - rect.left) / canvas.width) * (maxX - minX) + minX;
     const logY = ((e.clientY - rect.top) / canvas.height) * (maxY - minY) + minY;
     let nearest = null;
     let nearestDist = Infinity;
-    state.adventure.scenes.forEach((scene) => {
-      const dx = (scene.position?.x || 0) - logX;
-      const dy = (scene.position?.y || 0) - logY;
+    state.adventure.descriptions.forEach((desc) => {
+      const dx = (desc.position?.x || 0) - logX;
+      const dy = (desc.position?.y || 0) - logY;
       const dist = Math.hypot(dx, dy);
-      if (dist < nearestDist) { nearestDist = dist; nearest = scene; }
+      if (dist < nearestDist) { nearestDist = dist; nearest = desc; }
     });
     if (nearest) {
       switchSelectedScene(nearest.id);
@@ -3146,32 +3016,19 @@ function initMinimap() {
 
 // ─── Scene status dot (validazione live) ─────────────────────────────────────
 
-function computeSceneStatus(scene) {
-  if (!scene) return null;
-  const hasText = Boolean(scene.openingText?.trim());
-  if (!isCombatScene(scene)) {
-    const hasChoice = scene.choices.some((c) => c.targetSceneId || c.skillCheck?.successSceneId);
-    if (!hasText) return { level: "error", msg: "Nessun testo d'apertura." };
-    if (isCheckScene(scene)) {
-      const gateOk = scene.choices.some((c) => c.isCheckGate && c.skillCheck?.successSceneId);
-      if (!gateOk) return { level: "warn", msg: "Prova di accesso non configurata." };
-    } else if (!hasChoice) {
-      return { level: "warn", msg: "Nessuna scelta collegata a un evento." };
-    }
-    return { level: "ok", msg: "Scena completa." };
+function computeSceneStatus(desc) {
+  if (!desc) return null;
+  const hasText = Boolean(desc.text?.trim());
+  const choices = desc.choices || [];
+  if (desc.isEnding) {
+    if (!hasText) return { level: "warn", msg: "Nessun testo di chiusura." };
+    return { level: "ok", msg: "Epilogo completo." };
   }
-  if (isCombatScene(scene)) {
-    const hasMonster = scene.combatGroups?.some((g) => g.monsterId);
-    const victoryId = scene.outcomes?.victory?.targetSceneId || scene.outcomes?.victory?.choices?.length;
-    const defeatTarget = scene.outcomes?.defeat?.targetSceneId;
-    const defeatOk = defeatTarget === DEATH_SENTINEL || defeatTarget || scene.outcomes?.defeat?.choices?.length;
-    if (!hasText) return { level: "error", msg: "Nessun testo d'apertura." };
-    if (!hasMonster) return { level: "warn", msg: "Nessun mostro assegnato." };
-    if (!victoryId) return { level: "warn", msg: "Esito vittoria non collegato." };
-    if (!defeatOk) return { level: "warn", msg: "Esito sconfitta non collegato." };
-    return { level: "ok", msg: "Scena completa." };
-  }
-  return null;
+  const hasLinkedChoice = choices.some((c) => c.targetId || c.event);
+  if (!hasText) return { level: "warn", msg: "Nessun testo ancora." };
+  if (choices.length === 0) return { level: "warn", msg: "Nessuna scelta." };
+  if (!hasLinkedChoice) return { level: "warn", msg: "Nessuna scelta collegata." };
+  return { level: "ok", msg: "Nodo completo." };
 }
 
 function updateSceneStatusDot() {
@@ -3190,28 +3047,141 @@ function flowCardElement(sceneId) {
 }
 
 function updateFlowCardPosition(sceneId, bounds = getCurrentFlowBoardBounds()) {
-  const scene = state.adventure.scenes.find((entry) => entry.id === sceneId);
+  const desc = state.adventure.descriptions.find((d) => d.id === sceneId);
   const card = flowCardElement(sceneId);
-  if (!scene || !card) return;
-  const boardPoint = logicalToBoardPoint(scene.position, bounds);
+  if (!desc || !card) return;
+  const boardPoint = logicalToBoardPoint(desc.position, bounds);
   card.style.left = `${boardPoint.x}px`;
   card.style.top = `${boardPoint.y}px`;
 }
 
 function updateAllFlowCardPositions(bounds = getCurrentFlowBoardBounds()) {
-  state.adventure.scenes.forEach((scene) => updateFlowCardPosition(scene.id, bounds));
+  state.adventure.descriptions.forEach((desc) => updateFlowCardPosition(desc.id, bounds));
+}
+
+// ── Inline title editing ─────────────────────────────────────────────────────
+
+function startInlineTitleEdit(card, desc) {
+  if (card.dataset.editing === "title") return;
+  const titleEl = card.querySelector(".flow-card-title");
+  if (!titleEl) return;
+  card.dataset.editing = "title";
+
+  const input = document.createElement("input");
+  input.type = "text";
+  input.className = "flow-card-title-input";
+  input.value = desc.title || "";
+  input.placeholder = "Senza titolo";
+
+  const commit = () => {
+    const newTitle = input.value.trim();
+    if (newTitle !== (desc.title || "")) {
+      desc.title = newTitle;
+      markSceneDirty();
+      scheduleJsonRender();
+    }
+    delete card.dataset.editing;
+    refreshFlowCard(desc.id);
+    scheduleFlowLinksRender();
+  };
+
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); input.blur(); }
+    if (e.key === "Escape") { input.value = desc.title || ""; input.blur(); }
+    e.stopPropagation();
+  });
+  input.addEventListener("blur", commit, { once: true });
+  input.addEventListener("pointerdown", (e) => e.stopPropagation());
+  input.addEventListener("click", (e) => e.stopPropagation());
+
+  titleEl.replaceWith(input);
+  input.focus();
+  input.select();
+}
+
+// ── Choice event-type quick-picker ───────────────────────────────────────────
+
+const CHOICE_EVENT_PICKER_TYPES = [
+  { type: null,         icon: "→",  label: "Solo navigazione" },
+  { type: "combat",     icon: "⚔",  label: "Combattimento" },
+  { type: "skillcheck", icon: "🎲", label: "Prova abilità" },
+  { type: "requirement",icon: "🔑", label: "Requisito" },
+  { type: "loot",       icon: "🗡", label: "Loot" },
+  { type: "shop",       icon: "🏪", label: "Negozio" },
+  { type: "dialogue",   icon: "💬", label: "Dialogo" },
+  { type: "transition", icon: "🔗", label: "Transizione" },
+];
+
+function showChoiceEventPicker(descId, choiceId, anchorRect) {
+  const desc = state.adventure.descriptions.find((d) => d.id === descId);
+  const choice = desc?.choices?.find((c) => c.id === choiceId);
+  if (!desc || !choice) return;
+
+  closeChoiceEventPicker();
+
+  const picker = document.createElement("div");
+  picker.id = "choice-event-picker";
+  picker.className = "choice-event-picker";
+
+  // Posizionamento vicino alla riga scelta
+  const left = Math.min(anchorRect.left, window.innerWidth - 220);
+  const top = anchorRect.bottom + 4;
+  picker.style.left = `${left}px`;
+  picker.style.top = `${Math.min(top, window.innerHeight - 280)}px`;
+
+  const current = choice.event?.type ?? null;
+
+  CHOICE_EVENT_PICKER_TYPES.forEach(({ type, icon, label }) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "cep-btn" + (current === type ? " cep-btn--active" : "");
+    btn.innerHTML = `<span class="cep-icon">${icon}</span><span class="cep-label">${label}</span>`;
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (type === null) {
+        choice.event = null;
+      } else if (!choice.event || choice.event.type !== type) {
+        choice.event = createDefaultEvent(type);
+        choice.targetId = null;
+      }
+      markSceneDirty();
+      refreshFlowCard(descId);
+      scheduleFlowLinksRender();
+      scheduleJsonRender();
+      closeChoiceEventPicker();
+      if (type !== null) {
+        // Apri il pannello per la configurazione avanzata
+        switchSelectedScene(descId);
+        requestAnimationFrame(() =>
+          els.sceneEditor.scrollIntoView({ behavior: "smooth", block: "start" })
+        );
+      }
+    });
+    picker.appendChild(btn);
+  });
+
+  const handleOutside = (e) => {
+    if (!picker.contains(e.target)) closeChoiceEventPicker();
+  };
+  setTimeout(() => document.addEventListener("pointerdown", handleOutside, { once: true }), 0);
+
+  document.body.appendChild(picker);
+}
+
+function closeChoiceEventPicker() {
+  document.getElementById("choice-event-picker")?.remove();
 }
 
 function refreshFlowCard(sceneId) {
-  const sceneIndex = state.adventure.scenes.findIndex((entry) => entry.id === sceneId);
+  const sceneIndex = state.adventure.descriptions.findIndex((d) => d.id === sceneId);
   if (sceneIndex === -1) return;
   const current = flowCardElement(sceneId);
   const bounds = getCurrentFlowBoardBounds();
   if (!current) {
-    els.flowCanvas.appendChild(createFlowCard(state.adventure.scenes[sceneIndex], sceneIndex, bounds));
+    els.flowCanvas.appendChild(createFlowCard(state.adventure.descriptions[sceneIndex], sceneIndex, bounds));
     return;
   }
-  syncFlowCard(current, state.adventure.scenes[sceneIndex], sceneIndex, bounds);
+  syncFlowCard(current, state.adventure.descriptions[sceneIndex], sceneIndex, bounds);
 }
 
 function scheduleFlowCardRefresh(sceneId, delay = 300) {
@@ -3256,49 +3226,33 @@ function nodeEntry(scene, bounds = getCurrentFlowBoardBounds()) {
 }
 
 function renderSceneEditor() {
-  const scene = getSelectedScene();
-  const visible = Boolean(scene);
+  const desc = getSelectedScene();
+  const visible = Boolean(desc);
   els.sceneEmpty.classList.toggle("hidden", visible);
   els.sceneEditor.classList.toggle("hidden", !visible);
   updateSceneSaveStatus();
-  if (!scene) return;
+  if (!desc) return;
 
-  normalizeScene(scene);
-  const combat = isCombatScene(scene);
-  const check = isCheckScene(scene);
-  const dk = derivedSceneKind(scene);
-  els.sceneKind.value = dk;
-  els.sceneTitle.value = scene.title;
-  els.sceneOpeningText.value = scene.openingText;
-  renderSceneImagePreview(scene);
-  els.sceneCombatConfig.classList.toggle("hidden", !combat);
-  // Scelte visibili per description E check (check scene ha il gate choice nella lista)
-  const useGenericChoices = !combat;
-  els.sceneChoicesSection.classList.toggle("hidden", !useGenericChoices);
-  els.sceneOutcomesSection.classList.toggle("hidden", useGenericChoices);
-  els.sceneChoicesSection.open = true;
-  if (!useGenericChoices) els.sceneOutcomesSection.open = true;
+  els.sceneTitle.value = desc.title || "";
+  els.sceneOpeningText.value = desc.text || "";
+  if (els.sceneIsEnding) els.sceneIsEnding.checked = Boolean(desc.isEnding);
 
-  // Badge tipo nel header editor
-  const badge = document.getElementById("scene-type-badge");
-  if (badge) {
-    badge.className = `scene-type-badge scene-type-badge--${dk}`;
-    badge.textContent = combat ? "Combattimento" : check ? "Prova" : "Descrittiva";
-    badge.classList.remove("hidden");
+  renderSceneImagePreview(desc);
+
+  // Nascondi sezioni v1 non più presenti nel modello v2
+  if (els.sceneKind) els.sceneKind.closest("label")?.classList.add("hidden");
+  if (els.sceneCombatConfig)  els.sceneCombatConfig.classList.add("hidden");
+  if (els.sceneOutcomesSection) els.sceneOutcomesSection.classList.add("hidden");
+  document.getElementById("scene-loot-section")?.classList.add("hidden"); // v2: loot è sugli eventi
+  if (els.sceneChoicesSection) {
+    els.sceneChoicesSection.classList.remove("hidden");
+    els.sceneChoicesSection.open = true;
   }
+  if (els.sceneChoicesSummary) els.sceneChoicesSummary.textContent = "Scelte";
+  if (els.sceneChoicesHint) els.sceneChoicesHint.textContent = "Ogni scelta può avere una navigazione diretta o un evento (combattimento, prova, requisito...).";
+  if (els.addChoiceBtn) els.addChoiceBtn.textContent = "Aggiungi scelta";
 
-  els.sceneChoicesSummary.textContent = check ? "Prova e scelte" : "Scelte del nodo";
-  els.sceneChoicesHint.textContent = check
-    ? "Il primo elemento è la prova di accesso. Aggiungi scelte normali sotto per i rami successivi."
-    : "Le scelte guidano il nodo e i suoi rami principali.";
-  els.addChoiceBtn.textContent = check ? "Aggiungi scelta post-prova" : "Aggiungi scelta";
-  els.sceneOutcomesSummary.textContent = "Vittoria, sconfitta e ritirata";
-  els.sceneOutcomesHint.textContent = "Ogni esito del combattimento puo andare diretto a un evento oppure aprire un piccolo bivio successivo.";
-
-  renderSceneLoot(scene);
-  if (useGenericChoices) renderChoices(scene);
-  else renderOutcomeEditor(scene);
-  renderCombatGroups(scene);
+  renderChoices(desc);
   updateSceneStatusDot();
 }
 
@@ -3372,57 +3326,533 @@ function renderSceneLoot(scene) {
 }
 
 function renderSceneImagePreview(scene) {
+  // Supporta sia v2 (desc.image = URL/dataUrl) sia il caso in cui l'editor
+  // ha già caricato un'immagine (scene.eventImage = oggetto con dataUrl + metadati).
   const normalizedImage = scene.eventImage ? normalizeSceneImage(scene.eventImage) : null;
-  if (normalizedImage) {
-    scene.eventImage = normalizedImage;
-  }
-  const hasSceneImage = Boolean(normalizedImage?.dataUrl);
+  if (normalizedImage) scene.eventImage = normalizedImage;
+  const previewUrl = normalizedImage?.dataUrl || (typeof scene.image === "string" ? scene.image : null);
+  const hasSceneImage = Boolean(previewUrl);
   els.sceneImagePreview.classList.toggle("hidden", !hasSceneImage);
   if (!hasSceneImage) {
     els.sceneImageThumb.removeAttribute("src");
     els.sceneImageName.textContent = "Immagine evento";
     return;
   }
-  els.sceneImageThumb.src = normalizedImage.dataUrl;
-  els.sceneImageZoom.value = String(normalizedImage.zoom);
-  els.sceneImageFocusX.value = String(normalizedImage.focusX);
-  els.sceneImageFocusY.value = String(normalizedImage.focusY);
+  els.sceneImageThumb.src = previewUrl;
+  els.sceneImageZoom.value = String(normalizedImage?.zoom ?? 1);
+  els.sceneImageFocusX.value = String(normalizedImage?.focusX ?? 50);
+  els.sceneImageFocusY.value = String(normalizedImage?.focusY ?? 50);
   const imageMeta = [
-    normalizedImage.name || "Immagine evento",
-    normalizedImage.width && normalizedImage.height ? `${normalizedImage.width}x${normalizedImage.height}` : "",
-    normalizedImage.sizeKb ? `${normalizedImage.sizeKb} KB` : "",
-    `zoom ${normalizedImage.zoom.toFixed(2)}x`
+    normalizedImage?.name || "Immagine evento",
+    normalizedImage?.width && normalizedImage?.height ? `${normalizedImage.width}x${normalizedImage.height}` : "",
+    normalizedImage?.sizeKb ? `${normalizedImage.sizeKb} KB` : "",
+    normalizedImage ? `zoom ${normalizedImage.zoom.toFixed(2)}x` : ""
   ].filter(Boolean).join(" | ");
   els.sceneImageName.textContent = imageMeta || "Immagine evento";
 }
 
-function renderChoices(scene) {
-  renderChoiceCards(els.choiceList, scene.choices, {
-    onChange: () => {
-      markSceneDirty();
-      refreshFlowCard(scene.id);
-      scheduleFlowLinksRender();
-      scheduleJsonRender();
-    },
-    onRemove: (index) => {
-      scene.choices.splice(index, 1);
-      markSceneDirty();
-      renderChoices(scene);
-      refreshFlowCard(scene.id);
-      scheduleFlowLinksRender();
-      scheduleJsonRender();
-    }
+function renderChoices(desc) {
+  const container = els.choiceList;
+  if (!container) return;
+  container.innerHTML = "";
+  (desc.choices || []).forEach((choice, index) => {
+    container.appendChild(buildChoiceCard(desc, choice, index));
   });
   if (els.sceneChoicesSummary) {
-    const n = (scene.choices || []).length;
-    els.sceneChoicesSummary.textContent = n > 0 ? `${n} scelt${n === 1 ? "a" : "e"}` : "Scelte del nodo";
+    const n = (desc.choices || []).length;
+    els.sceneChoicesSummary.textContent = n > 0 ? `${n} scelt${n === 1 ? "a" : "e"}` : "Scelte";
   }
 }
 
+function onChoiceChange(desc, choice) {
+  markSceneDirty();
+  refreshFlowCard(desc.id);
+  scheduleFlowLinksRender();
+  scheduleJsonRender();
+}
+
+// Costruisce il DOM di un choice card per il nuovo modello
+function buildChoiceCard(desc, choice, index) {
+  const card = document.createElement("div");
+  card.className = "choice-card";
+
+  // ── Header ────────────────────────────────────────────────────────────────
+  const header = document.createElement("div");
+  header.className = "choice-card-header";
+
+  const textInput = document.createElement("input");
+  textInput.type = "text";
+  textInput.placeholder = "Testo scelta...";
+  textInput.value = choice.text || "";
+  textInput.addEventListener("input", (e) => {
+    choice.text = e.target.value;
+    onChoiceChange(desc, choice);
+  });
+
+  const removeBtn = document.createElement("button");
+  removeBtn.type = "button";
+  removeBtn.className = "danger small";
+  removeBtn.textContent = "✕";
+  removeBtn.title = "Rimuovi scelta";
+  removeBtn.addEventListener("click", () => {
+    desc.choices.splice(index, 1);
+    onChoiceChange(desc, choice);
+    renderChoices(desc);
+  });
+
+  header.append(textInput, removeBtn);
+
+  // ── Flags ─────────────────────────────────────────────────────────────────
+  const flagsRow = document.createElement("div");
+  flagsRow.className = "choice-flags-row";
+
+  const hiddenLabel = document.createElement("label");
+  const hiddenChk = document.createElement("input");
+  hiddenChk.type = "checkbox";
+  hiddenChk.checked = Boolean(choice.hidden);
+  hiddenChk.addEventListener("change", (e) => {
+    choice.hidden = e.target.checked;
+    onChoiceChange(desc, choice);
+  });
+  hiddenLabel.append(hiddenChk, " Nascosta");
+
+  const burnLabel = document.createElement("label");
+  const burnChk = document.createElement("input");
+  burnChk.type = "checkbox";
+  burnChk.checked = Boolean(choice.burnAfterUse);
+  burnChk.addEventListener("change", (e) => {
+    choice.burnAfterUse = e.target.checked;
+    onChoiceChange(desc, choice);
+  });
+  burnLabel.append(burnChk, " Brucia dopo uso");
+
+  flagsRow.append(hiddenLabel, burnLabel);
+
+  // ── Event type selector ───────────────────────────────────────────────────
+  const eventRow = document.createElement("div");
+  eventRow.className = "choice-event-row";
+
+  const eventLabel = document.createElement("label");
+  eventLabel.textContent = "Tipo evento ";
+  const eventSelect = document.createElement("select");
+  const eventTypes = [
+    { value: "", label: "Navigazione diretta" },
+    { value: "combat", label: "Combattimento" },
+    { value: "skillcheck", label: "Prova (skill check)" },
+    { value: "requirement", label: "Requisito oggetto" },
+    { value: "loot", label: "Loot" },
+    { value: "condition", label: "Condizione" },
+    { value: "transition", label: "Transizione" },
+    { value: "dialogue", label: "Dialogo NPC" },
+    { value: "shop", label: "Negozio" }
+  ];
+  eventTypes.forEach(({ value, label }) => {
+    const opt = document.createElement("option");
+    opt.value = value;
+    opt.textContent = label;
+    eventSelect.appendChild(opt);
+  });
+  eventSelect.value = choice.event?.type || "";
+  eventLabel.appendChild(eventSelect);
+  eventRow.appendChild(eventLabel);
+
+  // ── Event config section (rebuilds on change) ─────────────────────────────
+  const eventConfig = document.createElement("div");
+  eventConfig.className = "choice-event-config";
+
+  function rebuildEventConfig() {
+    eventConfig.innerHTML = "";
+    const evType = eventSelect.value;
+    if (!evType) {
+      // Navigazione diretta: mostra target selector
+      if (choice.event) { choice.event = null; onChoiceChange(desc, choice); }
+      eventConfig.appendChild(buildTargetRow("Destinazione", choice.targetId || "", (v) => {
+        choice.targetId = v || null;
+        onChoiceChange(desc, choice);
+      }));
+    } else {
+      // Assicura che event esista e abbia il tipo giusto
+      if (!choice.event || choice.event.type !== evType) {
+        choice.event = createDefaultEvent(evType);
+        choice.targetId = null;
+        onChoiceChange(desc, choice);
+      }
+      const ev = choice.event;
+      switch (evType) {
+        case "skillcheck":  buildSkillCheckConfig(eventConfig, ev, desc, choice); break;
+        case "combat":      buildCombatConfig(eventConfig, ev, desc, choice); break;
+        case "requirement": buildRequirementConfig(eventConfig, ev, desc, choice); break;
+        case "loot":        buildLootEventConfig(eventConfig, ev, desc, choice); break;
+        case "condition":   buildConditionConfig(eventConfig, ev, desc, choice); break;
+        case "transition":  buildTransitionConfig(eventConfig, ev, desc, choice); break;
+        default:
+          eventConfig.appendChild(makeHint(`Configurazione per "${evType}" in costruzione.`));
+      }
+    }
+  }
+
+  eventSelect.addEventListener("change", rebuildEventConfig);
+  rebuildEventConfig();
+
+  card.append(header, flagsRow, eventRow, eventConfig);
+  return card;
+}
+
+// ── Helper: target selector ───────────────────────────────────────────────────
+
+function buildTargetRow(labelText, currentValue, onChange) {
+  const label = document.createElement("label");
+  label.textContent = labelText + " ";
+  const select = document.createElement("select");
+  hydrateDescriptionTargetSelect(select, currentValue);
+  select.addEventListener("change", (e) => { if (!e.target._hydrating) onChange(e.target.value); });
+  label.appendChild(select);
+  return label;
+}
+
+function buildBranchRow(labelText, branch, desc, choice, isRetreatable = false) {
+  const wrap = document.createElement("div");
+  wrap.className = "branch-row";
+  wrap.appendChild(buildTargetRow(labelText, branch.targetId || "", (v) => {
+    branch.targetId = v || null;
+    onChoiceChange(desc, choice);
+  }));
+  const textInput = document.createElement("input");
+  textInput.type = "text";
+  textInput.placeholder = "Testo ramo (opzionale)";
+  textInput.value = branch.text || "";
+  textInput.addEventListener("input", (e) => {
+    branch.text = e.target.value || null;
+    onChoiceChange(desc, choice);
+  });
+  const burnLabel = document.createElement("label");
+  const burnChk = document.createElement("input");
+  burnChk.type = "checkbox";
+  burnChk.checked = Boolean(branch.burnAfterUse);
+  burnChk.addEventListener("change", (e) => {
+    branch.burnAfterUse = e.target.checked;
+    onChoiceChange(desc, choice);
+  });
+  burnLabel.append(burnChk, " Brucia scelta su questo esito");
+  wrap.append(textInput, burnLabel);
+  return wrap;
+}
+
+function makeHint(text) {
+  const p = document.createElement("p");
+  p.className = "hint";
+  p.textContent = text;
+  return p;
+}
+
+// ── SkillCheck config ─────────────────────────────────────────────────────────
+
+function buildSkillCheckConfig(container, ev, desc, choice) {
+  // Attributo
+  const attrLabel = document.createElement("label");
+  attrLabel.textContent = "Attributo ";
+  const attrSel = document.createElement("select");
+  SKILLS.forEach(({ value, label }) => {
+    const opt = document.createElement("option");
+    opt.value = value; opt.textContent = label;
+    attrSel.appendChild(opt);
+  });
+  attrSel.value = ev.attribute || "";
+  attrSel.addEventListener("change", (e) => { ev.attribute = e.target.value; onChoiceChange(desc, choice); });
+  attrLabel.appendChild(attrSel);
+
+  // Difficoltà
+  const diffLabel = document.createElement("label");
+  diffLabel.textContent = " Difficoltà ";
+  const diffInput = document.createElement("input");
+  diffInput.type = "number"; diffInput.min = 1; diffInput.max = 30;
+  diffInput.value = ev.difficulty || 12;
+  diffInput.style.width = "60px";
+  diffInput.addEventListener("input", (e) => { ev.difficulty = parseInt(e.target.value) || 12; onChoiceChange(desc, choice); });
+  diffLabel.appendChild(diffInput);
+
+  // burnOnFailure
+  const burnLabel = document.createElement("label");
+  const burnChk = document.createElement("input");
+  burnChk.type = "checkbox"; burnChk.checked = Boolean(ev.burnOnFailure);
+  burnChk.addEventListener("change", (e) => { ev.burnOnFailure = e.target.checked; onChoiceChange(desc, choice); });
+  burnLabel.append(burnChk, " Brucia scelta anche su fallimento");
+
+  container.append(attrLabel, diffLabel, burnLabel,
+    document.createElement("br"),
+    makeHint("Riuscita:"),
+    buildBranchRow("→ Destinazione successo", ev.successBranch, desc, choice),
+    makeHint("Fallimento:"),
+    buildBranchRow("→ Destinazione fallimento", ev.failureBranch, desc, choice)
+  );
+}
+
+// ── Combat config ─────────────────────────────────────────────────────────────
+
+function buildCombatConfig(container, ev, desc, choice) {
+  container.appendChild(makeHint("Combattimento — gruppi nemici"));
+
+  const groupList = document.createElement("div");
+  groupList.className = "combat-group-list";
+
+  function rerenderGroups() {
+    groupList.innerHTML = "";
+    (ev.combatGroups || []).forEach((group, gi) => {
+      const row = buildCombatGroupRow(group, gi, ev, desc, choice, rerenderGroups);
+      groupList.appendChild(row);
+    });
+  }
+  rerenderGroups();
+
+  const addGroupBtn = document.createElement("button");
+  addGroupBtn.type = "button"; addGroupBtn.textContent = "Aggiungi gruppo";
+  addGroupBtn.addEventListener("click", () => {
+    ev.combatGroups.push(createDefaultCombatGroup());
+    rerenderGroups();
+    onChoiceChange(desc, choice);
+  });
+
+  container.append(groupList, addGroupBtn,
+    document.createElement("br"),
+    makeHint("Vittoria:"),
+    buildBranchRow("→ Destinazione vittoria", ev.victoryBranch, desc, choice),
+    makeHint("Sconfitta:"),
+    buildBranchRow("→ Destinazione sconfitta", ev.defeatBranch, desc, choice)
+  );
+
+  // Ritirata (opzionale)
+  const retreatToggle = document.createElement("label");
+  const retreatChk = document.createElement("input");
+  retreatChk.type = "checkbox"; retreatChk.checked = Boolean(ev.retreatBranch);
+  retreatChk.addEventListener("change", (e) => {
+    ev.retreatBranch = e.target.checked ? { targetId: null, text: null, loot: [], burnAfterUse: false } : null;
+    onChoiceChange(desc, choice);
+    rerenderRetreat();
+  });
+  retreatToggle.append(retreatChk, " Abilita ritirata");
+  container.appendChild(retreatToggle);
+
+  const retreatSection = document.createElement("div");
+  function rerenderRetreat() {
+    retreatSection.innerHTML = "";
+    if (ev.retreatBranch) {
+      retreatSection.appendChild(buildBranchRow("→ Destinazione ritirata", ev.retreatBranch, desc, choice, true));
+    }
+  }
+  rerenderRetreat();
+  container.appendChild(retreatSection);
+}
+
+function buildCombatGroupRow(group, gi, ev, desc, choice, rerender) {
+  const row = document.createElement("div");
+  row.className = "combat-group-row";
+
+  // Selezione preset mostro
+  const presetSel = document.createElement("select");
+  const noneOpt = document.createElement("option"); noneOpt.value = ""; noneOpt.textContent = "— scegli mostro —";
+  presetSel.appendChild(noneOpt);
+  MONSTER_PRESETS.forEach((p) => {
+    const opt = document.createElement("option");
+    opt.value = p.id; opt.textContent = p.name;
+    presetSel.appendChild(opt);
+  });
+  presetSel.value = group.monsterId || "";
+  presetSel.addEventListener("change", (e) => {
+    const preset = MONSTER_PRESETS.find((p) => p.id === e.target.value);
+    if (preset) Object.assign(group, {
+      monsterId: preset.id, name: preset.name, description: preset.description || "",
+      hitPoints: preset.hitPoints, attackBonus: preset.attackBonus, defense: preset.defense,
+      damageMin: preset.damageMin, damageMax: preset.damageMax,
+      goldReward: preset.goldReward, abilityIds: [...(preset.abilityIds || [])],
+      hasBerserkerPhase: Boolean(preset.hasBerserkerPhase),
+      loot: (preset.loot || []).map((l) => ({ ...l }))
+    });
+    onChoiceChange(desc, choice);
+    rerender();
+  });
+
+  // Nome custom
+  const nameInput = document.createElement("input");
+  nameInput.type = "text"; nameInput.placeholder = "Nome mostro"; nameInput.value = group.name || "";
+  nameInput.addEventListener("input", (e) => { group.name = e.target.value; onChoiceChange(desc, choice); });
+
+  // Stats compatti
+  const statsRow = document.createElement("div");
+  statsRow.className = "two-col";
+  [
+    ["HP", "hitPoints", 1], ["ATK", "attackBonus", 0], ["DEF", "defense", 1],
+    ["Min", "damageMin", 1], ["Max", "damageMax", 1], ["Oro", "goldReward", 0]
+  ].forEach(([lbl, field, min]) => {
+    const l = document.createElement("label");
+    l.textContent = lbl + " ";
+    const inp = document.createElement("input");
+    inp.type = "number"; inp.min = min; inp.value = group[field] ?? 1; inp.style.width = "55px";
+    inp.addEventListener("input", (e) => { group[field] = parseInt(e.target.value) || 0; onChoiceChange(desc, choice); });
+    l.appendChild(inp); statsRow.appendChild(l);
+  });
+
+  const removeBtn = document.createElement("button");
+  removeBtn.type = "button"; removeBtn.className = "danger small"; removeBtn.textContent = "Rimuovi";
+  removeBtn.addEventListener("click", () => {
+    ev.combatGroups.splice(gi, 1);
+    onChoiceChange(desc, choice); rerender();
+  });
+
+  row.append(presetSel, nameInput, statsRow, removeBtn);
+  return row;
+}
+
+// ── Requirement config ────────────────────────────────────────────────────────
+
+function buildRequirementConfig(container, ev, desc, choice) {
+  const modeLabel = document.createElement("label");
+  modeLabel.textContent = "Tipo requisito ";
+  const modeSel = document.createElement("select");
+  [
+    { value: "itemId", label: "ID oggetto specifico" },
+    { value: "itemCategory", label: "Categoria oggetto" },
+    { value: "effectId", label: "Effetto oggetto" }
+  ].forEach(({ value, label }) => {
+    const opt = document.createElement("option"); opt.value = value; opt.textContent = label;
+    modeSel.appendChild(opt);
+  });
+  const currentMode = ev.itemId ? "itemId" : ev.itemCategory ? "itemCategory" : "effectId";
+  modeSel.value = currentMode;
+  modeLabel.appendChild(modeSel);
+
+  const valueLabel = document.createElement("label");
+  valueLabel.textContent = "Valore ";
+  const valueInput = document.createElement("input");
+  valueInput.type = "text";
+  valueInput.value = ev.itemId || ev.itemCategory || ev.effectId || "";
+  function syncReqValue() {
+    const mode = modeSel.value;
+    ev.itemId = mode === "itemId" ? (valueInput.value || null) : null;
+    ev.itemCategory = mode === "itemCategory" ? (valueInput.value || null) : null;
+    ev.effectId = mode === "effectId" ? (valueInput.value || null) : null;
+    onChoiceChange(desc, choice);
+  }
+  modeSel.addEventListener("change", syncReqValue);
+  valueInput.addEventListener("input", syncReqValue);
+  valueLabel.appendChild(valueInput);
+
+  const consumeLabel = document.createElement("label");
+  const consumeChk = document.createElement("input");
+  consumeChk.type = "checkbox"; consumeChk.checked = Boolean(ev.consumeOnMet);
+  consumeChk.addEventListener("change", (e) => { ev.consumeOnMet = e.target.checked; onChoiceChange(desc, choice); });
+  consumeLabel.append(consumeChk, " Consuma l'oggetto se requisito soddisfatto");
+
+  container.append(modeLabel, valueLabel, consumeLabel,
+    makeHint("Requisito soddisfatto:"),
+    buildBranchRow("→ Destinazione", ev.metBranch, desc, choice),
+    makeHint("Requisito non soddisfatto:"),
+    buildBranchRow("→ Destinazione", ev.unmetBranch, desc, choice)
+  );
+}
+
+// ── Loot event config ─────────────────────────────────────────────────────────
+
+function buildLootEventConfig(container, ev, desc, choice) {
+  const lootSection = document.createElement("div");
+  function rerenderLoot() {
+    renderLootList(lootSection, ev.loot, {
+      rerender: rerenderLoot,
+      onChange: () => onChoiceChange(desc, choice)
+    });
+  }
+  rerenderLoot();
+  const addLootBtn = document.createElement("button");
+  addLootBtn.type = "button"; addLootBtn.textContent = "Aggiungi loot";
+  addLootBtn.addEventListener("click", () => {
+    ev.loot.push(createLootFromPreset("coins"));
+    rerenderLoot(); onChoiceChange(desc, choice);
+  });
+  container.append(lootSection, addLootBtn,
+    makeHint("Continua verso:"),
+    buildBranchRow("→ Destinazione", ev.branch, desc, choice)
+  );
+}
+
+// ── Condition event config ────────────────────────────────────────────────────
+
+function buildConditionConfig(container, ev, desc, choice) {
+  const condLabel = document.createElement("label");
+  condLabel.textContent = "Condizione ";
+  const condSel = document.createElement("select");
+  hydrateConditionSelect(condSel, ev.conditionId || "");
+  condSel.addEventListener("change", (e) => { ev.conditionId = e.target.value; onChoiceChange(desc, choice); });
+  condLabel.appendChild(condSel);
+  container.append(condLabel,
+    makeHint("Continua verso:"),
+    buildBranchRow("→ Destinazione", ev.branch, desc, choice)
+  );
+}
+
+// ── Transition event config ───────────────────────────────────────────────────
+
+function buildTransitionConfig(container, ev, desc, choice) {
+  const textLabel = document.createElement("label");
+  textLabel.textContent = "Testo transizione";
+  const textArea = document.createElement("textarea");
+  textArea.rows = 3; textArea.value = ev.text || "";
+  textArea.addEventListener("input", (e) => { ev.text = e.target.value; onChoiceChange(desc, choice); });
+  textLabel.appendChild(textArea);
+  container.append(textLabel,
+    makeHint("Continua verso:"),
+    buildBranchRow("→ Destinazione", ev.branch, desc, choice)
+  );
+}
+
+// ── Default event factories ───────────────────────────────────────────────────
+
+function createDefaultEvent(type) {
+  const emptyBranch = () => ({ text: null, loot: [], condition: null, unlockChoiceId: null, burnAfterUse: false, targetId: null, event: null });
+  switch (type) {
+    case "combat":      return { type: "combat", text: null, image: null, combatGroups: [createDefaultCombatGroup()], victoryBranch: emptyBranch(), defeatBranch: { ...emptyBranch(), targetId: DEATH_SENTINEL }, retreatBranch: null };
+    case "skillcheck":  return { type: "skillcheck", text: null, attribute: "", difficulty: 12, successBranch: emptyBranch(), failureBranch: { ...emptyBranch(), targetId: STAY_SENTINEL }, burnOnFailure: false };
+    case "requirement": return { type: "requirement", text: null, itemId: null, itemCategory: null, effectId: null, consumeOnMet: false, metBranch: emptyBranch(), unmetBranch: emptyBranch() };
+    case "loot":        return { type: "loot", text: null, image: null, loot: [], branch: emptyBranch() };
+    case "condition":   return { type: "condition", text: null, conditionId: "", branch: emptyBranch() };
+    case "shop":        return { type: "shop", text: null, image: null, items: [], branch: emptyBranch() };
+    case "transition":  return { type: "transition", text: "", image: null, branch: emptyBranch() };
+    case "dialogue":    return { type: "dialogue", text: null, npcName: "", npcImage: null, root: { npcText: "", responses: [], branch: emptyBranch() } };
+    default:            return null;
+  }
+}
+
+function createDefaultCombatGroup() {
+  return { monsterId: "", count: 1, name: "", description: "", hitPoints: 10, attackBonus: 2, defense: 11, damageMin: 1, damageMax: 4, goldReward: 5, abilityIds: [], hasBerserkerPhase: false, loot: [] };
+}
+
+// ─── Populate description target selects ──────────────────────────────────────
+
+function hydrateDescriptionTargetSelect(select, currentValue) {
+  select._hydrating = true;
+  const sentinels = [
+    { value: "", label: "— nessuna destinazione —" },
+    { value: DEATH_SENTINEL, label: "☠ Morte" },
+    { value: STAY_SENTINEL, label: "📍 Resta qui" }
+  ];
+  select.innerHTML = "";
+  sentinels.forEach(({ value, label }) => {
+    const opt = document.createElement("option"); opt.value = value; opt.textContent = label;
+    select.appendChild(opt);
+  });
+  state.adventure.descriptions.forEach((d) => {
+    const opt = document.createElement("option");
+    opt.value = d.id; opt.textContent = d.title || d.id;
+    select.appendChild(opt);
+  });
+  select.value = currentValue || "";
+  select._hydrating = false;
+}
+
+// ─── DEAD CODE from old model — kept as stubs so old call sites don't crash ───
+
 function renderChoiceCards(container, choices, handlers) {
-  container.innerHTML = "";
-  choices.forEach((choice, index) => {
-    const node = document.getElementById("choice-template").content.firstElementChild.cloneNode(true);
+  // old model, not used — renderChoices replaces this entirely
+  (choices || []).forEach((choice, index) => {
+    const node = document.createElement("div"); // stub: no template in v2
     node.querySelector('[data-field="text"]').value = choice.text || "";
     node.querySelector('[data-field="endingText"]').value = choice.endingText || "";
     const targetLabel = node.querySelector('[data-field="targetSceneId"]').closest("label");
@@ -3548,9 +3978,7 @@ function renderChoiceCards(container, choices, handlers) {
       const lockId = choice.requiredLockId;
       if (!lockId) { reqKeyHint.textContent = ""; return; }
       const allLoot = [
-        ...(state.adventure?.starterKitItems || []),
-        ...(state.adventure?.scenes || []).flatMap((s) => s.sceneLoot || []),
-        ...(state.adventure?.encounters || []).flatMap((e) => e.loot || [])
+        ...collectAllAdventureLoot()
       ];
       const match = allLoot.find((l) => normalizeString(l.lockId) === lockId);
       const preset = LOOT_PRESETS.find((p) => p.lockId === lockId);
@@ -3563,11 +3991,7 @@ function renderChoiceCards(container, choices, handlers) {
     function updateSummaryHint() {
       if (!reqSummaryHint) return;
       if (choice.requiredLockId) {
-        const allLoot = [
-          ...(state.adventure?.starterKitItems || []),
-          ...(state.adventure?.scenes || []).flatMap((s) => s.sceneLoot || []),
-          ...(state.adventure?.encounters || []).flatMap((e) => e.loot || [])
-        ];
+        const allLoot = collectAllAdventureLoot();
         const key = allLoot.find((l) => normalizeString(l.lockId) === choice.requiredLockId);
         const preset = LOOT_PRESETS.find((p) => p.lockId === choice.requiredLockId);
         reqSummaryHint.textContent = `🔑 ${key?.itemName || preset?.name || choice.requiredLockId}`;
@@ -3644,9 +4068,7 @@ function renderChoiceCards(container, choices, handlers) {
       choice.requiredLockId = normalizeString(event.target.value) || "";
       // auto-fill lockLabel from key name for export annotation
       const allLoot = [
-        ...(state.adventure?.starterKitItems || []),
-        ...(state.adventure?.scenes || []).flatMap((s) => s.sceneLoot || []),
-        ...(state.adventure?.encounters || []).flatMap((e) => e.loot || [])
+        ...collectAllAdventureLoot()
       ];
       const key = allLoot.find((l) => normalizeString(l.lockId) === choice.requiredLockId);
       const preset = LOOT_PRESETS.find((p) => p.lockId === choice.requiredLockId);
@@ -3838,7 +4260,7 @@ function updateChoiceCheck(choice, node, onChange) {
   const attribute  = normalizeString(node.querySelector('[data-field="checkAttribute"]').value);
   const success    = normalizeString(node.querySelector('[data-field="checkSuccess"]').value);
   const failure    = normalizeString(node.querySelector('[data-field="checkFailure"]').value)
-    || state.selectedSceneId || "";
+    || state.selectedDescriptionId || "";
   const difficulty = Number(node.querySelector('[data-field="checkDifficulty"]').value || 0);
 
   if (attribute && success) {
@@ -3877,273 +4299,11 @@ function updateChoiceCheck(choice, node, onChange) {
   onChange();
 }
 
-function renderCombatGroups(scene) {
-  els.combatGroupList.innerHTML = "";
-  if (!scene.combatGroups?.length) {
-    const empty = document.createElement("div");
-    empty.className = "empty-state compact-empty";
-    empty.textContent = "Nessun mostro ancora aggiunto a questa scena.";
-    els.combatGroupList.appendChild(empty);
-    return;
-  }
-  (scene.combatGroups || []).forEach((group, index) => {
-    const node = document.getElementById("combat-group-template").content.firstElementChild.cloneNode(true);
-    const monsterSelect = node.querySelector('[data-field="monsterId"]');
-    const title = node.querySelector('[data-role="group-title"]');
-    const meta = node.querySelector('[data-role="group-meta"]');
-    const tag = node.querySelector('[data-role="group-tag"]');
-    const mode = node.querySelector('[data-role="group-mode"]');
-    const lootAction = node.querySelector('[data-action="edit-loot-inline"]');
-    const hint = node.querySelector(".monster-card-hint");
-    const preview = node.querySelector('[data-role="preview"]');
-    const inlineEditor = node.querySelector(".monster-inline-editor");
-    const countField = node.querySelector('[data-field="count"]');
-    hydrateMonsterSelect(monsterSelect, group.monsterId || "");
-    countField.value = group.count ?? 1;
+function renderCombatGroups(_scene) {} // stub — rimosso: i gruppi combattimento si editano nel pannello scelta
 
-    const resolveMonster = () => state.adventure.encounters.find((entry) => entry.id === group.monsterId) || null;
-
-    function updatePreview(monster) {
-      preview.innerHTML = monster
-        ? `<strong>${monster.name || "(senza nome)"}</strong><span>HP ${monster.hitPoints} | ATK +${monster.attackBonus} | DEF ${monster.defense} | DMG ${monster.damageMin}-${monster.damageMax}</span><p>${monster.description || "Nessuna descrizione."}</p>`
-        : "<strong>Nessun mostro selezionato</strong><span>Scegli un mostro esistente oppure crea un mostro nuovo direttamente da qui.</span>";
-    }
-
-    function updateGroupHeader() {
-      const monster = resolveMonster();
-      const count = group.count ?? 1;
-      title.textContent = monster?.name
-        ? (count > 1 ? `${count}× ${monster.name}` : monster.name)
-        : "Mostro della scena";
-      meta.textContent = monster
-        ? `HP ${monster.hitPoints} | ATK +${monster.attackBonus} | DEF ${monster.defense} | DMG ${monster.damageMin}–${monster.damageMax}`
-        : `Quantita ${count}`;
-      const srcLabel = monster?.sourceType === "preset" ? "Preset" : monster?.sourceType === "archetype" ? "Archetipo" : "Custom";
-      tag.textContent = srcLabel;
-      mode.textContent = node.open ? "Vista compatta" : "Modifica mostro";
-      lootAction.textContent = monster ? "Modifica loot" : "Loot";
-      lootAction.disabled = !monster;
-      hint.textContent = node.open
-        ? "Modifica i dettagli del mostro e richiudi la card quando hai finito."
-        : "Card compatta. Clicca la testata per riaprire la modifica.";
-      updatePreview(monster);
-    }
-
-    // Se non c'è ancora un mostro: mostra archetype picker al posto del select
-    if (!group.monsterId) {
-      const selectLabel = monsterSelect.closest("label");
-      if (selectLabel) selectLabel.style.display = "none";
-      hint.style.display = "none";
-      preview.style.display = "none";
-
-      const archetypePicker = buildArchetypePicker((archetypeId) => {
-        let newMonster;
-        if (archetypeId === "__custom__") {
-          newMonster = {
-            id: createUniqueMonsterId(),
-            name: "",
-            description: "",
-            hitPoints: 12,
-            attackBonus: 3,
-            defense: 11,
-            damageMin: 2,
-            damageMax: 5,
-            goldReward: 8,
-            abilityIds: [],
-            hasBerserkerPhase: false,
-            loot: [{ itemId: "coins", itemName: "Monete", quantity: 8, category: "treasure", rarity: "common", effectIds: ["trade_value"] }],
-            sourceType: "custom"
-          };
-        } else {
-          const arch = MONSTER_STAT_ARCHETYPES.find((a) => a.id === archetypeId);
-          newMonster = createMonsterFromArchetype(arch);
-        }
-        state.adventure.encounters.push(newMonster);
-        group.monsterId = newMonster.id;
-        group.expanded = true;
-        markSceneDirty();
-        renderCombatGroups(scene);
-        scheduleJsonRender(180);
-        // Focus sul campo nome
-        setTimeout(() => {
-          const nameField = els.combatGroupList.querySelector('[data-field="monsterName"]');
-          if (nameField) { nameField.select(); nameField.focus(); }
-        }, 60);
-      });
-
-      node.insertBefore(archetypePicker, countField.closest("label") || inlineEditor);
-    }
-
-    monsterSelect.addEventListener("change", (event) => {
-      const nextValue = normalizeString(event.target.value);
-      if (nextValue === CREATE_MONSTER_OPTION) {
-        const monster = createMonsterForCombatScene(scene);
-        group.monsterId = monster.id;
-        state.selectedMonsterId = monster.id;
-        group.expanded = true;
-      } else if (nextValue.startsWith("__preset__:")) {
-        const presetId = nextValue.replace("__preset__:", "");
-        const preset = monsterPresetById(presetId);
-        if (!preset) return;
-        const created = createMonsterFromPresetData(preset, `monster_${state.adventure.encounters.length + 1}`);
-        state.adventure.encounters.push(created);
-        group.monsterId = created.id;
-        state.selectedMonsterId = created.id;
-        group.expanded = false;
-      } else {
-        group.monsterId = nextValue;
-        if (group.monsterId) state.selectedMonsterId = group.monsterId;
-        if (group.monsterId) group.expanded = false;
-      }
-      markSceneDirty();
-      renderCombatGroups(scene);
-      renderMonsterList();
-      scheduleJsonRender(180);
-    });
-    countField.addEventListener("input", (event) => {
-      group.count = Number(event.target.value || 1);
-      markSceneDirty();
-      updateGroupHeader();
-      scheduleJsonRender();
-    });
-    node.querySelector('[data-action="remove-group"]').addEventListener("click", () => {
-      scene.combatGroups.splice(index, 1);
-      markSceneDirty();
-      renderCombatGroups(scene);
-      scheduleJsonRender();
-    });
-
-    const monster = resolveMonster();
-    node.open = group.expanded === true || !monster;
-    updateGroupHeader();
-    node.addEventListener("toggle", () => {
-      group.expanded = node.open;
-      updateGroupHeader();
-    });
-    node.querySelector('[data-action="collapse-group"]').addEventListener("click", () => {
-      group.expanded = false;
-      renderCombatGroups(scene);
-    });
-    lootAction.addEventListener("click", (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      const monster = resolveMonster();
-      if (!monster) return;
-      group.expanded = true;
-      node.open = true;
-      updateGroupHeader();
-      node.querySelector('[data-role="monster-loot-list"]')?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    });
-
-    inlineEditor.classList.toggle("hidden", !monster);
-    if (monster) {
-      const fields = {
-        monsterName: "name",
-        monsterDescription: "description",
-        monsterHp: "hitPoints",
-        monsterAttack: "attackBonus",
-        monsterDefense: "defense",
-        monsterGold: "goldReward",
-        monsterDamageMin: "damageMin",
-        monsterDamageMax: "damageMax"
-      };
-      Object.entries(fields).forEach(([fieldName, prop]) => {
-        const field = node.querySelector(`[data-field="${fieldName}"]`);
-        field.value = monster[prop] ?? "";
-        field.addEventListener("input", (event) => {
-          monster[prop] = ["name", "description"].includes(prop) ? event.target.value : Number(event.target.value || 0);
-          markSceneDirty();
-          updateGroupHeader();
-          scheduleMonsterListRender();
-          scheduleJsonRender();
-        });
-      });
-
-      renderLootList(node.querySelector('[data-role="monster-loot-list"]'), monster.loot, {
-        rerender: () => renderCombatGroups(scene),
-        onChange: () => {
-          markSceneDirty();
-          updateGroupHeader();
-          scheduleMonsterListRender();
-          scheduleJsonRender();
-        }
-      });
-      node.querySelector('[data-action="add-monster-loot-inline"]').addEventListener("click", () => {
-        monster.loot.push(createLootFromPreset(els.lootPresetSelect.value));
-        markSceneDirty();
-        renderCombatGroups(scene);
-        scheduleMonsterListRender();
-        scheduleJsonRender(180);
-      });
-    }
-
-    els.combatGroupList.appendChild(node);
-  });
-  const combatSummary = document.getElementById("scene-combat-summary");
-  if (combatSummary) {
-    const n = (scene.combatGroups || []).length;
-    combatSummary.textContent = n > 0 ? `${n} mostro${n === 1 ? "" : "i"}` : "Esiti + roster";
-  }
-}
-
-function renderMonsterList() {
-  els.monsterList.innerHTML = "";
-  state.adventure.encounters.forEach((monster) => {
-    const li = document.createElement("li");
-    li.innerHTML = `
-      <strong>${monster.name}</strong>
-      <span>HP ${monster.hitPoints} | ATK ${monster.attackBonus} | DEF ${monster.defense} | DMG ${monster.damageMin}-${monster.damageMax}</span>
-    `;
-    if (monster.id === state.selectedMonsterId) li.classList.add("active");
-    li.addEventListener("click", () => {
-      state.selectedMonsterId = monster.id;
-      renderMonsterEditor();
-      renderMonsterList();
-    });
-    els.monsterList.appendChild(li);
-  });
-}
-
-function renderMonsterEditor() {
-  const monster = getSelectedMonster();
-  const visible = Boolean(monster);
-  els.monsterEmpty.classList.toggle("hidden", visible);
-  els.monsterEditor.classList.toggle("hidden", !visible);
-  if (!monster) return;
-
-  hydrateMonsterPresetSelect(els.monsterEditorPresetSelect);
-  els.monsterEditorPresetSelect.value = "custom";
-  els.monsterName.value = monster.name;
-  els.monsterDescription.value = monster.description;
-  els.monsterHp.value = monster.hitPoints;
-  els.monsterAttack.value = monster.attackBonus;
-  els.monsterDefense.value = monster.defense;
-  els.monsterGold.value = monster.goldReward;
-  els.monsterDamageMin.value = monster.damageMin;
-  els.monsterDamageMax.value = monster.damageMax;
-
-  const abilityIds = monster.abilityIds || [];
-  els.monsterAbilityCheckboxes.forEach((cb) => {
-    if (!cb) return;
-    cb.checked = abilityIds.includes(cb.value);
-    cb.onchange = () => {
-      const current = monster.abilityIds || [];
-      monster.abilityIds = cb.checked
-        ? [...current, cb.value]
-        : current.filter((id) => id !== cb.value);
-      scheduleJsonRender();
-    };
-  });
-  if (els.monsterBerserkerPhase) {
-    els.monsterBerserkerPhase.checked = Boolean(monster.hasBerserkerPhase);
-    els.monsterBerserkerPhase.onchange = () => {
-      monster.hasBerserkerPhase = els.monsterBerserkerPhase.checked;
-      scheduleJsonRender();
-    };
-  }
-
-  renderMonsterLootEditor(monster);
-}
+// Stub — i mostri sono inline nei CombatGroup e non hanno più un pannello separato
+function renderMonsterList() {}
+function renderMonsterEditor() {}
 
 function renderMonsterLootEditor(monster) {
   renderLootList(els.monsterLootList, monster.loot, {
@@ -4276,8 +4436,9 @@ function renderLootList(container, items, options = {}) {
     function updateLockHint() {
       const id = loot.lockId?.trim();
       if (!id) { lockHint.textContent = ""; return; }
-      const matches = (state.adventure.scenes || []).flatMap((s) =>
-        (s.choices || []).filter((c) => c.requiredLockId === id).map(() => s.title || s.id)
+      // lockId è ora usato nei Requirement event; cerca nelle choices
+      const matches = (state.adventure.descriptions || []).flatMap((d) =>
+        (d.choices || []).filter((c) => c.event?.type === "requirement" && c.event?.itemId === id).map(() => d.title || d.id)
       );
       lockHint.textContent = matches.length
         ? `Collegato a: ${[...new Set(matches)].join(", ")}`
@@ -4342,9 +4503,10 @@ function renderLootList(container, items, options = {}) {
       } else if (loot.category === "key" && !loot.lockId) {
         const base = slugify(loot.itemName || "key");
         const usedIds = new Set(
-          (state.adventure?.scenes || []).flatMap((s) => s.sceneLoot || [])
-            .concat(state.adventure?.encounters?.flatMap((e) => e.loot || []) || [])
-            .concat(state.adventure?.starterKitItems || [])
+          (state.adventure?.starterKitItems || [])
+            .concat((state.adventure?.descriptions || []).flatMap((d) =>
+              (d.choices || []).flatMap((c) => c.event?.loot || [])
+            ))
             .map((l) => normalizeString(l.lockId)).filter(Boolean)
         );
         let candidate = base; let n = 1;
@@ -4381,9 +4543,10 @@ function renderLootList(container, items, options = {}) {
       if (loot.category === "key" && !loot.lockId) {
         const base = slugify(loot.itemName || loot.itemId || "key");
         const usedIds = new Set(
-          (state.adventure?.scenes || []).flatMap((s) => s.sceneLoot || [])
-            .concat(state.adventure?.encounters?.flatMap((e) => e.loot || []) || [])
-            .concat(state.adventure?.starterKitItems || [])
+          (state.adventure?.starterKitItems || [])
+            .concat((state.adventure?.descriptions || []).flatMap((d) =>
+              (d.choices || []).flatMap((c) => c.event?.loot || [])
+            ))
             .map((l) => normalizeString(l.lockId)).filter(Boolean)
         );
         let candidate = base; let n = 1;
@@ -4502,15 +4665,7 @@ function scheduleJsonRender(delay = 140, options = {}) {
   }, delay);
 }
 
-function scheduleMonsterListRender(delay = 90) {
-  if (state.ui.monsterListRenderTimer) {
-    window.clearTimeout(state.ui.monsterListRenderTimer);
-  }
-  state.ui.monsterListRenderTimer = window.setTimeout(() => {
-    state.ui.monsterListRenderTimer = null;
-    renderMonsterList();
-  }, delay);
-}
+function scheduleMonsterListRender() {} // stub — no more separate monster panel
 
 async function exportJson() {
   const cleaned = cleanAdventure(state.adventure);
@@ -4562,236 +4717,248 @@ function cleanAdventure(adventure) {
     itemName: loot.itemName,
     quantity: loot.quantity,
     lockId: normalizeString(loot.lockId),
-    questItem: Boolean(loot.questItem),
+    questItem: loot.questItem ? true : undefined,
     category: normalizeString(loot.category),
     rarity: normalizeString(loot.rarity),
     armorType: loot.category === "armor" ? (loot.armorType || "light") : undefined,
     effectIds: (loot.effectIds || []).filter(Boolean)
   });
+
+  const serializeBranch = (branch) => {
+    if (!branch) return null;
+    const out = {};
+    if (branch.text) out.text = branch.text;
+    if (branch.condition) out.condition = branch.condition;
+    if (branch.unlockChoiceId) out.unlockChoiceId = branch.unlockChoiceId;
+    if (branch.burnAfterUse) out.burnAfterUse = true;
+    const loot = (branch.loot || []).filter((l) => l.itemName).map(serializeLoot);
+    if (loot.length) out.loot = loot;
+    if (branch.event) out.event = serializeEvent(branch.event);
+    else if (branch.targetId) out.targetId = branch.targetId;
+    return Object.keys(out).length ? out : null;
+  };
+
+  const serializeCombatGroup = (group) => pruneEmpty({
+    monsterId: group.monsterId || undefined,
+    count: (group.count > 1) ? group.count : undefined,
+    name: group.name || undefined,
+    description: group.description || undefined,
+    hitPoints: group.hitPoints || 0,
+    attackBonus: group.attackBonus || 0,
+    defense: group.defense || 0,
+    damageMin: group.damageMin || 0,
+    damageMax: group.damageMax || 0,
+    goldReward: group.goldReward || undefined,
+    abilityIds: (group.abilityIds || []).filter(Boolean),
+    hasBerserkerPhase: Boolean(group.hasBerserkerPhase) || undefined,
+    loot: (group.loot || []).filter((l) => l.itemName).map(serializeLoot)
+  });
+
+  function serializeEvent(ev) {
+    if (!ev) return null;
+    switch (ev.type) {
+      case "combat":
+        return pruneEmpty({
+          type: "combat",
+          text: ev.text || undefined,
+          image: ev.image || undefined,
+          combatGroups: (ev.combatGroups || []).map(serializeCombatGroup),
+          victoryBranch: serializeBranch(ev.victoryBranch) || {},
+          defeatBranch: serializeBranch(ev.defeatBranch) || { targetId: "__death__" },
+          retreatBranch: ev.retreatBranch ? (serializeBranch(ev.retreatBranch) || null) : undefined
+        });
+      case "skillcheck":
+        return pruneEmpty({
+          type: "skillcheck",
+          text: ev.text || undefined,
+          attribute: ev.attribute || "",
+          difficulty: ev.difficulty != null ? ev.difficulty : 12,
+          successBranch: serializeBranch(ev.successBranch) || {},
+          failureBranch: serializeBranch(ev.failureBranch) || { targetId: "__stay__" },
+          burnOnFailure: ev.burnOnFailure ? true : undefined
+        });
+      case "requirement":
+        return pruneEmpty({
+          type: "requirement",
+          text: ev.text || undefined,
+          itemId: ev.itemId || undefined,
+          itemCategory: ev.itemCategory || undefined,
+          effectId: ev.effectId || undefined,
+          consumeOnMet: ev.consumeOnMet ? true : undefined,
+          metBranch: serializeBranch(ev.metBranch) || {},
+          unmetBranch: serializeBranch(ev.unmetBranch) || {}
+        });
+      case "loot":
+        return pruneEmpty({
+          type: "loot",
+          text: ev.text || undefined,
+          image: ev.image || undefined,
+          loot: (ev.loot || []).filter((l) => l.itemName).map(serializeLoot),
+          branch: serializeBranch(ev.branch) || {}
+        });
+      case "condition":
+        return pruneEmpty({
+          type: "condition",
+          text: ev.text || undefined,
+          conditionId: ev.conditionId || "",
+          branch: serializeBranch(ev.branch) || {}
+        });
+      case "shop":
+        return pruneEmpty({
+          type: "shop",
+          text: ev.text || undefined,
+          image: ev.image || undefined,
+          items: (ev.items || []).map((item) => pruneEmpty({
+            itemId: item.itemId || "",
+            itemName: item.itemName || "",
+            price: item.price || 0,
+            category: item.category || "",
+            rarity: item.rarity || "common",
+            effectIds: (item.effectIds || []).filter(Boolean)
+          })),
+          branch: serializeBranch(ev.branch) || {}
+        });
+      case "transition":
+        return pruneEmpty({
+          type: "transition",
+          text: ev.text || "",
+          image: ev.image || undefined,
+          branch: serializeBranch(ev.branch) || {}
+        });
+      case "dialogue":
+        return pruneEmpty({
+          type: "dialogue",
+          text: ev.text || undefined,
+          npcName: ev.npcName || "",
+          npcImage: ev.npcImage || undefined,
+          root: ev.root || { npcText: "", responses: [] }
+        });
+      default: return { type: ev.type };
+    }
+  }
+
   const serializeChoice = (choice) => {
-    const base = {
-      id: choice.id,
-      text: choice.text,
-      requiredLockId: normalizeString(choice.requiredLockId),
-      requiredLockLabel: normalizeString(choice.requiredLockLabel),
-      requiredItemId: normalizeString(choice.requiredItemId),
-      requiredItemName: choice.requiredItemId ? resolveRuntimeItemLabel(adventure, choice.requiredItemId) : null,
-      requiredItemCategory: normalizeString(choice.requiredItemCategory),
-      requiredEffectId: normalizeString(choice.requiredEffectId),
-      requiredEffectLabel: choice.requiredEffectId ? effectPresetLabel(choice.requiredEffectId) : null,
-      consumeOnUse: Boolean(choice.consumeOnUse)
-    };
-    const editorMeta = buildChoiceEditorMetadata(choice);
-    if (editorMeta) base._editor = editorMeta;
-    if (choice.skillCheck) {
-      const sc = choice.skillCheck;
-      const rawSuccessLoot = (choice._successLootDraft || sc.successLoot || [])
-        .filter((l) => l.itemName)
-        .map(serializeLoot);
-      const rawFailureLoot = (choice._failureLootDraft || sc.failureLoot || [])
-        .filter((l) => l.itemName)
-        .map(serializeLoot);
-      base.skillCheck = pruneEmpty({
-        attribute: sc.attribute,
-        difficulty: sc.difficulty,
-        successSceneId: sc.successSceneId,
-        failureSceneId: sc.failureSceneId,
-        successLoot:              rawSuccessLoot.length > 0 ? rawSuccessLoot : undefined,
-        successText:              sc.successText || undefined,
-        successEncounterId:       sc.successEncounterId || undefined,
-        successCondition:         sc.successCondition || undefined,
-        successUnlockChoiceId:    sc.successUnlockChoiceId || undefined,
-        failureLoot:              rawFailureLoot.length > 0 ? rawFailureLoot : undefined,
-        failureText:              sc.failureText || undefined,
-        failureEncounterId:       sc.failureEncounterId || undefined,
-        failureCondition:         sc.failureCondition || undefined,
-        failureUnlockChoiceId:    sc.failureUnlockChoiceId || undefined,
-        burnOnFailure:            sc.burnOnFailure || undefined
-      });
-      if (choice.hidden) base.hidden = true;
-    } else base.nextSceneId = choice.targetSceneId;
-    return pruneEmpty(base);
+    const out = { id: choice.id, text: choice.text || "" };
+    if (choice.hidden) out.hidden = true;
+    if (choice.burnAfterUse) out.burnAfterUse = true;
+    if (choice.event) out.event = serializeEvent(choice.event);
+    else if (choice.targetId) out.targetId = choice.targetId;
+    return out;
   };
 
   return {
     id: slugify(adventure.title || "new-adventure"),
-    title: adventure.title,
-    description: adventure.description,
+    version: 2,
+    title: adventure.title || "",
+    description: adventure.description || "",
     tags: normalizeAdventureTags(adventure.tags),
     adaptivePowerMultiplier: normalizeAdaptiveMultiplier(adventure.adaptivePowerMultiplier),
-    startingSceneId: adventure.startingSceneId,
-    allowCarryOverLoadout: Boolean(adventure.allowCarryOverLoadout),
-    allowFreshStart: Boolean(adventure.allowFreshStart),
-    forceLoadout: Boolean(adventure.forceLoadout),
-    restoreLoadoutOnEnd: Boolean(adventure.restoreLoadoutOnEnd),
-    starterKitItems: (adventure.starterKitItems || [])
-      .filter((loot) => loot.itemName)
-      .map(serializeLoot),
-    scenes: (adventure.scenes || []).flatMap((scene) => {
-      normalizeScene(scene);
-      const output = {
-        id: scene.id,
-        title: scene.title,
-        text: scene.openingText,
-        image: scene.eventImage?.dataUrl || null,
-        sceneLoot: scene.sceneLoot
-          .filter((loot) => loot.itemName)
-          .map(serializeLoot),
-        // Check scene e description scene esportano entrambe le choices normalmente.
-        // Il gate choice viene serializzato come qualsiasi skill check choice.
-        choices: !isCombatScene(scene) ? scene.choices.map(serializeChoice) : []
+    startingDescriptionId: adventure.startingDescriptionId || "",
+    allowCarryOverLoadout: adventure.allowCarryOverLoadout !== false,
+    allowFreshStart: adventure.allowFreshStart !== false,
+    forceLoadout: Boolean(adventure.forceLoadout) || undefined,
+    restoreLoadoutOnEnd: Boolean(adventure.restoreLoadoutOnEnd) || undefined,
+    starterKitItems: (adventure.starterKitItems || []).filter((l) => l.itemName).map(serializeLoot),
+    descriptions: (adventure.descriptions || []).map((desc) => {
+      const out = {
+        id: desc.id,
+        title: desc.title || "",
+        text: desc.text || ""
       };
-
-      const editorMeta = buildSceneEditorMetadata(scene);
-      if (editorMeta) output._editor = editorMeta;
-
-      const syntheticScenes = [];
-      const outcomeTargetForExport = (key) => {
-        const branch = getOutcomeBranch(scene, key);
-        if (branch.choices.length) {
-          const syntheticId = `${scene.id}__${key}`;
-          syntheticScenes.push(pruneEmpty({
-            id: syntheticId,
-            title: `${scene.title} - ${outcomeShortLabel(key)}`,
-            text: `${outcomeShortLabel(key)}. Scegli come procedere.`,
-            choices: branch.choices.map(serializeChoice),
-            _editor: {
-              syntheticOutcomeOf: scene.id,
-              syntheticOutcomeKey: key,
-              generatedSyntheticScene: true
-            }
-          }));
-          return syntheticId;
-        }
-        const explicit = normalizeString(branch.targetSceneId);
-        if (explicit) return explicit;
-        if (key === "defeat" || key === "failure") return scene.id;
-        return "";
-      };
-
-      if (isCombatScene(scene)) {
-        const combatGroups = (scene.combatGroups || []).filter((group) => group.monsterId);
-        const firstGroup = combatGroups[0];
-        if (firstGroup) {
-          output.encounterId = firstGroup.monsterId;
-          const count = parseInt(firstGroup.count) || 1;
-          if (count > 1) output.encounterCount = count;
-        }
-        output.victorySceneId = outcomeTargetForExport("victory");
-        output.victoryTransitionText = getOutcomeBranch(scene, "victory").transitionText || "";
-        output.defeatSceneId = outcomeTargetForExport("defeat");
-        output.defeatTransitionText = getOutcomeBranch(scene, "defeat").transitionText || "";
-        output.retreatSceneId = outcomeTargetForExport("retreat");
-        output.retreatTransitionText = getOutcomeBranch(scene, "retreat").transitionText || "";
-      }
-
-      return [pruneEmpty(output), ...syntheticScenes];
-    }),
-    encounters: adventure.encounters.map((monster) => pruneEmpty({
-      id: monster.id,
-      name: monster.name || monster.id,
-      description: monster.description || "—",
-      hitPoints: monster.hitPoints,
-      attackBonus: monster.attackBonus,
-      defense: monster.defense,
-      damageMin: monster.damageMin,
-      damageMax: monster.damageMax,
-      goldReward: monster.goldReward,
-      abilityIds: (monster.abilityIds || []).filter(Boolean),
-      hasBerserkerPhase: Boolean(monster.hasBerserkerPhase) || undefined,
-      loot: monster.loot
-        .filter((loot) => loot.itemName)
-        .map(serializeLoot)
-    }))
+      if (desc.image) out.image = desc.image;
+      if (desc.isEnding) out.isEnding = true;
+      out.choices = (desc.choices || []).map(serializeChoice);
+      if (desc.position) out._editor = { position: desc.position };
+      return out;
+    })
   };
 }
 
-function normalizeScene(scene) {
-  scene.sceneLoot = scene.sceneLoot || [];
-  scene.choices = scene.choices || [];
-  scene.outcomes = scene.outcomes || createEmptySceneOutcomes();
-  scene.position = scene.position || { x: 40, y: 40 };
-  scene.eventImage = scene.eventImage ? normalizeSceneImage(scene.eventImage) : null;
-  scene.sceneLoot = scene.sceneLoot.map((loot) => normalizeLoot(loot));
-  scene.choices = scene.choices.map((choice, index) => normalizeChoice(choice, index + 1));
-  Object.keys(createEmptySceneOutcomes()).forEach((key) => {
-    const branch = getOutcomeBranch(scene, key);
-    branch.choices = (branch.choices || []).map((choice, index) => normalizeChoice(choice, index + 1));
-  });
-  // combatGroups sempre presente (lista vuota per scene non-combat)
-  scene.combatGroups = scene.combatGroups || [];
-  // checkConfig rimosso dal modello normale: le check scene usano il gate choice
-}
+// normalizeScene rimosso: le Description non hanno la stessa struttura delle vecchie Scene
 
 function normalizeAdventureImport(adventure) {
-  const syntheticScenes = new Map();
-  const baseScenes = (adventure.scenes || []).filter((scene) => {
+  const isV2 = adventure.version === 2 || Array.isArray(adventure.descriptions);
+
+  if (isV2) {
+    const descriptions = (adventure.descriptions || []).map((desc, i) => normalizeImportedDescription(desc, i));
+    const startingDescriptionId = normalizeString(adventure.startingDescriptionId) || descriptions[0]?.id || "";
+    return {
+      id: normalizeString(adventure.id) || slugify(adventure.title || "new-adventure"),
+      version: 2,
+      title: adventure.title || "Nuova Avventura",
+      description: adventure.description || "",
+      tags: normalizeAdventureTags(adventure.tags),
+      adaptivePowerMultiplier: normalizeAdaptiveMultiplier(adventure.adaptivePowerMultiplier),
+      startingDescriptionId,
+      allowCarryOverLoadout: adventure.allowCarryOverLoadout !== false,
+      allowFreshStart: adventure.allowFreshStart !== false,
+      forceLoadout: Boolean(adventure.forceLoadout),
+      restoreLoadoutOnEnd: Boolean(adventure.restoreLoadoutOnEnd),
+      starterKitItems: (adventure.starterKitItems || []).map((loot) => normalizeLoot(loot)),
+      descriptions
+    };
+  }
+
+  // v1 fallback: importa scenes come Description senza meccaniche
+  const descriptions = (adventure.scenes || []).map((scene, i) => {
     const editor = scene._editor || {};
-    if (editor.syntheticOutcomeOf && editor.syntheticOutcomeKey) {
-      syntheticScenes.set(normalizeString(scene.id), scene);
-      return false;
-    }
-    return true;
+    const position = editor.position || { x: 40 + (i % 4) * 340, y: 40 + Math.floor(i / 4) * 240 };
+    return {
+      id: normalizeString(scene.id) || ("scene_" + (i + 1)),
+      title: scene.title || ("Scena " + (i + 1)),
+      text: scene.openingText || scene.text || "",
+      image: null,
+      isEnding: false,
+      choices: (scene.choices || []).map((choice, ci) => ({
+        id: normalizeString(choice.id) || ("choice_" + (ci + 1)),
+        text: choice.text || "",
+        hidden: Boolean(choice.hidden),
+        burnAfterUse: false,
+        targetId: normalizeString(choice.nextSceneId || choice.targetSceneId) || null,
+        event: null
+      })),
+      position
+    };
   });
-  const scenes = baseScenes.map((scene, index) => normalizeImportedScene(scene, index));
-  const encounters = (adventure.encounters || []).map((monster) => normalizeImportedEncounter(monster));
-  const startingSceneId = normalizeString(adventure.startingSceneId) || scenes[0]?.id || "";
-  const sceneById = new Map(scenes.map((scene) => [scene.id, scene]));
-
-  syntheticScenes.forEach((syntheticScene) => {
-    const editor = syntheticScene._editor || {};
-    const parent = sceneById.get(normalizeString(editor.syntheticOutcomeOf));
-    if (!parent) return;
-    const key = normalizeString(editor.syntheticOutcomeKey);
-    if (!key) return;
-    const branch = getOutcomeBranch(parent, key);
-    branch.choices = (syntheticScene.choices || []).map((choice, index) => normalizeImportedChoice(choice, index));
-    if (branch.targetSceneId === syntheticScene.id) branch.targetSceneId = "";
-  });
-
+  const startingDescriptionId = normalizeString(adventure.startingSceneId) || descriptions[0]?.id || "";
   return {
     id: normalizeString(adventure.id) || slugify(adventure.title || "new-adventure"),
+    version: 2,
     title: adventure.title || "Nuova Avventura",
     description: adventure.description || "",
     tags: normalizeAdventureTags(adventure.tags),
     adaptivePowerMultiplier: normalizeAdaptiveMultiplier(adventure.adaptivePowerMultiplier),
-    startingSceneId,
+    startingDescriptionId,
     allowCarryOverLoadout: adventure.allowCarryOverLoadout !== false,
     allowFreshStart: adventure.allowFreshStart !== false,
     forceLoadout: Boolean(adventure.forceLoadout),
     restoreLoadoutOnEnd: Boolean(adventure.restoreLoadoutOnEnd),
     starterKitItems: (adventure.starterKitItems || []).map((loot) => normalizeLoot(loot)),
-    scenes,
-    encounters
+    descriptions
   };
 }
 
-function normalizeImportedScene(scene, index) {
-  const editor = scene._editor || {};
-  // kind non è più un campo esplicito: viene derivato dal contenuto dopo normalizeScene.
-  // Mantenuto solo per retrocompat con avventure vecchie che lo hanno in _editor.
-  const legacyKind = scene.kind || editor.kind || "";
+function normalizeImportedDescription(desc, index) {
+  const editor = desc._editor || {};
   const position = editor.position || { x: 40 + (index % 4) * 340, y: 40 + Math.floor(index / 4) * 240 };
-  const normalized = {
-    id: normalizeString(scene.id) || `scene_${index + 1}`,
-    title: scene.title || `Evento ${index + 1}`,
-    openingText: scene.openingText || scene.text || editor.openingText || "",
-    text: scene.text || scene.openingText || editor.openingText || "",
-    eventImage: editor.eventImage || scene.eventImage || (scene.image ? { name: "Immagine evento", dataUrl: scene.image, sourceDataUrl: scene.image } : null),
-    position,
-    sceneLoot: (scene.sceneLoot || []).map((loot) => normalizeLoot(loot)),
-    choices: (scene.choices || []).map((choice, choiceIndex) => normalizeImportedChoice(choice, choiceIndex)),
-    combatGroups: editor.combatGroups || scene.combatGroups || buildFallbackCombatGroups(scene),
-    // checkConfig mantenuto per retrocompat durante migrateLegacyCheckGate
-    checkConfig: editor.checkConfig || scene.checkConfig || buildFallbackCheckConfig(scene),
-    outcomes: normalizeImportedOutcomes(editor.outcomes || scene.outcomes, scene),
-    _legacyKind: legacyKind || undefined
+  return {
+    id: normalizeString(desc.id) || ("scene_" + (index + 1)),
+    title: desc.title || ("Scena " + (index + 1)),
+    text: desc.text || "",
+    image: desc.image || null,
+    isEnding: Boolean(desc.isEnding),
+    choices: (desc.choices || []).map((choice, ci) => ({
+      id: normalizeString(choice.id) || ("choice_" + (ci + 1)),
+      text: choice.text || "",
+      hidden: Boolean(choice.hidden),
+      burnAfterUse: Boolean(choice.burnAfterUse),
+      targetId: normalizeString(choice.targetId) || null,
+      event: choice.event || null
+    })),
+    position
   };
-  normalizeScene(normalized);
-  migrateLegacyCheckGate(normalized);
-  delete normalized._legacyKind;
-  return normalized;
 }
+
 
 function normalizeImportedChoice(choice, index) {
   return {
@@ -4928,11 +5095,11 @@ function hydrateSceneTargetSelect(select, value = "") {
   placeholder.value = "";
   placeholder.textContent = "Nessun collegamento";
   select.appendChild(placeholder);
-  state.adventure.scenes.forEach((scene, index) => {
+  state.adventure.descriptions.forEach((desc, index) => {
     const option = document.createElement("option");
-    option.value = scene.id;
-    option.textContent = `${index + 1}. ${scene.title}`;
-    if (scene.id === value) option.selected = true;
+    option.value = desc.id;
+    option.textContent = `${index + 1}. ${desc.title || desc.id}`;
+    if (desc.id === value) option.selected = true;
     select.appendChild(option);
   });
   select._hydrating = false;
@@ -5011,6 +5178,25 @@ function hydrateSkillSelect(select, value = "") {
   select._hydrating = false;
 }
 
+/** Raccoglie tutti i LootDrop presenti nell'avventura v2 corrente (starterKit + eventi sulle scelte). */
+function collectAllAdventureLoot() {
+  const adv = state?.adventure;
+  if (!adv) return [];
+  return [
+    ...(adv.starterKitItems || []),
+    ...(adv.descriptions || []).flatMap((d) =>
+      (d.choices || []).flatMap((c) => {
+        const ev = c.event;
+        if (!ev) return [];
+        const loot = ev.loot || [];
+        const branchLoot = (ev.branches || []).flatMap((b) => b.loot || []);
+        const combatLoot = (ev.combatGroups || []).flatMap((g) => g.loot || []);
+        return [...loot, ...branchLoot, ...combatLoot];
+      })
+    )
+  ];
+}
+
 function hydrateKeySelect(select, value = "") {
   select.innerHTML = "";
   const noneOpt = document.createElement("option");
@@ -5033,13 +5219,8 @@ function hydrateKeySelect(select, value = "") {
 
   LOOT_PRESETS.filter((p) => p.category === "key" && p.lockId).forEach((p) => addOption(p.lockId, p.name));
 
-  const adventure = state?.adventure;
-  if (adventure) {
-    const allLoot = [
-      ...(adventure.starterKitItems || []),
-      ...(adventure.scenes || []).flatMap((s) => s.sceneLoot || []),
-      ...(adventure.encounters || []).flatMap((e) => e.loot || [])
-    ];
+  if (state?.adventure) {
+    const allLoot = collectAllAdventureLoot();
     allLoot.filter((l) => l.category === "key" && l.lockId).forEach((l) => {
       addOption(normalizeString(l.lockId), l.itemName || l.itemId || l.lockId);
     });
@@ -5188,13 +5369,7 @@ function hydrateEncounterSelect(select, value = "") {
   none.value = "";
   none.textContent = "— Nessuno —";
   select.appendChild(none);
-  (state.adventure?.encounters || []).forEach((enc) => {
-    const opt = document.createElement("option");
-    opt.value = enc.id;
-    opt.textContent = enc.name || enc.id;
-    if (enc.id === value) opt.selected = true;
-    select.appendChild(opt);
-  });
+  // encounters non esiste nel modello v2 — select rimane vuota
   select.value = value || "";
   select._hydrating = false;
 }
@@ -5241,31 +5416,21 @@ function hydrateMonsterSelect(select, value = "") {
   createOption.textContent = "+ Crea nuovo mostro";
   select.appendChild(createOption);
 
-  state.adventure.encounters.forEach((monster) => {
-    const option = document.createElement("option");
-    option.value = monster.id;
-    option.textContent = monster.name;
-    if (monster.id === value) option.selected = true;
-    select.appendChild(option);
-  });
   if (value === CREATE_MONSTER_OPTION) createOption.selected = true;
 }
+// hydrateMonsterSelect stub — encounters non esistono nel modello v2
 
 function getSelectedScene() {
-  return state.adventure.scenes.find((scene) => scene.id === state.selectedSceneId) || null;
+  return state.adventure.descriptions.find((d) => d.id === state.selectedDescriptionId) || null;
 }
 
-function getSelectedMonster() {
-  return state.adventure.encounters.find((monster) => monster.id === state.selectedMonsterId) || null;
-}
+function getSelectedMonster() { return null; } // no more separate monster model
 
 function sceneTitleById(sceneId, fallback = "nessuna destinazione") {
   if (!sceneId) return fallback;
   if (sceneId === DEATH_SENTINEL) return "☠ Morte";
-  if (sceneId === NO_ESCAPE_SENTINEL) return "⚔ Non hai alcuna via di fuga.";
-  if (sceneId === RETRY_SENTINEL) return "🔄 Ritenta";
-  if (sceneId === STAY_SENTINEL) return "📦 Resta qui";
-  const target = state.adventure.scenes.find((scene) => scene.id === sceneId);
+  if (sceneId === STAY_SENTINEL) return "📍 Resta qui";
+  const target = state.adventure.descriptions.find((d) => d.id === sceneId);
   return target ? target.title : fallback;
 }
 
@@ -5291,17 +5456,14 @@ function choiceLabel(index) {
 }
 
 function createEmptyChoice(index = 1) {
+  // v2 format: no requirement fields, event is on the edge
   return {
     id: `choice_${index}`,
     text: "",
-    endingText: "",
-    targetSceneId: null,
-    requiredLockId: "",
-    requiredLockLabel: "",
-    requiredItemId: "",
-    requiredItemCategory: "",
-    requiredEffectId: "",
-    consumeOnUse: false
+    hidden: false,
+    burnAfterUse: false,
+    targetId: null,
+    event: null
   };
 }
 
@@ -5355,28 +5517,32 @@ function setOutcomeTarget(scene, key, targetSceneId) {
   branch.targetSceneId = normalizeString(targetSceneId) || "";
 }
 
-function addLinkedTargetToScene(scene, targetSceneId) {
-  normalizeScene(scene);
-  if (!isCombatScene(scene)) {
-    const emptyChoice = scene.choices.find((c) => !c.targetSceneId && !c.skillCheck);
-    if (emptyChoice) {
-      emptyChoice.targetSceneId = targetSceneId;
-    } else {
-      scene.choices.push({
-        ...createEmptyChoice(scene.choices.length + 1),
-        text: `Scelta ${choiceLabel(scene.choices.length)}`,
-        targetSceneId
-      });
-    }
-    return;
+// Aggiunge una choice di navigazione diretta a targetId sulla description.
+// Se esiste già una choice senza destinazione, la riutilizza.
+function addLinkedTarget(desc, targetId) {
+  desc.choices = desc.choices || [];
+  const emptyChoice = desc.choices.find((c) => !c.targetId && !c.event);
+  if (emptyChoice) {
+    emptyChoice.targetId = targetId;
+  } else {
+    desc.choices.push({
+      id: createUniqueChoiceId(desc),
+      text: `Scelta ${desc.choices.length + 1}`,
+      hidden: false,
+      burnAfterUse: false,
+      targetId,
+      event: null
+    });
   }
+}
 
-  const definitions = outcomeDefinitionsForScene(scene);
-  const firstOpenDefinition = definitions.find(({ key }) => !getOutcomeBranch(scene, key).targetSceneId && getOutcomeBranch(scene, key).choices.length === 0);
-  const fallbackDefinition = definitions[0];
-  const outcomeKey = firstOpenDefinition?.key || fallbackDefinition?.key;
-  if (!outcomeKey) return;
-  setOutcomeTarget(scene, outcomeKey, targetSceneId);
+// Alias per compatibilità interna (drag-to-create usa ancora questo nome in alcuni punti)
+function addLinkedTargetToScene(desc, targetId) {
+  addLinkedTarget(desc, targetId);
+}
+
+function createUniqueChoiceId(desc) {
+  return `${desc.id}_c${(desc.choices?.length || 0) + 1}_${Date.now().toString(36).slice(-4)}`;
 }
 
 function createLootFromPreset(presetId) {
@@ -5420,8 +5586,9 @@ function resolveRuntimeItemLabel(adventure, itemId) {
   if (presetLabel) return presetLabel;
   const allLoot = [
     ...(adventure.starterKitItems || []),
-    ...(adventure.scenes || []).flatMap((scene) => scene.sceneLoot || []),
-    ...(adventure.encounters || []).flatMap((encounter) => encounter.loot || [])
+    ...(adventure.descriptions || []).flatMap((d) =>
+      (d.choices || []).flatMap((c) => [...(c.event?.loot || []), ...((c.event?.combatGroups || []).flatMap((g) => g.loot || []))])
+    )
   ];
   const matched = allLoot.find((loot) => runtimeLootItemId(loot) === normalizedId);
   return matched?.itemName || normalizedId;
@@ -5439,20 +5606,11 @@ function effectTriggerLabel(value) {
   return EFFECT_TRIGGERS.find((entry) => entry.value === value)?.label || value || "Nessuno";
 }
 
-function uniqueMonsterName(baseName) {
-  const existingNames = new Set(state.adventure.encounters.map((entry) => entry.name));
-  if (!existingNames.has(baseName)) return baseName;
-
-  let copyIndex = 2;
-  while (existingNames.has(`${baseName} ${copyIndex}`)) {
-    copyIndex += 1;
-  }
-  return `${baseName} ${copyIndex}`;
-}
+function uniqueMonsterName(baseName) { return baseName; } // stub
 
 function uniqueSceneCopyTitle(baseName) {
-  const normalizedBase = normalizeString(baseName) || "Evento";
-  const existingTitles = new Set(state.adventure.scenes.map((entry) => entry.title));
+  const normalizedBase = normalizeString(baseName) || "Scena";
+  const existingTitles = new Set(state.adventure.descriptions.map((d) => d.title));
   const initialCopyTitle = `${normalizedBase} copia`;
   if (!existingTitles.has(initialCopyTitle)) return initialCopyTitle;
 
@@ -5464,8 +5622,8 @@ function uniqueSceneCopyTitle(baseName) {
 }
 
 function createUniqueSceneId() {
-  const existingIds = new Set(state.adventure.scenes.map((scene) => scene.id));
-  let index = Math.max(1, state.adventure.scenes.length + 1);
+  const existingIds = new Set(state.adventure.descriptions.map((d) => d.id));
+  let index = Math.max(1, state.adventure.descriptions.length + 1);
   while (existingIds.has(createSceneId(index))) {
     index += 1;
   }
@@ -5473,12 +5631,8 @@ function createUniqueSceneId() {
 }
 
 function createUniqueMonsterId() {
-  const existingIds = new Set(state.adventure.encounters.map((monster) => monster.id));
-  let index = Math.max(1, state.adventure.encounters.length + 1);
-  while (existingIds.has(`monster_${index}`)) {
-    index += 1;
-  }
-  return `monster_${index}`;
+  // Genera un ID per un gruppo combattimento inline
+  return `monster_${Date.now().toString(36).slice(-6)}`;
 }
 
 function createSceneId(index) {
@@ -5616,310 +5770,222 @@ function validateAdventure(adventure, cleaned = cleanAdventure(adventure), optio
   const strictAlpha = Boolean(options.strictAlpha);
   const errors = [];
   const warnings = [];
-  const sceneIds = new Map();
-  const encounterIds = new Map();
-  const validCategories = new Set(ITEM_CATEGORIES.map((entry) => entry.value).filter(Boolean));
-  const validRarities = new Set(ITEM_RARITIES.map((entry) => entry.value));
-  const validEffects = new Set(EFFECT_PRESETS.map((entry) => entry.value).filter(Boolean));
-  const knownLootIds = new Map();
+  const descriptionIds = new Set();
+  const validCategories = new Set(ITEM_CATEGORIES.map((e) => e.value).filter(Boolean));
+  const validRarities = new Set(ITEM_RARITIES.map((e) => e.value));
+  const validEffects = new Set(EFFECT_PRESETS.map((e) => e.value).filter(Boolean));
 
   function pushWarning(message, { alphaBlocking = false } = {}) {
-    if (strictAlpha && alphaBlocking) {
-      errors.push(message);
-      return;
-    }
+    if (strictAlpha && alphaBlocking) { errors.push(message); return; }
     warnings.push(message);
   }
 
-  function registerLoot(loot, ownerLabel) {
-    const itemId = runtimeLootItemId(loot);
-    knownLootIds.set(itemId, loot.itemName || itemId);
+  function isValidTargetId(id) {
+    if (!id) return false;
+    if (id === "__death__" || id === "__stay__") return true;
+    return descriptionIds.has(id);
+  }
+
+  function validateLoot(loot, ownerLabel) {
     if (!loot.itemName?.trim()) {
       errors.push(`${ownerLabel}: loot senza itemName.`);
     }
     if (!Number.isFinite(Number(loot.quantity)) || Number(loot.quantity) < 1) {
-      errors.push(`${ownerLabel}: il loot ${loot.itemName || itemId} deve avere quantita >= 1.`);
+      errors.push(`${ownerLabel}: il loot ${loot.itemName || loot.itemId} deve avere quantita >= 1.`);
     }
     if (!loot.category) {
-      pushWarning(`${ownerLabel}: il loot ${loot.itemName || itemId} non ha una categoria — il runtime potrebbe ignorarlo.`, { alphaBlocking: true });
+      pushWarning(`${ownerLabel}: il loot ${loot.itemName || loot.itemId} non ha una categoria.`, { alphaBlocking: true });
     } else if (!validCategories.has(loot.category)) {
-      errors.push(`${ownerLabel}: il loot ${loot.itemName || itemId} usa una categoria non valida (${loot.category}).`);
+      errors.push(`${ownerLabel}: categoria non valida (${loot.category}).`);
     }
     if (loot.rarity && !validRarities.has(loot.rarity)) {
-      errors.push(`${ownerLabel}: il loot ${loot.itemName || itemId} usa una rarita non valida (${loot.rarity}).`);
+      errors.push(`${ownerLabel}: rarita non valida (${loot.rarity}).`);
     }
     (loot.effectIds || []).forEach((effectId) => {
       if (!validEffects.has(effectId)) {
-        errors.push(`${ownerLabel}: il loot ${loot.itemName || itemId} usa un effectId non valido (${effectId}).`);
-        return;
-      }
-      if (!effectAllowedForCategory(effectId, loot.category)) {
-        errors.push(
-          `${ownerLabel}: il loot ${loot.itemName || itemId} usa l'effetto ${effectPresetLabel(effectId)} ` +
-          `ma non e compatibile con la categoria ${loot.category || "non impostata"}.`
-        );
-      }
-    });
-    if (loot.category === "key" && !normalizeString(loot.lockId)) {
-      errors.push(`${ownerLabel}: la chiave ${loot.itemName || itemId} deve avere un lockId.`);
-    }
-    if (normalizeString(loot.lockId) && loot.category !== "key") {
-      warnings.push(`${ownerLabel}: il loot ${loot.itemName || itemId} ha lockId ma non e categorizzato come key.`);
-    }
-  }
-
-  function validateChoiceCollection(sceneId, choices, ownerLabel) {
-    (choices || []).forEach((choice) => {
-      // exactly one of these groups must be set — they are mutually exclusive
-      const reqGroups = [
-        choice.requiredLockId,
-        choice.requiredItemId,
-        choice.requiredItemCategory,
-        choice.requiredEffectId
-      ].filter(Boolean);
-      const requirementCount = reqGroups.length;
-
-      if (!choice.text?.trim()) {
-        errors.push(`${ownerLabel} nella scena ${sceneId} ha una scelta senza testo.`);
-      }
-      if (requirementCount > 1) {
-        errors.push(`${ownerLabel} nella scena ${sceneId} ha requisiti multipli: usa un solo tipo (chiave, oggetto, categoria o effetto).`);
-      }
-      if (choice.consumeOnUse && requirementCount === 0) {
-        warnings.push(`${ownerLabel} nella scena ${sceneId} consuma un requisito, ma nessun requisito e impostato.`);
-      }
-      if (choice.requiredLockLabel && !choice.requiredLockId) {
-        pushWarning(`${ownerLabel} nella scena ${sceneId} ha un'etichetta lock senza lockId.`);
-      }
-      if (choice.requiredItemCategory && !validCategories.has(choice.requiredItemCategory)) {
-        errors.push(`${ownerLabel} nella scena ${sceneId} usa una categoria requisito non valida (${choice.requiredItemCategory}).`);
-      }
-      if (choice.requiredEffectId && !validEffects.has(choice.requiredEffectId)) {
-        errors.push(`${ownerLabel} nella scena ${sceneId} usa un effectId requisito non valido (${choice.requiredEffectId}).`);
-      }
-      if (choice.requiredItemId && !knownLootIds.has(choice.requiredItemId) && !lootPresetById(choice.requiredItemId)) {
-        pushWarning(`${ownerLabel} nella scena ${sceneId} richiede itemId ${choice.requiredItemId}, ma nessun loot noto dell'avventura lo fornisce.`, { alphaBlocking: true });
-      }
-      if (choice.requiredLockId) {
-        const matchingKey = [...knownLootIds.keys()].some((itemId) => {
-          const allLoot = [
-            ...(cleaned.starterKitItems || []),
-            ...cleaned.scenes.flatMap((entry) => entry.sceneLoot || []),
-            ...cleaned.encounters.flatMap((entry) => entry.loot || [])
-          ];
-          return allLoot.some((loot) => runtimeLootItemId(loot) === itemId && normalizeString(loot.lockId) === choice.requiredLockId);
-        });
-        if (!matchingKey) {
-          pushWarning(`${ownerLabel} nella scena ${sceneId} richiede lockId ${choice.requiredLockId}, ma nessuna chiave nota dell'avventura lo fornisce.`, { alphaBlocking: true });
-        }
-      }
-
-      if (choice.skillCheck) {
-        if (!choice.skillCheck.attribute) {
-          errors.push(`${ownerLabel} nella scena ${sceneId} ha una skill check senza attributo.`);
-        }
-        if (!choice.skillCheck.successSceneId || (choice.skillCheck.successSceneId !== STAY_SENTINEL && !sceneIds.has(choice.skillCheck.successSceneId))) {
-          errors.push(`${ownerLabel} nella scena ${sceneId} ha un ramo successo non valido.`);
-        }
-        if (!choice.skillCheck.failureSceneId || (choice.skillCheck.failureSceneId !== RETRY_SENTINEL && choice.skillCheck.failureSceneId !== STAY_SENTINEL && !sceneIds.has(choice.skillCheck.failureSceneId))) {
-          errors.push(`${ownerLabel} nella scena ${sceneId} ha un ramo fallimento non valido.`);
-        }
-      } else if (!choice.nextSceneId) {
-        errors.push(`${ownerLabel} nella scena ${sceneId} non ha una destinazione valida.`);
-      } else if (!sceneIds.has(choice.nextSceneId)) {
-        errors.push(`${ownerLabel} nella scena ${sceneId} punta a una scena inesistente: ${choice.nextSceneId}.`);
+        errors.push(`${ownerLabel}: effectId non valido (${effectId}).`);
+      } else if (!effectAllowedForCategory(effectId, loot.category)) {
+        errors.push(`${ownerLabel}: effetto ${effectId} incompatibile con categoria ${loot.category || "—"}.`);
       }
     });
   }
 
+  function validateBranch(branch, label, descId) {
+    if (!branch) return;
+    if (branch.targetId && !isValidTargetId(branch.targetId)) {
+      errors.push(`${label} nella desc ${descId} punta a ID inesistente: ${branch.targetId}.`);
+    }
+    (branch.loot || []).forEach((loot) => validateLoot(loot, label));
+    if (branch.event) validateEvent(branch.event, label, descId);
+  }
+
+  function validateCombatGroup(group, label) {
+    if (!group.hitPoints || group.hitPoints < 1) {
+      pushWarning(`${label}: gruppo combattimento senza HP validi.`, { alphaBlocking: true });
+    }
+    if ((group.damageMax || 0) < (group.damageMin || 0)) {
+      errors.push(`${label}: dannoMax < dannoMin.`);
+    }
+    (group.loot || []).forEach((loot) => validateLoot(loot, label));
+  }
+
+  function validateEvent(ev, label, descId) {
+    if (!ev || !ev.type) return;
+    switch (ev.type) {
+      case "combat":
+        if (!ev.combatGroups?.length) {
+          pushWarning(`${label} in ${descId}: evento combattimento senza gruppi.`, { alphaBlocking: true });
+        }
+        (ev.combatGroups || []).forEach((g) => validateCombatGroup(g, label));
+        validateBranch(ev.victoryBranch, `vittoria di ${label}`, descId);
+        validateBranch(ev.defeatBranch, `sconfitta di ${label}`, descId);
+        if (ev.retreatBranch) validateBranch(ev.retreatBranch, `ritirata di ${label}`, descId);
+        break;
+      case "skillcheck":
+        if (!ev.attribute) errors.push(`${label} in ${descId}: skill check senza attributo.`);
+        validateBranch(ev.successBranch, `successo di ${label}`, descId);
+        validateBranch(ev.failureBranch, `fallimento di ${label}`, descId);
+        break;
+      case "requirement":
+        if (!ev.itemId && !ev.itemCategory && !ev.effectId) {
+          errors.push(`${label} in ${descId}: evento requisito senza alcun requisito specificato.`);
+        }
+        validateBranch(ev.metBranch, `soddisfatto di ${label}`, descId);
+        validateBranch(ev.unmetBranch, `non soddisfatto di ${label}`, descId);
+        break;
+      case "loot":
+        (ev.loot || []).forEach((loot) => validateLoot(loot, label));
+        validateBranch(ev.branch, `branch di ${label}`, descId);
+        break;
+      case "condition":
+        if (!ev.conditionId) errors.push(`${label} in ${descId}: evento condizione senza conditionId.`);
+        validateBranch(ev.branch, `branch di ${label}`, descId);
+        break;
+      case "shop":
+      case "transition":
+      case "dialogue":
+        validateBranch(ev.branch, `branch di ${label}`, descId);
+        break;
+    }
+  }
+
+  // — Validazione testata avventura
   if (!cleaned.title?.trim()) {
     pushWarning("L'avventura non ha ancora un titolo leggibile.", { alphaBlocking: true });
   }
-
   if ((cleaned.tags || []).length > 3) {
-    errors.push("L'avventura puo avere massimo 3 tag grimorio.");
+    errors.push("L'avventura puo avere massimo 3 tag.");
   }
   (cleaned.tags || []).forEach((tag) => {
-    if (/\s/.test(tag)) {
-      errors.push(`Il tag grimorio "${tag}" deve essere una sola parola.`);
-    }
+    if (/\s/.test(tag)) errors.push(`Il tag "${tag}" deve essere una parola sola.`);
   });
-
-  if (!cleaned.scenes.length) {
-    errors.push("Aggiungi almeno un evento prima di esportare.");
+  if (!cleaned.descriptions?.length) {
+    errors.push("Aggiungi almeno una descrizione prima di esportare.");
+    return { errors, warnings, strictAlpha };
   }
 
-  cleaned.scenes.forEach((scene) => {
-    if (sceneIds.has(scene.id)) {
-      errors.push(`ID scena duplicato: ${scene.id}.`);
+  // — Raccogli tutti gli ID
+  cleaned.descriptions.forEach((desc) => {
+    if (descriptionIds.has(desc.id)) {
+      errors.push(`ID duplicato: ${desc.id}.`);
     } else {
-      sceneIds.set(scene.id, scene);
+      descriptionIds.add(desc.id);
     }
   });
 
-  cleaned.encounters.forEach((encounter) => {
-    if (encounterIds.has(encounter.id)) {
-      errors.push(`ID mostro duplicato: ${encounter.id}.`);
-    } else {
-      encounterIds.set(encounter.id, encounter);
-    }
-    if ((encounter.damageMax ?? 0) < (encounter.damageMin ?? 0)) {
-      errors.push(`Il mostro ${encounter.name || encounter.id} ha danni massimi inferiori ai minimi.`);
-    }
-  });
+  // — Starter kit loot
+  (cleaned.starterKitItems || []).forEach((loot) => validateLoot(loot, "Starter kit"));
 
-  if (!cleaned.startingSceneId) {
-    errors.push("Imposta un evento iniziale valido.");
-  } else if (!sceneIds.has(cleaned.startingSceneId)) {
-    errors.push(`L'evento iniziale ${cleaned.startingSceneId} non esiste nel flusso.`);
+  // — ID iniziale
+  if (!cleaned.startingDescriptionId) {
+    errors.push("Imposta una descrizione iniziale valida.");
+  } else if (!descriptionIds.has(cleaned.startingDescriptionId)) {
+    errors.push(`La descrizione iniziale ${cleaned.startingDescriptionId} non esiste.`);
   }
 
-  (cleaned.starterKitItems || []).forEach((loot) => registerLoot(loot, "Starter kit"));
-  cleaned.encounters.forEach((encounter) => {
-    (encounter.loot || []).forEach((loot) => registerLoot(loot, `Mostro ${encounter.id}`));
+  // — Validazione nodi
+  cleaned.descriptions.forEach((desc) => {
+    if (!desc.title?.trim()) {
+      pushWarning(`La descrizione ${desc.id} non ha titolo.`, { alphaBlocking: true });
+    }
+    if (!desc.text?.trim()) {
+      pushWarning(`La descrizione ${desc.id} non ha testo.`, { alphaBlocking: true });
+    }
+    if (!desc.isEnding && (!desc.choices || desc.choices.length === 0)) {
+      pushWarning(`La descrizione ${desc.id} non ha scelte e non e marcata come epilogo.`, { alphaBlocking: true });
+    }
+    (desc.choices || []).forEach((choice) => {
+      if (!choice.text?.trim()) {
+        errors.push(`Scelta in ${desc.id} senza testo.`);
+      }
+      if (choice.event) {
+        validateEvent(choice.event, `Scelta "${choice.text}"`, desc.id);
+      } else if (choice.targetId) {
+        if (!isValidTargetId(choice.targetId)) {
+          errors.push(`Scelta "${choice.text}" in ${desc.id} punta a ID inesistente: ${choice.targetId}.`);
+        }
+      } else if (!desc.isEnding) {
+        pushWarning(`Scelta "${choice.text}" in ${desc.id} non ha destinazione ne evento.`, { alphaBlocking: true });
+      }
+    });
   });
 
-  cleaned.scenes.forEach((scene) => {
-    const authoringScene = adventure.scenes.find((entry) => entry.id === scene.id);
-    if (!scene.title?.trim()) {
-      pushWarning(`La scena ${scene.id} non ha un titolo leggibile.`, { alphaBlocking: true });
-    }
-    if (!scene.text?.trim()) {
-      pushWarning(`La scena ${scene.id} non ha ancora testo iniziale.`, { alphaBlocking: true });
-    }
-
-    const hasCombat = Boolean(scene.encounterId);
-    if (hasCombat) {
-      if (!encounterIds.has(scene.encounterId)) {
-        errors.push(`La scena ${scene.id} punta a un incontro inesistente: ${scene.encounterId}.`);
-      }
-      if (!scene.victorySceneId || !sceneIds.has(scene.victorySceneId)) {
-        errors.push(`La scena di combattimento ${scene.id} non ha un evento vittoria valido.`);
-      }
-      if (scene.defeatSceneId !== DEATH_SENTINEL && (!scene.defeatSceneId || !sceneIds.has(scene.defeatSceneId))) {
-        errors.push(`La scena di combattimento ${scene.id} non ha un evento sconfitta valido.`);
-      }
-      if (scene.retreatSceneId && scene.retreatSceneId !== DEATH_SENTINEL && scene.retreatSceneId !== NO_ESCAPE_SENTINEL && !sceneIds.has(scene.retreatSceneId)) {
-        errors.push(`La scena di combattimento ${scene.id} ha un evento ritirata non valido.`);
-      }
-      if (!scene.retreatSceneId) {
-        pushWarning(`La scena di combattimento ${scene.id} non ha un evento ritirata dedicato: il runtime ripieghera sulla sconfitta.`);
-      }
-    }
-
-    if (authoringScene && isCombatScene(authoringScene) && !scene.encounterId) {
-      errors.push(`La scena ${scene.id} e marcata come combattimento, ma non esporta un encounterId valido.`);
-    }
-    if (authoringScene && isCheckScene(authoringScene)) {
-      const gateChoice = authoringScene.choices?.find((c) => c.isCheckGate && c.skillCheck);
-      if (!gateChoice) {
-        pushWarning(`La scena ${scene.id} e una prova, ma non ha un choice gate con skill check configurato.`, { alphaBlocking: true });
-      } else if (!gateChoice.skillCheck.successSceneId || gateChoice.skillCheck.successSceneId === STAY_SENTINEL) {
-        // __stay__ è OK per prove inline; scena di destinazione opzionale
-      }
-    }
-    if (authoringScene && isCombatScene(authoringScene)) {
-      if (authoringScene.choices?.length) {
-        errors.push(`La scena ${scene.id} ha ancora scelte legacy fuori dagli esiti. Spostale nei rami di vittoria/sconfitta/ritirata prima di esportare.`);
-      }
-      ["victory", "defeat", "retreat"].forEach((key) => {
-        const branch = getOutcomeBranch(authoringScene, key);
-        const label = outcomeShortLabel(key).toLowerCase();
-        const required = key !== "retreat";
-        const isSentinel = branch.targetSceneId === DEATH_SENTINEL || branch.targetSceneId === NO_ESCAPE_SENTINEL;
-        if (required && !branch.targetSceneId && branch.choices.length === 0) {
-          if (key === "victory") {
-            errors.push(`La scena ${scene.id} non definisce un esito ${label}: serve una destinazione diretta oppure almeno una scelta di esito.`);
-          } else {
-            pushWarning(`La scena ${scene.id} non ha un esito sconfitta impostato: il runtime rimarra su questa scena.`);
-          }
-        }
-        if (branch.targetSceneId && !isSentinel && !sceneIds.has(branch.targetSceneId)) {
-          errors.push(`La scena ${scene.id} ha un esito ${label} che punta a una scena inesistente: ${branch.targetSceneId}.`);
-        }
-        if (!required && !branch.targetSceneId && branch.choices.length === 0) {
-          pushWarning(`La scena ${scene.id} non definisce un esito ritirata dedicato: il runtime ripieghera sulla sconfitta.`);
-        }
-        validateChoiceCollection(scene.id, branch.choices, `Le scelte di ${label}`);
-      });
-    }
-
-    (scene.sceneLoot || []).forEach((loot) => registerLoot(loot, `Scena ${scene.id}`));
-    validateChoiceCollection(scene.id, scene.choices || [], "La scelta");
-  });
-
+  // — Raggiungibilita
   const reachable = new Set();
-  if (sceneIds.has(cleaned.startingSceneId)) {
-    const queue = [cleaned.startingSceneId];
-    while (queue.length) {
-      const nextId = queue.shift();
-      if (!nextId || reachable.has(nextId)) continue;
-      reachable.add(nextId);
-      const scene = sceneIds.get(nextId);
-      if (!scene) continue;
-      (scene.choices || []).forEach((choice) => {
-        if (choice.skillCheck) {
-          if (choice.skillCheck.successSceneId) queue.push(choice.skillCheck.successSceneId);
-          if (choice.skillCheck.failureSceneId && choice.skillCheck.failureSceneId !== RETRY_SENTINEL) queue.push(choice.skillCheck.failureSceneId);
-        } else if (choice.nextSceneId) {
-          queue.push(choice.nextSceneId);
-        }
+  if (descriptionIds.has(cleaned.startingDescriptionId)) {
+    const queue = [cleaned.startingDescriptionId];
+    const collectTargets = (branch) => {
+      if (!branch) return;
+      if (branch.targetId && descriptionIds.has(branch.targetId)) queue.push(branch.targetId);
+      if (branch.event) collectEventTargets(branch.event);
+    };
+    const collectEventTargets = (ev) => {
+      if (!ev) return;
+      ["victoryBranch","defeatBranch","retreatBranch","successBranch","failureBranch","metBranch","unmetBranch","branch"].forEach((k) => {
+        if (ev[k]) collectTargets(ev[k]);
       });
-      if (scene.victorySceneId) queue.push(scene.victorySceneId);
-      if (scene.defeatSceneId && scene.defeatSceneId !== DEATH_SENTINEL) queue.push(scene.defeatSceneId);
-      if (scene.retreatSceneId && scene.retreatSceneId !== DEATH_SENTINEL && scene.retreatSceneId !== NO_ESCAPE_SENTINEL) queue.push(scene.retreatSceneId);
+    };
+    while (queue.length) {
+      const id = queue.shift();
+      if (!id || reachable.has(id)) continue;
+      reachable.add(id);
+      const desc = cleaned.descriptions.find((d) => d.id === id);
+      if (!desc) continue;
+      (desc.choices || []).forEach((choice) => {
+        if (choice.targetId && descriptionIds.has(choice.targetId)) queue.push(choice.targetId);
+        if (choice.event) collectEventTargets(choice.event);
+      });
     }
   }
-
-  cleaned.scenes
-    .filter((scene) => !reachable.has(scene.id))
-    .forEach((scene) => pushWarning(`La scena ${scene.id} non e raggiungibile dall'evento iniziale.`, { alphaBlocking: true }));
+  cleaned.descriptions
+    .filter((d) => !reachable.has(d.id))
+    .forEach((d) => pushWarning(`La descrizione ${d.id} non e raggiungibile dall'inizio.`, { alphaBlocking: true }));
 
   return { errors, warnings, strictAlpha };
 }
 
-// ── Predicati tipo-scena ────────────────────────────────────────────────────
-// Il tipo è derivato dal contenuto, non da un campo "kind" esplicito.
-function isCombatScene(scene) {
-  return (scene.combatGroups?.some((g) => g.monsterId)) || false;
-}
-function isCheckScene(scene) {
-  // Una scena "prova" è una scena descrittiva il cui primo choice è un skill check gate.
-  // Viene mantenuta la label "check" per l'UI, ma non richiede più checkConfig separato.
-  return !isCombatScene(scene) && !!(scene.choices?.some((c) => c.skillCheck && (c.isCheckGate || c.generatedCheckGate)));
-}
-function derivedSceneKind(scene) {
-  if (isCombatScene(scene)) return "combat";
-  if (isCheckScene(scene)) return "check";
-  return "description";
-}
 
-function buildSceneEditorMetadata(scene) {
-  // Solo i campi strettamente editor-only che il runtime non conosce.
-  // kind, openingText, checkConfig, outcomes sono ora flat sulla scena o derivati.
-  const editor = {
-    eventImage: scene.eventImage ? pruneEmpty({
-      name: scene.eventImage.name,
-      type: scene.eventImage.type,
-      dataUrl: scene.eventImage.dataUrl,
-      sourceDataUrl: scene.eventImage.sourceDataUrl,
-      zoom: scene.eventImage.zoom,
-      focusX: scene.eventImage.focusX,
-      focusY: scene.eventImage.focusY
-    }) : null,
-    position: scene.position,
-    combatGroups: isCombatScene(scene)
-      ? (scene.combatGroups || []).filter((group) => group.monsterId)
-      : null
-  };
-  const cleaned = pruneEmpty(editor);
-  return Object.keys(cleaned).length ? cleaned : null;
+// ── Predicati tipo-scena (v2: tutte le Description sono narrative, il tipo è negli Event sulle Choice) ──
+// Mantenuti come stub per non rompere chiamate residue nel codice v1 non ancora rimosso.
+function isCombatScene(_scene) { return false; }
+function isCheckScene(_scene) { return false; }
+function derivedSceneKind(_scene) { return "description"; }
+
+function buildSceneEditorMetadata(desc) {
+  // In v2 l'unico metadato editor-only di una Description è la posizione sulla flow board.
+  // L'immagine è un campo dati diretto (desc.image), non un metadato editor.
+  if (!desc.position) return null;
+  return { position: desc.position };
 }
 
 // buildChoiceEditorMetadata rimosso: endingText è già flat sulla choice.
 // Mantenuto come stub per compatibilità con chiamate esistenti.
 function buildChoiceEditorMetadata(_choice) {
   return null;
+}
+
+function esc(str) {
+  return String(str || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
 function pruneEmpty(object) {

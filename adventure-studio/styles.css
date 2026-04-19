@@ -1425,6 +1425,125 @@ button.small {
   box-shadow: 0 0 0 2px rgba(230, 150, 50, 0.55), var(--shadow);
 }
 
+/* ── Flow-card: titolo editabile inline ── */
+.flow-card-title {
+  cursor: text;
+  transition: color 0.15s;
+}
+.flow-card-title:hover {
+  color: var(--accent);
+}
+.flow-card-title-input {
+  font-size: inherit;
+  font-weight: 700;
+  font-family: inherit;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--accent);
+  border-radius: 5px;
+  padding: 1px 6px;
+  width: 100%;
+  outline: none;
+  cursor: text;
+  user-select: text;
+  touch-action: auto;
+}
+
+/* ── Flow-card: footer "+ scelta" ── */
+.flow-card-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(255,255,255,0.08);
+}
+.flow-add-btn {
+  font-size: 0.72rem;
+  color: var(--muted);
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  padding: 2px 10px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.flow-add-btn:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* ── Choice-row in flow card ── */
+.flow-choice-row {
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 2px 4px;
+  margin: 0 -4px;
+  transition: background 0.12s;
+}
+.flow-choice-row:hover {
+  background: rgba(200, 130, 58, 0.12);
+  color: var(--text);
+}
+.flow-choice-dest {
+  opacity: 0.7;
+  font-size: 0.88em;
+}
+.flow-empty[data-action="add-choice"] {
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 2px 4px;
+  transition: background 0.12s, color 0.12s;
+}
+.flow-empty[data-action="add-choice"]:hover {
+  background: rgba(200, 130, 58, 0.12);
+  color: var(--accent);
+}
+
+/* ── Choice event picker (popover) ── */
+.choice-event-picker {
+  position: fixed;
+  z-index: 9999;
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 190px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.55);
+}
+.cep-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  color: var(--text);
+  font-size: 0.9rem;
+  transition: background 0.12s;
+}
+.cep-btn:hover {
+  background: rgba(200, 130, 58, 0.15);
+}
+.cep-btn--active {
+  background: rgba(200, 130, 58, 0.22);
+  color: var(--accent);
+}
+.cep-icon {
+  width: 20px;
+  text-align: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+.cep-label {
+  flex: 1;
+}
+
 /* ── Flow card search dim ── */
 .flow-card--dim {
   opacity: 0.25;
