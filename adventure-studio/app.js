@@ -1511,19 +1511,33 @@ function onBoardPointerUp(event) {
   const targetNode = event.target.closest(".node-card");
   const targetSceneId = targetNode?.dataset.sceneId || null;
   const sourceSceneId = state.linkDraft.sceneId;
+  const sourceChoiceId = state.linkDraft.choiceId || null;
   state.linkDraft = null;
 
   if (targetSceneId && targetSceneId !== sourceSceneId) {
     const sourceScene = state.adventure.descriptions.find((d) => d.id === sourceSceneId);
     if (sourceScene) {
-      addLinkedTargetToScene(sourceScene, targetSceneId);
-      state.selectedDescriptionId = sourceSceneId;
-      render();
+      if (sourceChoiceId) {
+        // Collega il ramo specifico della scelta alla scena target
+        const choice = sourceScene.choices?.find((c) => c.id === sourceChoiceId);
+        if (choice) {
+          setFirstUnsetBranch(choice, targetSceneId);
+          markSceneDirty();
+          refreshFlowCard(sourceSceneId);
+          refreshChoiceNodes(sourceSceneId);
+          scheduleFlowLinksRender();
+          scheduleJsonRender();
+        }
+      } else {
+        addLinkedTargetToScene(sourceScene, targetSceneId);
+        state.selectedDescriptionId = sourceSceneId;
+        render();
+      }
     }
   } else if (!targetSceneId) {
     // Drag-to-create: il link è finito nel vuoto — mostra il picker alla posizione del puntatore
     const dropPoint = flowBoardPointFromClient({ clientX: event.clientX, clientY: event.clientY });
-    showNodePicker({ mode: "drag", sourceSceneId, dropPoint, clientX: event.clientX, clientY: event.clientY });
+    showNodePicker({ mode: "drag", sourceSceneId, sourceChoiceId, dropPoint, clientX: event.clientX, clientY: event.clientY });
   } else {
     renderFlowLinks();
   }
@@ -1691,8 +1705,8 @@ function createScene() {
 // Stato del picker: null quando chiuso, altrimenti { mode, sourceSceneId, dropPoint }
 let _nodePicker = null;
 
-function showNodePicker({ mode = "toolbar", sourceSceneId = null, dropPoint = null, clientX = null, clientY = null } = {}) {
-  _nodePicker = { mode, sourceSceneId, dropPoint };
+function showNodePicker({ mode = "toolbar", sourceSceneId = null, sourceChoiceId = null, dropPoint = null, clientX = null, clientY = null } = {}) {
+  _nodePicker = { mode, sourceSceneId, sourceChoiceId, dropPoint };
   const picker = document.getElementById("node-picker");
   if (!picker) return;
 
@@ -1734,9 +1748,24 @@ function hideNodePicker() {
 }
 
 function onNodePickerChoose(kind) {
-  const { sourceSceneId = null, dropPoint = null } = _nodePicker || {};
+  const { sourceSceneId = null, sourceChoiceId = null, dropPoint = null } = _nodePicker || {};
   hideNodePicker();
-  createDescription({ position: dropPoint, sourceDescriptionId: sourceSceneId, isEnding: kind === "final" });
+  if (sourceChoiceId && sourceSceneId) {
+    // Crea la scena e collega il ramo specifico della scelta
+    const newDesc = createDescription({ position: dropPoint, isEnding: kind === "final" });
+    const sourceDesc = state.adventure.descriptions.find((d) => d.id === sourceSceneId);
+    const choice = sourceDesc?.choices?.find((c) => c.id === sourceChoiceId);
+    if (choice && newDesc) {
+      setFirstUnsetBranch(choice, newDesc.id);
+      markSceneDirty();
+      scheduleFlowLinksRender();
+      scheduleJsonRender(100);
+      refreshFlowCard(sourceSceneId);
+      refreshChoiceNodes(sourceSceneId);
+    }
+  } else {
+    createDescription({ position: dropPoint, sourceDescriptionId: sourceSceneId, isEnding: kind === "final" });
+  }
 }
 
 function nodePickerGoBack() {
@@ -2362,6 +2391,7 @@ function renderFlowBoard({ preserveCenter = false, logicalCenter = null } = {}) 
   renderFlowCards(bounds);
   renderFlowLinks(bounds);
   applyFlowZoom({ preserveCenter, rerenderOnModeChange: false, bounds, logicalCenter });
+  refreshOpenTargetsPopover();
 }
 
 function renderFlowCards(bounds = computeBoardBounds()) {
@@ -3225,6 +3255,9 @@ function showChoiceTargetsPopover(descId, choiceId, anchorRect) {
   const pop = document.createElement("div");
   pop.id = "choice-targets-popover";
   pop.className = "choice-targets-popover";
+  // Salva i riferimenti per il refresh automatico al cambio di stato
+  pop.dataset.descId = descId;
+  pop.dataset.choiceId = choiceId;
   // Posizionamento: a destra del nodo, evita i bordi finestra
   const left = Math.min(anchorRect.right + 10, window.innerWidth - 270);
   const top  = Math.min(Math.max(4, anchorRect.top - 8), window.innerHeight - 320);
@@ -3296,6 +3329,57 @@ function showChoiceTargetsPopover(descId, choiceId, anchorRect) {
 
 function closeChoiceTargetsPopover() {
   document.getElementById("choice-targets-popover")?.remove();
+}
+
+/** Aggiorna il popover destinazioni se aperto (es. dopo aver creato una nuova scena). */
+function refreshOpenTargetsPopover() {
+  const pop = document.getElementById("choice-targets-popover");
+  if (!pop) return;
+  const descId = pop.dataset.descId;
+  const choiceId = pop.dataset.choiceId;
+  if (!descId || !choiceId) return;
+  const nodeEl = els.choiceNodesLayer?.querySelector(
+    `.choice-node[data-desc-id="${descId}"][data-choice-id="${choiceId}"]`
+  );
+  if (!nodeEl) { closeChoiceTargetsPopover(); return; }
+  showChoiceTargetsPopover(descId, choiceId, nodeEl.getBoundingClientRect());
+}
+
+/**
+ * Imposta il primo ramo non ancora collegato della scelta a targetId.
+ * Per eventi multi-ramo (combat, skillcheck, requirement) segue l'ordine naturale.
+ */
+function setFirstUnsetBranch(choice, targetId) {
+  const ev = choice.event;
+  if (!ev) {
+    choice.targetId = targetId;
+    return;
+  }
+  switch (ev.type) {
+    case "combat":
+      if (!ev.victoryBranch?.targetId) {
+        ev.victoryBranch = ev.victoryBranch || {}; ev.victoryBranch.targetId = targetId;
+      } else {
+        ev.defeatBranch = ev.defeatBranch || {}; ev.defeatBranch.targetId = targetId;
+      }
+      break;
+    case "skillcheck":
+      if (!ev.successBranch?.targetId) {
+        ev.successBranch = ev.successBranch || {}; ev.successBranch.targetId = targetId;
+      } else {
+        ev.failureBranch = ev.failureBranch || {}; ev.failureBranch.targetId = targetId;
+      }
+      break;
+    case "requirement":
+      if (!ev.metBranch?.targetId) {
+        ev.metBranch = ev.metBranch || {}; ev.metBranch.targetId = targetId;
+      } else {
+        ev.unmetBranch = ev.unmetBranch || {}; ev.unmetBranch.targetId = targetId;
+      }
+      break;
+    default:
+      ev.branch = ev.branch || {}; ev.branch.targetId = targetId;
+  }
 }
 
 /** Restituisce la configurazione dei rami per una scelta (quale branch, label, colore). */
@@ -3558,13 +3642,36 @@ function createChoiceNodeEl(desc, choice, x, y) {
     switchSelectedScene(desc.id);
     const c = desc.choices?.find((x) => x.id === choice.id);
     if (c?.event || c?.targetId) {
-      // Already configured: show targets popover directly
       showChoiceTargetsPopover(desc.id, choice.id, el.getBoundingClientRect());
     } else {
-      // Not configured yet: pick event type first
       showChoiceEventPicker(desc.id, choice.id, el.getBoundingClientRect());
     }
   });
+
+  // Drag handle — appare al hover, permette di collegare la scelta a una scena trascinando
+  const linkHandle = document.createElement("span");
+  linkHandle.className = "choice-node-link";
+  linkHandle.title = "Trascina per collegare a una scena (crea o collega)";
+  linkHandle.addEventListener("pointerdown", (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const bounds = getCurrentFlowBoardBounds();
+    const pos = choiceNodesBoardPositions(desc, bounds).find((p) => p.choice.id === choice.id);
+    if (!pos) return;
+    closeChoiceTargetsPopover();
+    closeChoiceEventPicker();
+    state.linkDraft = {
+      sceneId: desc.id,
+      choiceId: choice.id,
+      start: { x: pos.x, y: pos.y },
+      current: { x: pos.x, y: pos.y },
+      pointerClientX: e.clientX,
+      pointerClientY: e.clientY
+    };
+    scheduleFlowLinksRender("drag");
+    ensureFlowAutoScrollLoop();
+  });
+  el.appendChild(linkHandle);
   return el;
 }
 
