@@ -2471,12 +2471,14 @@ function syncFlowCard(card, desc, index, bounds = getCurrentFlowBoardBounds()) {
   const isOrphanCard = desc.id !== state.adventure.startingDescriptionId
     && state.adventure.descriptions.length > 1
     && !getConnectedSceneIds().has(desc.id);
+  const sceneIndex = state.adventure.descriptions.findIndex((d) => d.id === desc.id);
   card.className = [
     "flow-card node-card",
     desc.id === state.selectedDescriptionId ? "active" : "",
     metrics.compact ? "flow-card--compact" : "",
     isOrphanCard ? "flow-card--orphan" : "",
-    desc.isEnding ? "flow-card--ending" : ""
+    desc.isEnding ? "flow-card--ending" : "",
+    metrics.compact ? "" : `flow-card--c${sceneIndex % 8}`
   ].filter(Boolean).join(" ");
   card.dataset.sceneId = desc.id;
   card.style.left = `${boardPoint.x}px`;
@@ -3189,13 +3191,13 @@ function showChoiceEventPicker(descId, choiceId, anchorRect) {
       scheduleFlowLinksRender();
       scheduleJsonRender();
       closeChoiceEventPicker();
-      if (type !== null) {
-        // Apri il pannello per la configurazione avanzata
-        switchSelectedScene(descId);
-        requestAnimationFrame(() =>
-          els.sceneEditor.scrollIntoView({ behavior: "smooth", block: "start" })
+      // Apri subito il popover destinazioni per configurare i rami sulla mappa
+      requestAnimationFrame(() => {
+        const nodeEl = els.choiceNodesLayer?.querySelector(
+          `.choice-node[data-desc-id="${descId}"][data-choice-id="${choice.id}"]`
         );
-      }
+        if (nodeEl) showChoiceTargetsPopover(descId, choice.id, nodeEl.getBoundingClientRect());
+      });
     });
     picker.appendChild(btn);
   });
@@ -3210,6 +3212,163 @@ function showChoiceEventPicker(descId, choiceId, anchorRect) {
 
 function closeChoiceEventPicker() {
   document.getElementById("choice-event-picker")?.remove();
+}
+
+// ── Choice targets popover (collega rami a scene direttamente dalla mappa) ───
+
+function showChoiceTargetsPopover(descId, choiceId, anchorRect) {
+  const desc = state.adventure.descriptions.find((d) => d.id === descId);
+  const choice = desc?.choices?.find((c) => c.id === choiceId);
+  if (!desc || !choice) return;
+  closeChoiceTargetsPopover();
+
+  const pop = document.createElement("div");
+  pop.id = "choice-targets-popover";
+  pop.className = "choice-targets-popover";
+  // Posizionamento: a destra del nodo, evita i bordi finestra
+  const left = Math.min(anchorRect.right + 10, window.innerWidth - 270);
+  const top  = Math.min(Math.max(4, anchorRect.top - 8), window.innerHeight - 320);
+  pop.style.left = `${left}px`;
+  pop.style.top  = `${top}px`;
+
+  // Header: tipo + pulsante "cambia tipo"
+  const ev = choice.event;
+  const typeEntry = CHOICE_EVENT_PICKER_TYPES.find((t) => t.type === (ev?.type ?? null))
+    || CHOICE_EVENT_PICKER_TYPES[0];
+  const header = document.createElement("div");
+  header.className = "ctp-header";
+  header.innerHTML = `<span class="ctp-type-badge">${typeEntry.icon} ${typeEntry.label}</span>`;
+  const changeBtn = document.createElement("button");
+  changeBtn.type = "button";
+  changeBtn.className = "ctp-change-btn";
+  changeBtn.textContent = "Cambia tipo";
+  changeBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    closeChoiceTargetsPopover();
+    showChoiceEventPicker(descId, choiceId, anchorRect);
+  });
+  header.appendChild(changeBtn);
+  pop.appendChild(header);
+
+  // Righe rami: label colorata + select scene
+  const branches = getChoiceBranchConfigs(choice);
+  branches.forEach(({ label, color, getTarget, setTarget }) => {
+    const row = document.createElement("div");
+    row.className = "ctp-row";
+    const lbl = document.createElement("span");
+    lbl.className = "ctp-branch-lbl";
+    lbl.style.color = color;
+    lbl.textContent = label;
+    const sel = buildChoiceTargetSelect(desc.id, getTarget());
+    sel.addEventListener("change", () => {
+      setTarget(sel.value || null);
+      markSceneDirty();
+      refreshFlowCard(descId);
+      scheduleFlowLinksRender();
+      scheduleJsonRender();
+    });
+    row.append(lbl, sel);
+    pop.appendChild(row);
+  });
+
+  // Footer: link editor avanzato
+  const footer = document.createElement("div");
+  footer.className = "ctp-footer";
+  const detBtn = document.createElement("button");
+  detBtn.type = "button";
+  detBtn.className = "ctp-details-btn";
+  detBtn.textContent = "⚙ Dettagli avanzati";
+  detBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    closeChoiceTargetsPopover();
+    switchSelectedScene(descId);
+    requestAnimationFrame(() => els.sceneEditor?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  });
+  footer.appendChild(detBtn);
+  pop.appendChild(footer);
+
+  const handleOutside = (e) => {
+    if (!pop.contains(e.target)) closeChoiceTargetsPopover();
+  };
+  setTimeout(() => document.addEventListener("pointerdown", handleOutside, { once: true }), 0);
+  document.body.appendChild(pop);
+}
+
+function closeChoiceTargetsPopover() {
+  document.getElementById("choice-targets-popover")?.remove();
+}
+
+/** Restituisce la configurazione dei rami per una scelta (quale branch, label, colore). */
+function getChoiceBranchConfigs(choice) {
+  const ev = choice.event;
+  if (!ev) {
+    return [{
+      label: "→ Destinazione",
+      color: "#b56d39",
+      getTarget: () => choice.targetId,
+      setTarget: (id) => { choice.targetId = id || null; }
+    }];
+  }
+  switch (ev.type) {
+    case "combat":
+      return [
+        { label: "✓ Vittoria", color: "#6f8a57",
+          getTarget: () => ev.victoryBranch?.targetId,
+          setTarget: (id) => { ev.victoryBranch = ev.victoryBranch || {}; ev.victoryBranch.targetId = id || null; } },
+        { label: "✗ Sconfitta", color: "#b94a48",
+          getTarget: () => ev.defeatBranch?.targetId,
+          setTarget: (id) => { ev.defeatBranch = ev.defeatBranch || {}; ev.defeatBranch.targetId = id || null; } },
+      ];
+    case "skillcheck":
+      return [
+        { label: "✓ Successo", color: "#6f8a57",
+          getTarget: () => ev.successBranch?.targetId,
+          setTarget: (id) => { ev.successBranch = ev.successBranch || {}; ev.successBranch.targetId = id || null; } },
+        { label: "✗ Fallimento", color: "#b94a48",
+          getTarget: () => ev.failureBranch?.targetId,
+          setTarget: (id) => { ev.failureBranch = ev.failureBranch || {}; ev.failureBranch.targetId = id || null; } },
+      ];
+    case "requirement":
+      return [
+        { label: "✓ Soddisfatto", color: "#6f8a57",
+          getTarget: () => ev.metBranch?.targetId,
+          setTarget: (id) => { ev.metBranch = ev.metBranch || {}; ev.metBranch.targetId = id || null; } },
+        { label: "✗ Non soddisfatto", color: "#b94a48",
+          getTarget: () => ev.unmetBranch?.targetId,
+          setTarget: (id) => { ev.unmetBranch = ev.unmetBranch || {}; ev.unmetBranch.targetId = id || null; } },
+      ];
+    default:
+      // loot, shop, dialogue, transition — single branch
+      return [{
+        label: "→ Destinazione",
+        color: "#b56d39",
+        getTarget: () => ev.branch?.targetId,
+        setTarget: (id) => { ev.branch = ev.branch || {}; ev.branch.targetId = id || null; }
+      }];
+  }
+}
+
+/** Costruisce una <select> con tutte le scene + sentinelle per una scelta di destinazione. */
+function buildChoiceTargetSelect(currentDescId, currentValue) {
+  const sel = document.createElement("select");
+  sel.className = "ctp-scene-select";
+  const opts = [
+    { value: "",              label: "— non impostata —" },
+    { value: DEATH_SENTINEL,  label: "☠ Morte" },
+    { value: STAY_SENTINEL,   label: "↺ Rimani" },
+  ];
+  opts.forEach(({ value, label }) => {
+    const o = document.createElement("option"); o.value = value; o.textContent = label;
+    sel.appendChild(o);
+  });
+  state.adventure.descriptions.forEach((d, i) => {
+    const o = document.createElement("option");
+    o.value = d.id;
+    o.textContent = `${i + 1}. ${d.title || "Senza titolo"}`;
+    sel.appendChild(o);
+  });
+  sel.value = currentValue || "";
+  return sel;
 }
 
 function refreshFlowCard(sceneId) {
@@ -3397,7 +3556,14 @@ function createChoiceNodeEl(desc, choice, x, y) {
   el.addEventListener("click", (e) => {
     e.stopPropagation();
     switchSelectedScene(desc.id);
-    showChoiceEventPicker(desc.id, choice.id, el.getBoundingClientRect());
+    const c = desc.choices?.find((x) => x.id === choice.id);
+    if (c?.event || c?.targetId) {
+      // Already configured: show targets popover directly
+      showChoiceTargetsPopover(desc.id, choice.id, el.getBoundingClientRect());
+    } else {
+      // Not configured yet: pick event type first
+      showChoiceEventPicker(desc.id, choice.id, el.getBoundingClientRect());
+    }
   });
   return el;
 }
@@ -3596,7 +3762,8 @@ function onChoiceChange(desc, choice) {
 // Costruisce il DOM di un choice card per il nuovo modello
 function buildChoiceCard(desc, choice, index) {
   const card = document.createElement("div");
-  card.className = "choice-card";
+  const evType = choice.event?.type || (choice.targetId ? "nav" : "empty");
+  card.className = `choice-card choice-card--${evType}`;
 
   // ── Header ────────────────────────────────────────────────────────────────
   const header = document.createElement("div");
