@@ -425,6 +425,9 @@ const MONSTER_STAT_ARCHETYPES = [
 
 const NODE_WIDTH = 280;
 const NODE_HEIGHT = 130;
+const CHOICE_BUS_GAP = 56;    // board px from scene right edge to choice circle center
+const CHOICE_SPACING = 36;    // board px vertical spacing between choice circles
+const CHOICE_NODE_R = 13;     // board px radius of choice circle
 const CREATE_MONSTER_OPTION = "__create_new__";
 const SCENE_IMAGE_ASPECT_RATIO = 2.48;
 const SCENE_IMAGE_TARGET_WIDTH = 1200;
@@ -811,6 +814,7 @@ const els = {
   monsterList: document.getElementById("monster-list"),
   lootPresetSelect: document.getElementById("loot-preset-select"),
   flowBoard: document.getElementById("flow-board"),
+  choiceNodesLayer: document.getElementById("choice-nodes-layer"),
   flowStage: document.getElementById("flow-stage"),
   flowViewport: document.getElementById("flow-viewport"),
   flowCanvas: document.getElementById("flow-canvas"),
@@ -1535,6 +1539,7 @@ function updateDraggedScenePosition(clientX, clientY) {
   scene.position.x = clamp(point.x - drag.offsetX, -FLOW_COORD_LIMIT, FLOW_COORD_LIMIT);
   scene.position.y = clamp(point.y - drag.offsetY, -FLOW_COORD_LIMIT, FLOW_COORD_LIMIT);
   updateFlowCardPosition(scene.id, dragBounds);
+  updateChoiceNodePositions(scene.id, dragBounds);
   scheduleFlowLinksRender("drag");
 }
 
@@ -1561,6 +1566,7 @@ function finalizeFlowDrag() {
     updateAllFlowCardPositions(nextBounds);
   }
   renderFlowLinks(nextBounds);
+  renderChoiceNodes(nextBounds);
 }
 
 function ensureFlowAutoScrollLoop() {
@@ -2077,6 +2083,7 @@ function addChoice() {
   markSceneDirty();
   renderSceneEditor();
   refreshFlowCard(desc.id);
+  refreshChoiceNodes(desc.id);
   scheduleJsonRender(180);
 }
 
@@ -2369,6 +2376,7 @@ function renderFlowCards(bounds = computeBoardBounds()) {
   });
 
   els.flowCanvas.appendChild(fragment);
+  renderChoiceNodes(bounds);
   renderFlowStats();
   renderMinimap();
 }
@@ -2383,8 +2391,7 @@ function createFlowCard(desc, index, bounds = getCurrentFlowBoardBounds()) {
     // Pulsante "+ scelta" (nel footer o nell'empty state delle scelte)
     if (event.target.closest('[data-action="add-choice"]')) {
       event.stopPropagation();
-      switchSelectedScene(card.dataset.sceneId);
-      addChoice();
+      addChoiceAndPickEvent(card.dataset.sceneId);
       return;
     }
 
@@ -2496,9 +2503,7 @@ function buildFlowCardMarkup(desc, index) {
       </div>
     `;
   }
-  const choices = desc.choices || [];
-  const exitsHtml = choices.map((c, i) => buildExitChip(c, i)).join("") +
-    (!desc.isEnding ? `<button class="flow-exit-add" data-action="add-choice" title="Aggiungi scelta">+</button>` : "");
+  const choiceCount = (desc.choices || []).length;
   return `
     <button class="link-handle" title="Trascina per collegare"></button>
     <div class="flow-card-head">
@@ -2507,9 +2512,10 @@ function buildFlowCardMarkup(desc, index) {
         ${isStart ? '<span class="flow-badge flow-badge--start">▶</span>' : ""}
         ${desc.isEnding ? '<span class="flow-badge flow-badge--ending">■</span>' : ""}
         ${isOrphan ? '<span class="flow-badge flow-badge--orphan" title="Nessun nodo collega qui">!</span>' : ""}
+        ${choiceCount > 0 ? `<span class="flow-badge flow-badge--choices" title="${choiceCount} scelta/e">${choiceCount}</span>` : ""}
       </span>
     </div>
-    <div class="flow-exits">${exitsHtml || `<button class="flow-exit-add flow-exit-add--empty" data-action="add-choice">+ scelta</button>`}</div>
+    ${desc.text ? `<p class="flow-card-snippet">${esc(truncate(desc.text, 90))}</p>` : ""}
   `;
 }
 
@@ -2577,11 +2583,19 @@ function renderFlowLinks(bounds = computeBoardBounds()) {
 function buildLinkMarkup(bounds = getCurrentFlowBoardBounds()) {
   const lines = [];
   const visibleBounds = shouldVirtualizeFlowLinks() ? getVisibleFlowBounds(bounds) : null;
+
   state.adventure.descriptions.forEach((desc) => {
-    const source = nodeAnchor(desc, bounds);
-    (desc.choices || []).forEach((choice) => {
+    const choices = desc.choices || [];
+    if (choices.length === 0) return;
+
+    // Draw trunk (scene → bus) + bus (vertical connecting choice nodes)
+    lines.push(buildTrunkBusPath(desc, bounds));
+
+    // Draw arrows from each choice node position to its target
+    const choicePositions = choiceNodesBoardPositions(desc, bounds);
+    choicePositions.forEach(({ choice, x, y }) => {
       const color = choiceLinkColor(choice);
-      appendDescriptionChoiceLinks(lines, source, choice, color, visibleBounds, bounds);
+      appendDescriptionChoiceLinks(lines, { x, y }, choice, color, visibleBounds, bounds);
     });
   });
 
@@ -2730,7 +2744,9 @@ function computeBoardBounds() {
   const scenePositions = state.adventure.descriptions.map((d) => d.position || { x: 0, y: 0 });
   const minX = scenePositions.length ? Math.min(...scenePositions.map((point) => point.x), 0) : 0;
   const minY = scenePositions.length ? Math.min(...scenePositions.map((point) => point.y), 0) : 0;
-  const maxX = scenePositions.length ? Math.max(...scenePositions.map((point) => point.x + metrics.width), metrics.width) : metrics.width;
+  // Choice nodes extend beyond the scene card right edge
+  const choiceNodeExtra = metrics.compact ? 0 : CHOICE_BUS_GAP + CHOICE_NODE_R + 4;
+  const maxX = scenePositions.length ? Math.max(...scenePositions.map((point) => point.x + metrics.width + choiceNodeExtra), metrics.width) : metrics.width;
   const maxY = scenePositions.length ? Math.max(...scenePositions.map((point) => point.y + metrics.height), metrics.height) : metrics.height;
   const contentWidth = Math.max(metrics.width, maxX - minX);
   const contentHeight = Math.max(metrics.height, maxY - minY);
@@ -3203,9 +3219,10 @@ function refreshFlowCard(sceneId) {
   const bounds = getCurrentFlowBoardBounds();
   if (!current) {
     els.flowCanvas.appendChild(createFlowCard(state.adventure.descriptions[sceneIndex], sceneIndex, bounds));
-    return;
+  } else {
+    syncFlowCard(current, state.adventure.descriptions[sceneIndex], sceneIndex, bounds);
   }
-  syncFlowCard(current, state.adventure.descriptions[sceneIndex], sceneIndex, bounds);
+  refreshChoiceNodes(sceneId, bounds);
 }
 
 function scheduleFlowCardRefresh(sceneId, delay = 300) {
@@ -3234,6 +3251,12 @@ function scheduleFlowLinksRender(reason = "general") {
     state.ui.flowLinksFrame = null;
     const bounds = state.drag?.bounds || state.ui.flowBoardBounds || computeBoardBounds();
     renderFlowLinks(bounds);
+    // Sync choice nodes: cheap positional update during drag, full rebuild otherwise
+    if (state.drag) {
+      updateChoiceNodePositions(state.drag.sceneId, bounds);
+    } else {
+      renderChoiceNodes(bounds);
+    }
   });
 }
 
@@ -3247,6 +3270,181 @@ function nodeEntry(scene, bounds = getCurrentFlowBoardBounds()) {
   const metrics = getFlowCardMetrics();
   const boardPoint = logicalToBoardPoint(scene.position, bounds);
   return { x: boardPoint.x, y: boardPoint.y + metrics.height / 2 };
+}
+
+// ── Choice node geometry helpers ─────────────────────────────────────────────
+
+/** Returns board-space {choice, x, y} for each choice of desc. */
+function choiceNodesBoardPositions(desc, bounds = getCurrentFlowBoardBounds()) {
+  const anchor = nodeAnchor(desc, bounds);
+  const choices = desc.choices || [];
+  const n = choices.length;
+  const busX = anchor.x + CHOICE_BUS_GAP;
+  const totalSpan = Math.max(0, n - 1) * CHOICE_SPACING;
+  const startY = anchor.y - totalSpan / 2;
+  return choices.map((choice, i) => ({
+    choice,
+    x: busX,
+    y: startY + i * CHOICE_SPACING
+  }));
+}
+
+/** Returns board-space {x, y} of the "add choice" button for desc. */
+function choiceAddNodeBoardPos(desc, bounds = getCurrentFlowBoardBounds()) {
+  const anchor = nodeAnchor(desc, bounds);
+  const n = (desc.choices || []).length;
+  const busX = anchor.x + CHOICE_BUS_GAP;
+  const totalSpan = Math.max(0, n - 1) * CHOICE_SPACING;
+  const lastY = n === 0 ? anchor.y : anchor.y - totalSpan / 2 + (n - 1) * CHOICE_SPACING;
+  return { x: busX, y: n === 0 ? lastY : lastY + CHOICE_SPACING };
+}
+
+/** SVG path for the horizontal trunk + vertical bus connecting scene to choice nodes. */
+function buildTrunkBusPath(desc, bounds = getCurrentFlowBoardBounds()) {
+  const anchor = nodeAnchor(desc, bounds);
+  const choices = desc.choices || [];
+  const n = choices.length;
+  if (n === 0) return "";
+  const busX = anchor.x + CHOICE_BUS_GAP;
+  const totalSpan = Math.max(0, n - 1) * CHOICE_SPACING;
+  const topY = anchor.y - totalSpan / 2;
+  const botY = anchor.y + totalSpan / 2;
+  const stroke = "rgba(120,140,165,0.32)";
+  let d = `M ${anchor.x} ${anchor.y} H ${busX}`;
+  if (topY !== botY) d += ` M ${busX} ${topY} V ${botY}`;
+  return `<path d="${d}" stroke="${stroke}" stroke-width="1.5" fill="none" pointer-events="none"/>`;
+}
+
+// ── Choice nodes DOM layer ───────────────────────────────────────────────────
+
+/** Full rebuild of all choice node DOM elements. */
+function renderChoiceNodes(bounds = getCurrentFlowBoardBounds()) {
+  const layer = els.choiceNodesLayer;
+  if (!layer) return;
+  layer.innerHTML = "";
+  layer.style.width = `${bounds.width}px`;
+  layer.style.height = `${bounds.height}px`;
+  state.adventure.descriptions.forEach((desc) => {
+    const positions = choiceNodesBoardPositions(desc, bounds);
+    positions.forEach(({ choice, x, y }) => layer.appendChild(createChoiceNodeEl(desc, choice, x, y)));
+    if (!desc.isEnding) {
+      const addPos = choiceAddNodeBoardPos(desc, bounds);
+      layer.appendChild(createChoiceAddNodeEl(desc, addPos.x, addPos.y));
+    }
+  });
+}
+
+/** Rebuild choice nodes for a single desc (used after addChoice/deleteChoice). */
+function refreshChoiceNodes(descId, bounds = getCurrentFlowBoardBounds()) {
+  const layer = els.choiceNodesLayer;
+  if (!layer) return;
+  layer.querySelectorAll(`[data-desc-id="${descId}"]`).forEach((el) => el.remove());
+  const desc = state.adventure.descriptions.find((d) => d.id === descId);
+  if (!desc) return;
+  const positions = choiceNodesBoardPositions(desc, bounds);
+  positions.forEach(({ choice, x, y }) => layer.appendChild(createChoiceNodeEl(desc, choice, x, y)));
+  if (!desc.isEnding) {
+    const addPos = choiceAddNodeBoardPos(desc, bounds);
+    layer.appendChild(createChoiceAddNodeEl(desc, addPos.x, addPos.y));
+  }
+}
+
+/** Move choice nodes during drag without full DOM rebuild. */
+function updateChoiceNodePositions(descId, bounds = getCurrentFlowBoardBounds()) {
+  const layer = els.choiceNodesLayer;
+  if (!layer) return;
+  const desc = state.adventure.descriptions.find((d) => d.id === descId);
+  if (!desc) return;
+  choiceNodesBoardPositions(desc, bounds).forEach(({ choice, x, y }) => {
+    const el = layer.querySelector(`.choice-node[data-desc-id="${descId}"][data-choice-id="${choice.id}"]`);
+    if (el) { el.style.left = `${x - CHOICE_NODE_R}px`; el.style.top = `${y - CHOICE_NODE_R}px`; }
+  });
+  const addEl = layer.querySelector(`.choice-node--add[data-desc-id="${descId}"]`);
+  if (addEl) {
+    const addPos = choiceAddNodeBoardPos(desc, bounds);
+    addEl.style.left = `${addPos.x - CHOICE_NODE_R}px`;
+    addEl.style.top = `${addPos.y - CHOICE_NODE_R}px`;
+  }
+}
+
+function createChoiceNodeEl(desc, choice, x, y) {
+  const el = document.createElement("button");
+  el.type = "button";
+  el.dataset.descId = desc.id;
+  el.dataset.choiceId = choice.id;
+  el.style.left = `${x - CHOICE_NODE_R}px`;
+  el.style.top = `${y - CHOICE_NODE_R}px`;
+  el.style.width = el.style.height = `${CHOICE_NODE_R * 2}px`;
+  el.title = choice.text || `Scelta ${(desc.choices || []).indexOf(choice) + 1}`;
+  const ev = choice.event;
+  const icon = ev?.type === "combat"     ? "⚔"
+    : ev?.type === "skillcheck"          ? "🎲"
+    : ev?.type === "requirement"         ? "🔑"
+    : ev?.type === "dialogue"            ? "💬"
+    : ev?.type === "shop"                ? "🏪"
+    : ev?.type === "loot"                ? "🗡"
+    : choice.targetId                    ? "→"
+    : "·";
+  el.textContent = icon;
+  const typeClass = ev?.type === "combat"     ? "choice-node--combat"
+    : ev?.type === "skillcheck"               ? "choice-node--check"
+    : ev?.type === "requirement"              ? "choice-node--req"
+    : ev?.type === "shop"                     ? "choice-node--shop"
+    : ev?.type === "loot"                     ? "choice-node--loot"
+    : choice.targetId                         ? "choice-node--nav"
+    : "choice-node--empty";
+  el.className = `choice-node ${typeClass}`;
+  el.addEventListener("click", (e) => {
+    e.stopPropagation();
+    switchSelectedScene(desc.id);
+    showChoiceEventPicker(desc.id, choice.id, el.getBoundingClientRect());
+  });
+  return el;
+}
+
+function createChoiceAddNodeEl(desc, x, y) {
+  const el = document.createElement("button");
+  el.type = "button";
+  el.className = "choice-node choice-node--add";
+  el.dataset.descId = desc.id;
+  el.style.left = `${x - CHOICE_NODE_R}px`;
+  el.style.top = `${y - CHOICE_NODE_R}px`;
+  el.style.width = el.style.height = `${CHOICE_NODE_R * 2}px`;
+  el.textContent = "+";
+  el.title = "Aggiungi scelta";
+  el.addEventListener("click", (e) => {
+    e.stopPropagation();
+    addChoiceAndPickEvent(desc.id);
+  });
+  return el;
+}
+
+/** Adds a new choice to desc and immediately opens the event picker for it. */
+function addChoiceAndPickEvent(descId) {
+  switchSelectedScene(descId);
+  const desc = state.adventure.descriptions.find((d) => d.id === descId);
+  if (!desc) return;
+  desc.choices = desc.choices || [];
+  const newChoice = {
+    id: createUniqueChoiceId(desc),
+    text: `Scelta ${desc.choices.length + 1}`,
+    hidden: false,
+    burnAfterUse: false,
+    targetId: null,
+    event: null
+  };
+  desc.choices.push(newChoice);
+  markSceneDirty();
+  renderSceneEditor();
+  scheduleJsonRender(180);
+  const bounds = getCurrentFlowBoardBounds();
+  refreshChoiceNodes(descId, bounds);
+  scheduleFlowLinksRender();
+  requestAnimationFrame(() => {
+    const layer = els.choiceNodesLayer;
+    const newNode = layer?.querySelector(`.choice-node[data-desc-id="${descId}"][data-choice-id="${newChoice.id}"]`);
+    if (newNode) showChoiceEventPicker(descId, newChoice.id, newNode.getBoundingClientRect());
+  });
 }
 
 function renderSceneEditor() {
@@ -3390,7 +3588,7 @@ function renderChoices(desc) {
 
 function onChoiceChange(desc, choice) {
   markSceneDirty();
-  refreshFlowCard(desc.id);
+  refreshFlowCard(desc.id);  // also calls refreshChoiceNodes internally
   scheduleFlowLinksRender();
   scheduleJsonRender();
 }
