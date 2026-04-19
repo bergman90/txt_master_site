@@ -844,9 +844,6 @@ const els = {
   sceneImageFocusY: document.getElementById("scene-image-focus-y"),
   replaceSceneImageBtn: document.getElementById("replace-scene-image-btn"),
   removeSceneImageBtn: document.getElementById("remove-scene-image-btn"),
-  sceneCheckConfig: document.getElementById("scene-check-config"),
-  sceneCheckSkill: document.getElementById("scene-check-skill"),
-  sceneCheckDifficulty: document.getElementById("scene-check-difficulty"),
   sceneCombatConfig: document.getElementById("scene-combat-config"),
   combatGroupList: document.getElementById("combat-group-list"),
   addCombatGroupBtn: document.getElementById("add-combat-group-btn"),
@@ -901,7 +898,6 @@ const els = {
 };
 
 function bootstrap() {
-  hydrateSkillSelect(els.sceneCheckSkill);
   hydrateMonsterPresetSelect();
   hydrateLootPresetSelect();
   hydrateExampleAdventureSelect();
@@ -1073,17 +1069,6 @@ function bindActions() {
   });
   els.addCombatGroupBtn.addEventListener("click", addCombatGroup);
 
-  // Difficulty pills nel pannello check (solo quelle statiche nell'editor)
-  document.querySelectorAll("#scene-check-config .difficulty-pill[data-value]").forEach((pill) => {
-    pill.addEventListener("click", () => {
-      const val = Number(pill.dataset.value);
-      if (els.sceneCheckDifficulty) {
-        els.sceneCheckDifficulty.value = String(val);
-        els.sceneCheckDifficulty.dispatchEvent(new Event("input"));
-      }
-      syncDifficultyPills(val);
-    });
-  });
 
   els.saveAdventureBtn?.addEventListener("click", saveAdventureProject);
   els.saveFab?.addEventListener("click", saveAdventureProject);
@@ -1201,7 +1186,25 @@ function bindSceneEditor() {
   els.sceneKind.addEventListener("change", (e) => {
     const scene = getSelectedScene();
     if (!scene) return;
-    scene.kind = e.target.value;
+    const newKind = e.target.value;
+    // Il "kind" non è più un campo memorizzato: il cambio tipo modifica il contenuto.
+    if (newKind === "combat" && !isCombatScene(scene)) {
+      scene.combatGroups = [{ monsterId: "", count: 1, composition: "" }];
+      scene.outcomes.defeat.targetSceneId = scene.id;
+      scene.outcomes.retreat.targetSceneId = scene.id;
+    } else if (newKind === "description" && isCombatScene(scene)) {
+      scene.combatGroups = [];
+    } else if (newKind === "check" && !isCheckScene(scene)) {
+      const gateId = `${scene.id}__gate`;
+      if (!scene.choices.some((c) => c.isCheckGate)) {
+        scene.choices.unshift({
+          id: gateId,
+          text: "Affronta la prova",
+          isCheckGate: true,
+          skillCheck: { attribute: "", difficulty: 12, successSceneId: "", failureSceneId: scene.id }
+        });
+      }
+    }
     normalizeScene(scene);
     markSceneDirty();
     render();
@@ -1226,23 +1229,6 @@ function bindSceneEditor() {
     updateSceneStatusDot();
   });
 
-  els.sceneCheckSkill.addEventListener("change", (e) => {
-    const scene = getSelectedScene();
-    if (!scene) return;
-    scene.checkConfig.skill = normalizeString(e.target.value);
-    markSceneDirty();
-    scheduleJsonRender(90);
-  });
-
-  els.sceneCheckDifficulty.addEventListener("input", (e) => {
-    const scene = getSelectedScene();
-    if (!scene) return;
-    const val = Number(e.target.value || 0);
-    scene.checkConfig.difficulty = val;
-    syncDifficultyPills(val);
-    markSceneDirty();
-    scheduleJsonRender(140);
-  });
 }
 
 function readFileAsDataUrl(file) {
@@ -1696,11 +1682,11 @@ function createSceneOfKind(kind, { position = null, sourceSceneId = null, preset
   const defaultTitle = isFinal ? "Nodo finale" : titleSourceScene ? deriveChildTitle(titleSourceScene.title) : `Evento ${index}`;
   const scene = {
     id: createUniqueSceneId(),
-    kind: effectiveKind,
     title: defaultTitle,
     openingText: "",
     eventImage: null,
     choices: [],
+    combatGroups: [],
     outcomes: createEmptySceneOutcomes(),
     sceneLoot: [],
     position: spawnPosition
@@ -1708,7 +1694,6 @@ function createSceneOfKind(kind, { position = null, sourceSceneId = null, preset
 
   // Per le scene di combattimento: crea gruppo con preset oppure lascia vuoto (apre l'archetype picker)
   if (kind === "combat") {
-    scene.combatGroups = [];
     if (presetId) {
       const preset = monsterPresetById(presetId);
       if (preset) {
@@ -1719,23 +1704,27 @@ function createSceneOfKind(kind, { position = null, sourceSceneId = null, preset
       }
     }
     if (!scene.combatGroups.length) {
-      // Nessun preset: gruppo vuoto, l'archetype picker si aprirà nell'editor
       scene.combatGroups.push({ monsterId: "", count: 1, composition: "" });
     }
-  }
-
-  // Per le scene check: pre-compila checkConfig se fornito dal node picker
-  if (kind === "check" && checkConfig) {
-    scene.checkConfig = { skill: checkConfig.skill || "", difficulty: checkConfig.difficulty ?? 12 };
-  }
-
-  // Default: fallimento e sconfitta/fuga puntano alla scena stessa
-  if (kind === "check") {
-    scene.outcomes.failure.targetSceneId = scene.id;
-  }
-  if (kind === "combat") {
     scene.outcomes.defeat.targetSceneId = scene.id;
     scene.outcomes.retreat.targetSceneId = scene.id;
+  }
+
+  // Per le scene check: crea un gate choice con skill check scheletro
+  if (kind === "check") {
+    const gateSkill = checkConfig?.skill || "";
+    const gateDifficulty = checkConfig?.difficulty ?? 12;
+    scene.choices.push({
+      id: `${scene.id}__gate`,
+      text: "Affronta la prova",
+      isCheckGate: true,
+      skillCheck: {
+        attribute: gateSkill,
+        difficulty: gateDifficulty,
+        successSceneId: "",
+        failureSceneId: scene.id
+      }
+    });
   }
 
   state.adventure.scenes.push(scene);
@@ -2247,7 +2236,7 @@ function deleteMonster() {
 function addChoice() {
   const scene = getSelectedScene();
   if (!scene) return;
-  if (scene.kind !== "description") return;
+  if (isCombatScene(scene)) return;
   scene.choices.push(createEmptyChoice(scene.choices.length + 1));
   render();
 }
@@ -2474,17 +2463,11 @@ function syncCurrentSceneEditorStateFromDom() {
   if (!scene) return;
 
   normalizeScene(scene);
-  scene.kind = normalizeString(els.sceneKind?.value) || scene.kind;
   scene.title = els.sceneTitle?.value ?? scene.title;
   scene.openingText = els.sceneOpeningText?.value ?? scene.openingText;
 
-  if (scene.kind === "check") {
-    scene.checkConfig = scene.checkConfig || { skill: "", difficulty: 10 };
-    scene.checkConfig.skill = normalizeString(els.sceneCheckSkill?.value);
-    scene.checkConfig.difficulty = Number(els.sceneCheckDifficulty?.value || 0);
-  }
-
-  if (scene.kind === "description") {
+  // Description e check scene condividono la stessa lista choice nel pannello
+  if (!isCombatScene(scene)) {
     syncChoiceCollectionFromContainer(els.choiceList, scene.choices);
     return;
   }
@@ -2655,8 +2638,8 @@ function syncFlowCard(card, scene, index, bounds = getCurrentFlowBoardBounds()) 
     scene.id === state.selectedSceneId ? "active" : "",
     metrics.compact ? "flow-card--compact" : "",
     isOrphanCard ? "flow-card--orphan" : "",
-    scene.kind === "combat" ? "flow-card--combat" : "",
-    scene.kind === "check" ? "flow-card--check" : ""
+    isCombatScene(scene) ? "flow-card--combat" : "",
+    isCheckScene(scene) ? "flow-card--check" : ""
   ].filter(Boolean).join(" ");
   card.dataset.sceneId = scene.id;
   card.style.left = `${boardPoint.x}px`;
@@ -2664,7 +2647,7 @@ function syncFlowCard(card, scene, index, bounds = getCurrentFlowBoardBounds()) 
   card.style.width = `${metrics.width}px`;
   card.style.height = metrics.compact ? `${metrics.height}px` : "";
   card.style.minHeight = metrics.compact ? "" : `${metrics.height}px`;
-  card.title = `${index + 1}. ${scene.title || "Evento"} (${sceneLabel(scene.kind)})`;
+  card.title = `${index + 1}. ${scene.title || "Evento"} (${sceneLabel(derivedSceneKind(scene))})`;
   card.innerHTML = buildFlowCardMarkup(scene, index);
 }
 
@@ -2678,7 +2661,7 @@ function buildFlowCardMarkup(scene, index) {
       <button class="link-handle" title="Trascina per collegare"></button>
       <div class="flow-card-mini-index">${index + 1}</div>
       <div class="flow-card-mini-meta">
-        <span>${sceneKindShortLabel(scene.kind)}</span>
+        <span>${sceneKindShortLabel(derivedSceneKind(scene))}</span>
         <span>${isStart ? "IN" : ""}${isOrphan ? "!" : ""}</span>
       </div>
     `;
@@ -2686,7 +2669,7 @@ function buildFlowCardMarkup(scene, index) {
   return `
     <button class="link-handle" title="Trascina per collegare"></button>
     <div class="flow-card-head">
-      <strong>${index + 1}. [${sceneLabel(scene.kind)}] ${scene.title || "Senza titolo"}</strong>
+      <strong>${index + 1}. [${sceneLabel(derivedSceneKind(scene))}] ${scene.title || "Senza titolo"}</strong>
       <span class="flow-card-badges">${isStart ? '<span class="flow-badge flow-badge--start">INIZIO</span>' : ""}${isOrphan ? '<span class="flow-badge flow-badge--orphan" title="Nessuna scena collega a questo nodo">&#x26A0; orfano</span>' : ""}</span>
     </div>
     <div class="flow-choices">
@@ -2696,7 +2679,7 @@ function buildFlowCardMarkup(scene, index) {
 }
 
 function renderFlowChoiceSummary(scene) {
-  if (scene.kind !== "description") return renderOutcomeSummary(scene);
+  if (isCombatScene(scene)) return renderOutcomeSummary(scene);
   return scene.choices.length
     ? scene.choices.map((choice, idx) => {
         const icon = choice.skillCheck ? "&#x2694;" : choice.requiredLockId ? "&#x1F512;" : "&#x2192;";
@@ -2711,7 +2694,7 @@ function renderFlowChoiceSummary(scene) {
 function getConnectedSceneIds() {
   const ids = new Set();
   state.adventure.scenes.forEach((scene) => {
-    if (scene.kind === "description") {
+    if (!isCombatScene(scene)) {
       scene.choices.forEach((choice) => {
         if (choice.skillCheck) {
           if (choice.skillCheck.successSceneId && choice.skillCheck.successSceneId !== STAY_SENTINEL) ids.add(choice.skillCheck.successSceneId);
@@ -2749,7 +2732,7 @@ function buildLinkMarkup(bounds = getCurrentFlowBoardBounds()) {
   const visibleBounds = shouldVirtualizeFlowLinks() ? getVisibleFlowBounds(bounds) : null;
   state.adventure.scenes.forEach((scene) => {
     const source = nodeAnchor(scene, bounds);
-    if (scene.kind === "description") {
+    if (!isCombatScene(scene)) {
       scene.choices.forEach((choice) => appendChoiceLinks(lines, source, choice, "#b56d39", visibleBounds, bounds));
     } else {
       outcomeDefinitionsForScene(scene).forEach((definition) => {
@@ -2902,7 +2885,7 @@ function boardToLogicalPoint(point, bounds = getCurrentFlowBoardBounds()) {
 
 function estimateFlowLinkCount() {
   return state.adventure.scenes.reduce((total, scene) => {
-    if (scene.kind === "description") {
+    if (!isCombatScene(scene)) {
       return total + (scene.choices?.length || 0);
     }
     return total + outcomeDefinitionsForScene(scene).reduce((branchTotal, definition) => {
@@ -3166,19 +3149,18 @@ function initMinimap() {
 function computeSceneStatus(scene) {
   if (!scene) return null;
   const hasText = Boolean(scene.openingText?.trim());
-  if (scene.kind === "description") {
+  if (!isCombatScene(scene)) {
     const hasChoice = scene.choices.some((c) => c.targetSceneId || c.skillCheck?.successSceneId);
     if (!hasText) return { level: "error", msg: "Nessun testo d'apertura." };
-    if (!hasChoice) return { level: "warn", msg: "Nessuna scelta collegata a un evento." };
+    if (isCheckScene(scene)) {
+      const gateOk = scene.choices.some((c) => c.isCheckGate && c.skillCheck?.successSceneId);
+      if (!gateOk) return { level: "warn", msg: "Prova di accesso non configurata." };
+    } else if (!hasChoice) {
+      return { level: "warn", msg: "Nessuna scelta collegata a un evento." };
+    }
     return { level: "ok", msg: "Scena completa." };
   }
-  if (scene.kind === "check") {
-    const successId = scene.outcomes?.success?.targetSceneId || scene.outcomes?.success?.choices?.some((c) => c.targetSceneId);
-    if (!hasText) return { level: "error", msg: "Nessun testo d'apertura." };
-    if (!successId) return { level: "warn", msg: "Esito successo non collegato." };
-    return { level: "ok", msg: "Scena completa." };
-  }
-  if (scene.kind === "combat") {
+  if (isCombatScene(scene)) {
     const hasMonster = scene.combatGroups?.some((g) => g.monsterId);
     const victoryId = scene.outcomes?.victory?.targetSceneId || scene.outcomes?.victory?.choices?.length;
     const defeatTarget = scene.outcomes?.defeat?.targetSceneId;
@@ -3282,55 +3264,42 @@ function renderSceneEditor() {
   if (!scene) return;
 
   normalizeScene(scene);
-  els.sceneKind.value = scene.kind;
+  const combat = isCombatScene(scene);
+  const check = isCheckScene(scene);
+  const dk = derivedSceneKind(scene);
+  els.sceneKind.value = dk;
   els.sceneTitle.value = scene.title;
   els.sceneOpeningText.value = scene.openingText;
   renderSceneImagePreview(scene);
-  els.sceneCheckConfig.classList.toggle("hidden", scene.kind !== "check");
-  els.sceneCombatConfig.classList.toggle("hidden", scene.kind !== "combat");
-  const useGenericChoices = scene.kind === "description";
+  els.sceneCombatConfig.classList.toggle("hidden", !combat);
+  // Scelte visibili per description E check (check scene ha il gate choice nella lista)
+  const useGenericChoices = !combat;
   els.sceneChoicesSection.classList.toggle("hidden", !useGenericChoices);
   els.sceneOutcomesSection.classList.toggle("hidden", useGenericChoices);
   els.sceneChoicesSection.open = true;
-  // Esiti sempre aperti per combat/check — l'azione più comune è collegare subito vittoria/successo
   if (!useGenericChoices) els.sceneOutcomesSection.open = true;
 
   // Badge tipo nel header editor
   const badge = document.getElementById("scene-type-badge");
   if (badge) {
-    badge.className = "scene-type-badge";
-    badge.classList.add(`scene-type-badge--${scene.kind}`);
-    badge.textContent = scene.kind === "combat" ? "Combattimento" : scene.kind === "check" ? "Prova" : "Descrittiva";
+    badge.className = `scene-type-badge scene-type-badge--${dk}`;
+    badge.textContent = combat ? "Combattimento" : check ? "Prova" : "Descrittiva";
     badge.classList.remove("hidden");
   }
 
-  // Difficulty pills: sincronizza stato attivo col valore corrente
-  syncDifficultyPills(scene.checkConfig?.difficulty ?? 10);
-
-  els.sceneChoicesSummary.textContent = "Scelte del nodo";
-  els.sceneChoicesHint.textContent = "Le scelte guidano il nodo e i suoi rami principali.";
-  els.addChoiceBtn.textContent = "Aggiungi scelta";
-  els.sceneOutcomesSummary.textContent = scene.kind === "check" ? "Riuscita e fallimento" : "Vittoria, sconfitta e ritirata";
-  const baseOutcomeHint = scene.kind === "check"
-    ? "Ogni esito della prova puo portare subito a un altro evento oppure aprire una scelta successiva."
-    : "Ogni esito del combattimento puo andare diretto a un evento oppure aprire un piccolo bivio successivo.";
-  els.sceneOutcomesHint.textContent = scene.choices.length > 0
-    ? `${baseOutcomeHint} Attenzione: questa scena ha ancora scelte generiche legacy. Spostale dentro gli esiti prima dell'export.`
-    : baseOutcomeHint;
-  hydrateSkillSelect(els.sceneCheckSkill, scene.checkConfig?.skill || "");
-  els.sceneCheckDifficulty.value = scene.checkConfig?.difficulty ?? 10;
+  els.sceneChoicesSummary.textContent = check ? "Prova e scelte" : "Scelte del nodo";
+  els.sceneChoicesHint.textContent = check
+    ? "Il primo elemento è la prova di accesso. Aggiungi scelte normali sotto per i rami successivi."
+    : "Le scelte guidano il nodo e i suoi rami principali.";
+  els.addChoiceBtn.textContent = check ? "Aggiungi scelta post-prova" : "Aggiungi scelta";
+  els.sceneOutcomesSummary.textContent = "Vittoria, sconfitta e ritirata";
+  els.sceneOutcomesHint.textContent = "Ogni esito del combattimento puo andare diretto a un evento oppure aprire un piccolo bivio successivo.";
 
   renderSceneLoot(scene);
   if (useGenericChoices) renderChoices(scene);
   else renderOutcomeEditor(scene);
   renderCombatGroups(scene);
   updateSceneStatusDot();
-}
-
-function syncDifficultyPills(value) {
-  document.querySelectorAll("#scene-check-config .difficulty-pill[data-value]").forEach((pill) => {
-    pill.classList.toggle("difficulty-pill--active", Number(pill.dataset.value) === Number(value));
-  });
 }
 
 function createMonsterFromArchetype(archetype) {
@@ -4668,7 +4637,9 @@ function cleanAdventure(adventure) {
         sceneLoot: scene.sceneLoot
           .filter((loot) => loot.itemName)
           .map(serializeLoot),
-        choices: scene.kind === "description" ? scene.choices.map(serializeChoice) : []
+        // Check scene e description scene esportano entrambe le choices normalmente.
+        // Il gate choice viene serializzato come qualsiasi skill check choice.
+        choices: !isCombatScene(scene) ? scene.choices.map(serializeChoice) : []
       };
 
       const editorMeta = buildSceneEditorMetadata(scene);
@@ -4698,23 +4669,7 @@ function cleanAdventure(adventure) {
         return "";
       };
 
-      if (scene.kind === "check") {
-        output.choices = [pruneEmpty({
-          id: `${scene.id}__check_gate`,
-          text: "Affronta la prova",
-          skillCheck: {
-            attribute: normalizeString(scene.checkConfig?.skill),
-            difficulty: Number(scene.checkConfig?.difficulty || 0),
-            successSceneId: outcomeTargetForExport("success"),
-            successTransitionText: getOutcomeBranch(scene, "success").transitionText || "",
-            failureSceneId: outcomeTargetForExport("failure"),
-            failureTransitionText: getOutcomeBranch(scene, "failure").transitionText || ""
-          },
-          _editor: {
-            generatedCheckGate: true
-          }
-        })];
-      } else if (scene.kind === "combat") {
+      if (isCombatScene(scene)) {
         const combatGroups = (scene.combatGroups || []).filter((group) => group.monsterId);
         const firstGroup = combatGroups[0];
         if (firstGroup) {
@@ -4763,14 +4718,9 @@ function normalizeScene(scene) {
     const branch = getOutcomeBranch(scene, key);
     branch.choices = (branch.choices || []).map((choice, index) => normalizeChoice(choice, index + 1));
   });
-  if (scene.kind === "check") {
-    scene.checkConfig = scene.checkConfig || { skill: "", difficulty: 10 };
-  } else if (scene.kind === "combat") {
-    scene.combatGroups = scene.combatGroups || [];
-  } else {
-    scene.checkConfig = scene.checkConfig || { skill: "", difficulty: 10 };
-    scene.combatGroups = scene.combatGroups || [];
-  }
+  // combatGroups sempre presente (lista vuota per scene non-combat)
+  scene.combatGroups = scene.combatGroups || [];
+  // checkConfig rimosso dal modello normale: le check scene usano il gate choice
 }
 
 function normalizeAdventureImport(adventure) {
@@ -4818,26 +4768,28 @@ function normalizeAdventureImport(adventure) {
 
 function normalizeImportedScene(scene, index) {
   const editor = scene._editor || {};
-  const inferredKind = scene.kind
-    || editor.kind
-    || (scene.encounterId ? "combat" : inferCheckKind(scene) ? "check" : "description");
+  // kind non è più un campo esplicito: viene derivato dal contenuto dopo normalizeScene.
+  // Mantenuto solo per retrocompat con avventure vecchie che lo hanno in _editor.
+  const legacyKind = scene.kind || editor.kind || "";
   const position = editor.position || { x: 40 + (index % 4) * 340, y: 40 + Math.floor(index / 4) * 240 };
   const normalized = {
     id: normalizeString(scene.id) || `scene_${index + 1}`,
-    kind: inferredKind,
     title: scene.title || `Evento ${index + 1}`,
-    openingText: editor.openingText || scene.openingText || scene.text || "",
+    openingText: scene.openingText || scene.text || editor.openingText || "",
     text: scene.text || scene.openingText || editor.openingText || "",
     eventImage: editor.eventImage || scene.eventImage || (scene.image ? { name: "Immagine evento", dataUrl: scene.image, sourceDataUrl: scene.image } : null),
     position,
     sceneLoot: (scene.sceneLoot || []).map((loot) => normalizeLoot(loot)),
     choices: (scene.choices || []).map((choice, choiceIndex) => normalizeImportedChoice(choice, choiceIndex)),
     combatGroups: editor.combatGroups || scene.combatGroups || buildFallbackCombatGroups(scene),
+    // checkConfig mantenuto per retrocompat durante migrateLegacyCheckGate
     checkConfig: editor.checkConfig || scene.checkConfig || buildFallbackCheckConfig(scene),
-    outcomes: normalizeImportedOutcomes(editor.outcomes || scene.outcomes, scene)
+    outcomes: normalizeImportedOutcomes(editor.outcomes || scene.outcomes, scene),
+    _legacyKind: legacyKind || undefined
   };
   normalizeScene(normalized);
   migrateLegacyCheckGate(normalized);
+  delete normalized._legacyKind;
   return normalized;
 }
 
@@ -4918,18 +4870,37 @@ function normalizeImportedOutcomes(outcomes, scene) {
 }
 
 function migrateLegacyCheckGate(scene) {
-  if (scene.kind !== "check") return;
-  const generatedGate = scene.choices.find((choice) => choice.generatedCheckGate && choice.skillCheck);
-  const fallbackGate = generatedGate || (scene.choices.length === 1 && scene.choices[0].skillCheck ? scene.choices[0] : null);
-  if (!fallbackGate?.skillCheck) return;
+  // Formato nuovo: una check scene ha già un choice con isCheckGate/generatedCheckGate.
+  // Formato vecchio (pre-refactor): checkConfig + outcomes, nessun choice gate.
+  // Questo migrator converte il vecchio nel nuovo.
 
-  scene.checkConfig = {
-    skill: normalizeString(fallbackGate.skillCheck.attribute),
-    difficulty: Number(fallbackGate.skillCheck.difficulty || 0)
+  const isLegacyCheck = scene._legacyKind === "check" ||
+    (!isCheckScene(scene) && !isCombatScene(scene) && scene.checkConfig?.skill);
+  if (!isLegacyCheck) return;
+
+  // Cerca un gate già generato (da import di JSON vecchio con la choice sintetica)
+  const generatedGate = scene.choices.find((c) => c.generatedCheckGate && c.skillCheck);
+  if (generatedGate) {
+    generatedGate.isCheckGate = true;
+    delete generatedGate.generatedCheckGate;
+    return;
+  }
+
+  // Crea la gate choice dal vecchio checkConfig + outcomes
+  if (!scene.checkConfig?.skill) return;
+  const gateChoice = {
+    id: `${scene.id}__gate`,
+    text: "Affronta la prova",
+    isCheckGate: true,
+    skillCheck: {
+      attribute: normalizeString(scene.checkConfig.skill),
+      difficulty: Number(scene.checkConfig.difficulty || 10),
+      successSceneId: normalizeString(getOutcomeBranch(scene, "success").targetSceneId) || "",
+      failureSceneId: normalizeString(getOutcomeBranch(scene, "failure").targetSceneId) || scene.id
+    }
   };
-  getOutcomeBranch(scene, "success").targetSceneId = normalizeString(fallbackGate.skillCheck.successSceneId);
-  getOutcomeBranch(scene, "failure").targetSceneId = normalizeString(fallbackGate.skillCheck.failureSceneId);
-  scene.choices = scene.choices.filter((choice) => choice !== fallbackGate);
+  scene.choices = [gateChoice, ...scene.choices.filter((c) => !c.generatedCheckGate)];
+  delete scene.checkConfig;
 }
 
 function inferCheckKind(scene) {
@@ -5353,19 +5324,12 @@ function createEmptySceneOutcomes() {
 }
 
 function outcomeKeysForScene(scene) {
-  if (scene.kind === "check") return ["success", "failure"];
-  if (scene.kind === "combat") return ["victory", "defeat", "retreat"];
+  if (isCombatScene(scene)) return ["victory", "defeat", "retreat"];
   return [];
 }
 
 function outcomeDefinitionsForScene(scene) {
-  if (scene.kind === "check") {
-    return [
-      { key: "success", title: "Se la prova riesce", hint: "Puoi andare a un evento diretto oppure aprire un bivio successivo." },
-      { key: "failure", title: "Se la prova fallisce", hint: "Usa questo ramo per costo, deviazione o complicazione. Se non impostato, il giocatore rimane su questa scena." }
-    ];
-  }
-  if (scene.kind === "combat") {
+  if (isCombatScene(scene)) {
     return [
       { key: "victory", title: "Se il combattimento finisce in vittoria", hint: "Premio, svolta o scelta successiva alla vittoria." },
       { key: "defeat", title: "Se il combattimento finisce in sconfitta", hint: "Caduta, cattura o ultima scelta prima del memoriale. Scegli ☠ Morte per andare direttamente alla schermata game over senza passare per una scena intermedia." },
@@ -5393,7 +5357,7 @@ function setOutcomeTarget(scene, key, targetSceneId) {
 
 function addLinkedTargetToScene(scene, targetSceneId) {
   normalizeScene(scene);
-  if (scene.kind === "description") {
+  if (!isCombatScene(scene)) {
     const emptyChoice = scene.choices.find((c) => !c.targetSceneId && !c.skillCheck);
     if (emptyChoice) {
       emptyChoice.targetSceneId = targetSceneId;
@@ -5843,34 +5807,18 @@ function validateAdventure(adventure, cleaned = cleanAdventure(adventure), optio
       }
     }
 
-    if (authoringScene?.kind === "combat" && !scene.encounterId) {
+    if (authoringScene && isCombatScene(authoringScene) && !scene.encounterId) {
       errors.push(`La scena ${scene.id} e marcata come combattimento, ma non esporta un encounterId valido.`);
     }
-    if (authoringScene?.kind === "check" && !authoringScene.checkConfig?.skill) {
-      pushWarning(`La scena ${scene.id} e marcata come prova, ma non ha una skill predefinita nel metadata di authoring.`, { alphaBlocking: true });
-    }
-    if (authoringScene?.kind === "check") {
-      if (authoringScene.choices?.length) {
-        errors.push(`La scena ${scene.id} ha ancora scelte legacy fuori dagli esiti. Spostale nei rami di riuscita/fallimento prima di esportare.`);
+    if (authoringScene && isCheckScene(authoringScene)) {
+      const gateChoice = authoringScene.choices?.find((c) => c.isCheckGate && c.skillCheck);
+      if (!gateChoice) {
+        pushWarning(`La scena ${scene.id} e una prova, ma non ha un choice gate con skill check configurato.`, { alphaBlocking: true });
+      } else if (!gateChoice.skillCheck.successSceneId || gateChoice.skillCheck.successSceneId === STAY_SENTINEL) {
+        // __stay__ è OK per prove inline; scena di destinazione opzionale
       }
-      ["success", "failure"].forEach((key) => {
-        const branch = getOutcomeBranch(authoringScene, key);
-        const label = key === "success" ? "riuscita" : "fallimento";
-        const isSentinel = branch.targetSceneId === RETRY_SENTINEL;
-        if (!branch.targetSceneId && branch.choices.length === 0) {
-          if (key === "success") {
-            errors.push(`La scena ${scene.id} non definisce un esito ${label}: serve una destinazione diretta oppure almeno una scelta di esito.`);
-          } else {
-            pushWarning(`La scena ${scene.id} non ha un esito fallimento impostato: il runtime rimarra su questa scena.`);
-          }
-        }
-        if (branch.targetSceneId && !isSentinel && !sceneIds.has(branch.targetSceneId)) {
-          errors.push(`La scena ${scene.id} ha un esito ${label} che punta a una scena inesistente: ${branch.targetSceneId}.`);
-        }
-        validateChoiceCollection(scene.id, branch.choices, `Le scelte di ${label}`);
-      });
     }
-    if (authoringScene?.kind === "combat") {
+    if (authoringScene && isCombatScene(authoringScene)) {
       if (authoringScene.choices?.length) {
         errors.push(`La scena ${scene.id} ha ancora scelte legacy fuori dagli esiti. Spostale nei rami di vittoria/sconfitta/ritirata prima di esportare.`);
       }
@@ -5930,10 +5878,26 @@ function validateAdventure(adventure, cleaned = cleanAdventure(adventure), optio
   return { errors, warnings, strictAlpha };
 }
 
+// ── Predicati tipo-scena ────────────────────────────────────────────────────
+// Il tipo è derivato dal contenuto, non da un campo "kind" esplicito.
+function isCombatScene(scene) {
+  return (scene.combatGroups?.some((g) => g.monsterId)) || false;
+}
+function isCheckScene(scene) {
+  // Una scena "prova" è una scena descrittiva il cui primo choice è un skill check gate.
+  // Viene mantenuta la label "check" per l'UI, ma non richiede più checkConfig separato.
+  return !isCombatScene(scene) && !!(scene.choices?.some((c) => c.skillCheck && (c.isCheckGate || c.generatedCheckGate)));
+}
+function derivedSceneKind(scene) {
+  if (isCombatScene(scene)) return "combat";
+  if (isCheckScene(scene)) return "check";
+  return "description";
+}
+
 function buildSceneEditorMetadata(scene) {
+  // Solo i campi strettamente editor-only che il runtime non conosce.
+  // kind, openingText, checkConfig, outcomes sono ora flat sulla scena o derivati.
   const editor = {
-    kind: scene.kind,
-    openingText: scene.openingText,
     eventImage: scene.eventImage ? pruneEmpty({
       name: scene.eventImage.name,
       type: scene.eventImage.type,
@@ -5944,20 +5908,7 @@ function buildSceneEditorMetadata(scene) {
       focusY: scene.eventImage.focusY
     }) : null,
     position: scene.position,
-    checkConfig: scene.kind === "check" ? pruneEmpty(scene.checkConfig || {}) : null,
-    outcomes: outcomeKeysForScene(scene).length
-      ? pruneEmpty(Object.fromEntries(outcomeKeysForScene(scene).map((key) => {
-          const branch = getOutcomeBranch(scene, key);
-          return [key, pruneEmpty({
-            targetSceneId: normalizeString(branch.targetSceneId),
-            choices: (branch.choices || []).map((choice) => pruneEmpty({
-              ...choice,
-              skillCheck: choice.skillCheck ? pruneEmpty(choice.skillCheck) : null
-            }))
-          })];
-        })))
-      : null,
-    combatGroups: scene.kind === "combat"
+    combatGroups: isCombatScene(scene)
       ? (scene.combatGroups || []).filter((group) => group.monsterId)
       : null
   };
@@ -5965,11 +5916,10 @@ function buildSceneEditorMetadata(scene) {
   return Object.keys(cleaned).length ? cleaned : null;
 }
 
-function buildChoiceEditorMetadata(choice) {
-  const editor = pruneEmpty({
-    endingText: normalizeString(choice.endingText)
-  });
-  return Object.keys(editor).length ? editor : null;
+// buildChoiceEditorMetadata rimosso: endingText è già flat sulla choice.
+// Mantenuto come stub per compatibilità con chiamate esistenti.
+function buildChoiceEditorMetadata(_choice) {
+  return null;
 }
 
 function pruneEmpty(object) {
