@@ -3467,6 +3467,7 @@ function renderChoiceCards(container, choices, handlers) {
     node.querySelector('[data-field="checkDifficulty"]').value = choice.skillCheck?.difficulty ?? "";
     node.querySelector('[data-field="consumeOnUse"]').checked = Boolean(choice.consumeOnUse);
     node.querySelector('[data-field="burnOnFailure"]').checked = Boolean(choice.skillCheck?.burnOnFailure);
+    node.querySelector('[data-field="hidden"]').checked = Boolean(choice.hidden);
 
     // ── nascondi "Collega a evento" quando il skill check è attivo ────────────
     function syncTargetVisibility() {
@@ -3475,23 +3476,43 @@ function renderChoiceCards(container, choices, handlers) {
     }
     syncTargetVisibility();
 
-    // ── success loot section (visibile solo quando successSceneId == __stay__) ─
-    // Usiamo choice._successLootDraft come riferimento stabile: non viene mai
-    // distrutto da updateChoiceCheck che ricostruisce choice.skillCheck ad ogni sync.
-    const successLootSection = node.querySelector('[data-role="success-loot-section"]');
-    const successLootList    = node.querySelector('[data-role="success-loot-list"]');
+    // ── sezioni inline (visibili solo con "Resta qui" sul ramo corrispondente) ─
+    // I draft vivono sull'oggetto choice per sopravvivere ai rerender.
+    const successInlineSection = node.querySelector('[data-role="success-inline-section"]');
+    const failureInlineSection = node.querySelector('[data-role="failure-inline-section"]');
+    const successLootList      = node.querySelector('[data-role="success-loot-list"]');
+    const failureLootList      = node.querySelector('[data-role="failure-loot-list"]');
 
     if (!choice._successLootDraft) {
       choice._successLootDraft = Array.isArray(choice.skillCheck?.successLoot)
-        ? choice.skillCheck.successLoot
-        : [];
+        ? choice.skillCheck.successLoot : [];
+    }
+    if (!choice._failureLootDraft) {
+      choice._failureLootDraft = Array.isArray(choice.skillCheck?.failureLoot)
+        ? choice.skillCheck.failureLoot : [];
     }
 
-    function syncSuccessLootVisibility() {
-      const val = node.querySelector('[data-field="checkSuccess"]').value;
-      successLootSection.style.display = (val === STAY_SENTINEL) ? "" : "none";
+    function syncInlineSections() {
+      const successVal = node.querySelector('[data-field="checkSuccess"]').value;
+      const failureVal = node.querySelector('[data-field="checkFailure"]').value;
+      const isSuccessStay = successVal === STAY_SENTINEL;
+      const isFailureStay = failureVal === STAY_SENTINEL || failureVal === "";
+      successInlineSection.style.display = isSuccessStay ? "" : "none";
+      failureInlineSection.style.display = isFailureStay ? "" : "none";
     }
-    syncSuccessLootVisibility();
+    syncInlineSections();
+
+    // Idrata campi success inline
+    node.querySelector('[data-field="successText"]').value = choice.skillCheck?.successText || "";
+    hydrateEncounterSelect(node.querySelector('[data-field="successEncounterId"]'), choice.skillCheck?.successEncounterId || "");
+    hydrateConditionSelect(node.querySelector('[data-field="successCondition"]'), choice.skillCheck?.successCondition || "");
+    node.querySelector('[data-field="successUnlockChoiceId"]').value = choice.skillCheck?.successUnlockChoiceId || "";
+
+    // Idrata campi failure inline
+    node.querySelector('[data-field="failureText"]').value = choice.skillCheck?.failureText || "";
+    hydrateEncounterSelect(node.querySelector('[data-field="failureEncounterId"]'), choice.skillCheck?.failureEncounterId || "");
+    hydrateConditionSelect(node.querySelector('[data-field="failureCondition"]'), choice.skillCheck?.failureCondition || "");
+    node.querySelector('[data-field="failureUnlockChoiceId"]').value = choice.skillCheck?.failureUnlockChoiceId || "";
 
     function rerenderSuccessLoot() {
       renderLootList(successLootList, choice._successLootDraft, {
@@ -3501,13 +3522,31 @@ function renderChoiceCards(container, choices, handlers) {
     }
     rerenderSuccessLoot();
 
+    function rerenderFailureLoot() {
+      renderLootList(failureLootList, choice._failureLootDraft, {
+        rerender: rerenderFailureLoot,
+        onChange: () => { markSceneDirty(); scheduleJsonRender(); }
+      });
+    }
+    rerenderFailureLoot();
+
     node.querySelector('[data-field="checkSuccess"]').addEventListener("change", () => {
-      syncSuccessLootVisibility();
+      syncInlineSections();
+    });
+    node.querySelector('[data-field="checkFailure"]').addEventListener("change", () => {
+      syncInlineSections();
     });
 
     node.querySelector('[data-action="add-success-loot"]').addEventListener("click", () => {
       choice._successLootDraft.push(createLootFromPreset("coins"));
       rerenderSuccessLoot();
+      markSceneDirty();
+      scheduleJsonRender();
+    });
+
+    node.querySelector('[data-action="add-failure-loot"]').addEventListener("click", () => {
+      choice._failureLootDraft.push(createLootFromPreset("coins"));
+      rerenderFailureLoot();
       markSceneDirty();
       scheduleJsonRender();
     });
@@ -3703,6 +3742,20 @@ function renderChoiceCards(container, choices, handlers) {
     node.querySelector('[data-field="checkSuccess"]').addEventListener("change", (e) => { if (!e.target._hydrating) syncCheck(); });
     node.querySelector('[data-field="checkFailure"]').addEventListener("change", (e) => { if (!e.target._hydrating) syncCheck(); });
     node.querySelector('[data-field="burnOnFailure"]').addEventListener("change", () => syncCheck());
+    node.querySelector('[data-field="hidden"]').addEventListener("change", (e) => {
+      choice.hidden = Boolean(e.target.checked);
+      handlers.onChange();
+    });
+    // Campi inline successo
+    node.querySelector('[data-field="successText"]').addEventListener("input", () => syncCheck());
+    node.querySelector('[data-field="successEncounterId"]').addEventListener("change", (e) => { if (!e.target._hydrating) syncCheck(); });
+    node.querySelector('[data-field="successCondition"]').addEventListener("change", (e) => { if (!e.target._hydrating) syncCheck(); });
+    node.querySelector('[data-field="successUnlockChoiceId"]').addEventListener("input", () => syncCheck());
+    // Campi inline fallimento
+    node.querySelector('[data-field="failureText"]').addEventListener("input", () => syncCheck());
+    node.querySelector('[data-field="failureEncounterId"]').addEventListener("change", (e) => { if (!e.target._hydrating) syncCheck(); });
+    node.querySelector('[data-field="failureCondition"]').addEventListener("change", (e) => { if (!e.target._hydrating) syncCheck(); });
+    node.querySelector('[data-field="failureUnlockChoiceId"]').addEventListener("input", () => syncCheck());
 
     node.querySelector('[data-action="remove-choice"]').addEventListener("click", () => {
       handlers.onRemove(index);
@@ -3813,18 +3866,39 @@ function renderOutcomeEditor(scene) {
 }
 
 function updateChoiceCheck(choice, node, onChange) {
-  const attribute = normalizeString(node.querySelector('[data-field="checkAttribute"]').value);
-  const success = normalizeString(node.querySelector('[data-field="checkSuccess"]').value);
-  const failure = normalizeString(node.querySelector('[data-field="checkFailure"]').value)
+  const attribute  = normalizeString(node.querySelector('[data-field="checkAttribute"]').value);
+  const success    = normalizeString(node.querySelector('[data-field="checkSuccess"]').value);
+  const failure    = normalizeString(node.querySelector('[data-field="checkFailure"]').value)
     || state.selectedSceneId || "";
   const difficulty = Number(node.querySelector('[data-field="checkDifficulty"]').value || 0);
 
   if (attribute && success) {
+    const burnOnFailure     = Boolean(node.querySelector('[data-field="burnOnFailure"]')?.checked);
+    const successText       = node.querySelector('[data-field="successText"]')?.value?.trim() || undefined;
+    const successEncId      = normalizeString(node.querySelector('[data-field="successEncounterId"]')?.value) || undefined;
+    const successCond       = normalizeString(node.querySelector('[data-field="successCondition"]')?.value) || undefined;
+    const successUnlockId   = node.querySelector('[data-field="successUnlockChoiceId"]')?.value?.trim() || undefined;
+    const failureText       = node.querySelector('[data-field="failureText"]')?.value?.trim() || undefined;
+    const failureEncId      = normalizeString(node.querySelector('[data-field="failureEncounterId"]')?.value) || undefined;
+    const failureCond       = normalizeString(node.querySelector('[data-field="failureCondition"]')?.value) || undefined;
+    const failureUnlockId   = node.querySelector('[data-field="failureUnlockChoiceId"]')?.value?.trim() || undefined;
+
     choice.skillCheck = {
       attribute,
       difficulty,
       successSceneId: success,
-      failureSceneId: failure
+      failureSceneId: failure,
+      ...(choice._successLootDraft?.length && { successLoot: choice._successLootDraft }),
+      ...(successText     && { successText }),
+      ...(successEncId    && { successEncounterId: successEncId }),
+      ...(successCond     && { successCondition: successCond }),
+      ...(successUnlockId && { successUnlockChoiceId: successUnlockId }),
+      ...(choice._failureLootDraft?.length && { failureLoot: choice._failureLootDraft }),
+      ...(failureText     && { failureText }),
+      ...(failureEncId    && { failureEncounterId: failureEncId }),
+      ...(failureCond     && { failureCondition: failureCond }),
+      ...(failureUnlockId && { failureUnlockChoiceId: failureUnlockId }),
+      ...(burnOnFailure   && { burnOnFailure: true }),
     };
     choice.targetSceneId = null;
   } else {
@@ -4545,14 +4619,27 @@ function cleanAdventure(adventure) {
       const rawSuccessLoot = (choice._successLootDraft || sc.successLoot || [])
         .filter((l) => l.itemName)
         .map(serializeLoot);
+      const rawFailureLoot = (choice._failureLootDraft || sc.failureLoot || [])
+        .filter((l) => l.itemName)
+        .map(serializeLoot);
       base.skillCheck = pruneEmpty({
         attribute: sc.attribute,
         difficulty: sc.difficulty,
         successSceneId: sc.successSceneId,
         failureSceneId: sc.failureSceneId,
-        successLoot: rawSuccessLoot.length > 0 ? rawSuccessLoot : undefined,
-        burnOnFailure: sc.burnOnFailure || undefined
+        successLoot:              rawSuccessLoot.length > 0 ? rawSuccessLoot : undefined,
+        successText:              sc.successText || undefined,
+        successEncounterId:       sc.successEncounterId || undefined,
+        successCondition:         sc.successCondition || undefined,
+        successUnlockChoiceId:    sc.successUnlockChoiceId || undefined,
+        failureLoot:              rawFailureLoot.length > 0 ? rawFailureLoot : undefined,
+        failureText:              sc.failureText || undefined,
+        failureEncounterId:       sc.failureEncounterId || undefined,
+        failureCondition:         sc.failureCondition || undefined,
+        failureUnlockChoiceId:    sc.failureUnlockChoiceId || undefined,
+        burnOnFailure:            sc.burnOnFailure || undefined
       });
+      if (choice.hidden) base.hidden = true;
     } else base.nextSceneId = choice.targetSceneId;
     return pruneEmpty(base);
   };
@@ -4766,10 +4853,22 @@ function normalizeImportedChoice(choice, index) {
       successSceneId: normalizeString(choice.skillCheck.successSceneId),
       failureSceneId: normalizeString(choice.skillCheck.failureSceneId),
       successLoot: (choice.skillCheck.successLoot || []).map((l) => normalizeLoot(l)),
+      ...(choice.skillCheck.successText       && { successText: choice.skillCheck.successText }),
+      ...(choice.skillCheck.successEncounterId && { successEncounterId: normalizeString(choice.skillCheck.successEncounterId) }),
+      ...(choice.skillCheck.successCondition  && { successCondition: normalizeString(choice.skillCheck.successCondition) }),
+      ...(choice.skillCheck.successUnlockChoiceId && { successUnlockChoiceId: normalizeString(choice.skillCheck.successUnlockChoiceId) }),
+      failureLoot: (choice.skillCheck.failureLoot || []).map((l) => normalizeLoot(l)),
+      ...(choice.skillCheck.failureText       && { failureText: choice.skillCheck.failureText }),
+      ...(choice.skillCheck.failureEncounterId && { failureEncounterId: normalizeString(choice.skillCheck.failureEncounterId) }),
+      ...(choice.skillCheck.failureCondition  && { failureCondition: normalizeString(choice.skillCheck.failureCondition) }),
+      ...(choice.skillCheck.failureUnlockChoiceId && { failureUnlockChoiceId: normalizeString(choice.skillCheck.failureUnlockChoiceId) }),
       burnOnFailure: Boolean(choice.skillCheck.burnOnFailure) || undefined
     } : null,
     _successLootDraft: choice.skillCheck?.successLoot
       ? (choice.skillCheck.successLoot || []).map((l) => normalizeLoot(l))
+      : [],
+    _failureLootDraft: choice.skillCheck?.failureLoot
+      ? (choice.skillCheck.failureLoot || []).map((l) => normalizeLoot(l))
       : [],
     requiredLockId: normalizeString(choice.requiredLockId),
     requiredLockLabel: normalizeString(choice.requiredLockLabel),
@@ -4777,6 +4876,7 @@ function normalizeImportedChoice(choice, index) {
     requiredItemCategory: normalizeString(choice.requiredItemCategory),
     requiredEffectId: normalizeString(choice.requiredEffectId),
     consumeOnUse: Boolean(choice.consumeOnUse),
+    hidden: Boolean(choice.hidden) || undefined,
     generatedCheckGate: Boolean(choice.generatedCheckGate || choice._editor?.generatedCheckGate)
   };
 }
@@ -5107,6 +5207,48 @@ function hydrateLootPresetSelect() {
 
 function monsterPresetById(presetId) {
   return MONSTER_PRESETS.find((entry) => entry.id === presetId) || null;
+}
+
+// Select per encounter esistenti (usata nei branch inline di skill check)
+function hydrateEncounterSelect(select, value = "") {
+  select._hydrating = true;
+  select.innerHTML = "";
+  const none = document.createElement("option");
+  none.value = "";
+  none.textContent = "— Nessuno —";
+  select.appendChild(none);
+  (state.adventure?.encounters || []).forEach((enc) => {
+    const opt = document.createElement("option");
+    opt.value = enc.id;
+    opt.textContent = enc.name || enc.id;
+    if (enc.id === value) opt.selected = true;
+    select.appendChild(opt);
+  });
+  select.value = value || "";
+  select._hydrating = false;
+}
+
+const CONDITION_OPTIONS = [
+  { value: "", label: "— Nessuna —" },
+  { value: "focused",   label: "Concentrato (focused)" },
+  { value: "guarded",   label: "In Guardia (guarded)" },
+  { value: "staggered", label: "Stordito (staggered)" },
+  { value: "exposed",   label: "Scoperto (exposed)" },
+  { value: "weakened",  label: "Indebolito (weakened)" },
+];
+
+function hydrateConditionSelect(select, value = "") {
+  select._hydrating = true;
+  select.innerHTML = "";
+  CONDITION_OPTIONS.forEach(({ value: v, label }) => {
+    const opt = document.createElement("option");
+    opt.value = v;
+    opt.textContent = label;
+    if (v === value) opt.selected = true;
+    select.appendChild(opt);
+  });
+  select.value = value || "";
+  select._hydrating = false;
 }
 
 function hydrateMonsterSelect(select, value = "") {
@@ -5440,13 +5582,27 @@ function normalizeChoice(choice, index = 1) {
     normalized.requiredEffectId = snapshot.requiredEffectId || defaults.requiredEffectId;
   }
   normalized.consumeOnUse = Boolean(snapshot.consumeOnUse);
+  normalized.hidden = Boolean(snapshot.hidden) || undefined;
   if (snapshot.skillCheck) {
+    const sc = snapshot.skillCheck;
     normalized.skillCheck = {
-      attribute: normalizeString(snapshot.skillCheck.attribute),
-      difficulty: Number(snapshot.skillCheck.difficulty || 0),
-      successSceneId: normalizeString(snapshot.skillCheck.successSceneId),
-      failureSceneId: normalizeString(snapshot.skillCheck.failureSceneId)
+      attribute: normalizeString(sc.attribute),
+      difficulty: Number(sc.difficulty || 0),
+      successSceneId: normalizeString(sc.successSceneId),
+      failureSceneId: normalizeString(sc.failureSceneId),
+      ...(sc.successText           && { successText: sc.successText }),
+      ...(sc.successEncounterId    && { successEncounterId: normalizeString(sc.successEncounterId) }),
+      ...(sc.successCondition      && { successCondition: normalizeString(sc.successCondition) }),
+      ...(sc.successUnlockChoiceId && { successUnlockChoiceId: normalizeString(sc.successUnlockChoiceId) }),
+      ...(sc.failureLoot?.length   && { failureLoot: sc.failureLoot }),
+      ...(sc.failureText           && { failureText: sc.failureText }),
+      ...(sc.failureEncounterId    && { failureEncounterId: normalizeString(sc.failureEncounterId) }),
+      ...(sc.failureCondition      && { failureCondition: normalizeString(sc.failureCondition) }),
+      ...(sc.failureUnlockChoiceId && { failureUnlockChoiceId: normalizeString(sc.failureUnlockChoiceId) }),
+      ...(sc.burnOnFailure         && { burnOnFailure: true })
     };
+    normalized._successLootDraft = (sc.successLoot || []).map((l) => normalizeLoot(l));
+    normalized._failureLootDraft = (sc.failureLoot || []).map((l) => normalizeLoot(l));
   } else {
     delete normalized.skillCheck;
   }

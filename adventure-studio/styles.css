@@ -1237,6 +1237,19 @@ button.small {
   line-height: 1.45;
 }
 
+.inline-branch-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 10px 0 6px;
+  padding: 4px 8px;
+  background: rgba(200, 130, 58, 0.08);
+  border-left: 2px solid var(--accent);
+  border-radius: 0 6px 6px 0;
+}
+
 #autosave-indicator {
   margin-top: 0;
 }

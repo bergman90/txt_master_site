@@ -426,12 +426,28 @@
           <label>Evento se fallisce <small>(vuoto = rimane qui)</small><select data-field="checkFailure"></select></label>
         </div>
         <label class="checkbox-line"><input data-field="burnOnFailure" type="checkbox"> Brucia scelta al fallimento — scompare dopo un tentativo fallito</label>
-        <div data-role="success-loot-section" style="display:none">
-          <p class="hint">Visibile solo con esito "📦 Resta qui". Loot assegnato al successo: la scelta si brucia e non è ripetibile.</p>
+        <!-- SUCCESSO inline — visibile solo con "Resta qui" -->
+        <div data-role="success-inline-section" style="display:none">
+          <p class="hint inline-branch-label">Esito successo (resta nella scena)</p>
           <div data-role="success-loot-list"></div>
-          <button data-action="add-success-loot" type="button" class="small">+ Aggiungi oggetto</button>
+          <button data-action="add-success-loot" type="button" class="small">+ Loot al successo</button>
+          <label>Testo narrativo al successo<textarea data-field="successText" rows="2" placeholder="es. Le rune indicano la porta centrale."></textarea></label>
+          <label>Combattimento al successo<select data-field="successEncounterId"></select></label>
+          <label>Condizione al successo<select data-field="successCondition"></select></label>
+          <label>Sblocca scelta (ID) al successo<input data-field="successUnlockChoiceId" type="text" placeholder="es. hidden_door"></label>
+        </div>
+        <!-- FALLIMENTO inline — visibile solo con "Resta qui" -->
+        <div data-role="failure-inline-section" style="display:none">
+          <p class="hint inline-branch-label">Esito fallimento (resta nella scena)</p>
+          <div data-role="failure-loot-list"></div>
+          <button data-action="add-failure-loot" type="button" class="small">+ Loot al fallimento</button>
+          <label>Testo narrativo al fallimento<textarea data-field="failureText" rows="2" placeholder="es. Non riesci a interpretare le rune."></textarea></label>
+          <label>Combattimento al fallimento<select data-field="failureEncounterId"></select></label>
+          <label>Condizione al fallimento<select data-field="failureCondition"></select></label>
+          <label>Sblocca scelta (ID) al fallimento<input data-field="failureUnlockChoiceId" type="text" placeholder="es. hidden_door"></label>
         </div>
       </details>
+      <label class="checkbox-line"><input data-field="hidden" type="checkbox"> Scelta nascosta — visibile solo se sbloccata da una prova (successUnlockChoiceId / failureUnlockChoiceId)</label>
       <hr class="choice-divider">
       <button data-action="remove-choice" class="danger small">Rimuovi scelta</button>
     </div>
