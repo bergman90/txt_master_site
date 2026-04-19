@@ -1728,21 +1728,9 @@ function hideNodePicker() {
 }
 
 function onNodePickerChoose(kind) {
-  if (kind === "description" || kind === "final") {
-    const { sourceSceneId = null, dropPoint = null } = _nodePicker || {};
-    hideNodePicker();
-    createSceneOfKind(kind, { position: dropPoint, sourceSceneId });
-    return;
-  }
-  // Combat e check: mostra step 2
-  const step1 = document.getElementById("node-picker-step1");
-  const step2 = document.getElementById("node-picker-step2");
-  if (!step1 || !step2) return;
-  step1.classList.add("hidden");
-  step2.classList.remove("hidden");
-  step2.innerHTML = "";
-  if (kind === "combat") renderNodePickerStep2Combat(step2);
-  else if (kind === "check") renderNodePickerStep2Check(step2);
+  const { sourceSceneId = null, dropPoint = null } = _nodePicker || {};
+  hideNodePicker();
+  createDescription({ position: dropPoint, sourceDescriptionId: sourceSceneId, isEnding: kind === "final" });
 }
 
 function nodePickerGoBack() {
@@ -2088,6 +2076,7 @@ function addChoice() {
   });
   markSceneDirty();
   renderSceneEditor();
+  refreshFlowCard(desc.id);
   scheduleJsonRender(180);
 }
 
@@ -2428,6 +2417,7 @@ function createFlowCard(desc, index, bounds = getCurrentFlowBoardBounds()) {
   card.addEventListener("pointerdown", (event) => {
     if (event.button !== 0) return;
     if (event.target.closest(".link-handle")) return;
+    if (event.target.closest("button, input, select, textarea, [contenteditable]")) return;
     event.preventDefault();
     const sceneId = card.dataset.sceneId;
     const currentDesc = state.adventure.descriptions.find((d) => d.id === sceneId);
@@ -2501,26 +2491,49 @@ function buildFlowCardMarkup(desc, index) {
       <button class="link-handle" title="Trascina per collegare"></button>
       <div class="flow-card-mini-index">${index + 1}</div>
       <div class="flow-card-mini-meta">
-        <span>${desc.isEnding ? "FIN" : "DESC"}</span>
-        <span>${isStart ? "IN" : ""}${isOrphan ? "!" : ""}</span>
+        <span>${desc.isEnding ? "FIN" : "SC"}</span>
+        <span>${isStart ? "▶" : ""}${isOrphan ? "!" : ""}</span>
       </div>
     `;
   }
+  const choices = desc.choices || [];
+  const exitsHtml = choices.map((c, i) => buildExitChip(c, i)).join("") +
+    (!desc.isEnding ? `<button class="flow-exit-add" data-action="add-choice" title="Aggiungi scelta">+</button>` : "");
   return `
     <button class="link-handle" title="Trascina per collegare"></button>
     <div class="flow-card-head">
       <strong class="flow-card-title" title="Doppio clic per modificare il titolo">${index + 1}. ${esc(desc.title || "Senza titolo")}</strong>
       <span class="flow-card-badges">
-        ${isStart ? '<span class="flow-badge flow-badge--start">INIZIO</span>' : ""}
-        ${desc.isEnding ? '<span class="flow-badge flow-badge--ending">FINE</span>' : ""}
-        ${isOrphan ? '<span class="flow-badge flow-badge--orphan" title="Nessuna descrizione collega a questo nodo">&#x26A0; orfano</span>' : ""}
+        ${isStart ? '<span class="flow-badge flow-badge--start">▶</span>' : ""}
+        ${desc.isEnding ? '<span class="flow-badge flow-badge--ending">■</span>' : ""}
+        ${isOrphan ? '<span class="flow-badge flow-badge--orphan" title="Nessun nodo collega qui">!</span>' : ""}
       </span>
     </div>
-    <div class="flow-choices">
-      ${renderFlowChoiceSummary(desc)}
-    </div>
-    ${!desc.isEnding ? `<div class="flow-card-footer"><button class="flow-add-btn" data-action="add-choice" title="Aggiungi scelta (Invio)">+ scelta</button></div>` : ""}
+    <div class="flow-exits">${exitsHtml || `<button class="flow-exit-add flow-exit-add--empty" data-action="add-choice">+ scelta</button>`}</div>
   `;
+}
+
+function buildExitChip(choice, index) {
+  const ev = choice.event;
+  const type = ev?.type;
+  const icon = type === "combat"      ? "⚔"
+    : type === "skillcheck"           ? "🎲"
+    : type === "requirement"          ? "🔑"
+    : type === "dialogue"             ? "💬"
+    : type === "shop"                 ? "🏪"
+    : type === "loot"                 ? "🗡"
+    : type === "transition"           ? "↗"
+    : "→";
+  const label = choice.text || `Scelta ${index + 1}`;
+  const isLinked = Boolean(choice.targetId || ev);
+  const colorClass = type === "combat" ? "chip--combat"
+    : type === "skillcheck"           ? "chip--check"
+    : type === "requirement"          ? "chip--req"
+    : isLinked                        ? "chip--nav"
+    : "chip--empty";
+  return `<div class="flow-exit-chip ${colorClass}" data-choice-id="${esc(choice.id)}" title="${esc(label)}">
+    <span class="chip-icon">${icon}</span><span class="chip-label">${esc(truncate(label, 16))}</span>
+  </div>`;
 }
 
 function renderFlowChoiceSummary(desc) {
@@ -2643,20 +2656,22 @@ function resolveChoiceTargetIds(choice) {
 function appendDescriptionChoiceLinks(lines, source, choice, color, visibleBounds = null, bounds = getCurrentFlowBoardBounds()) {
   if (choice.event) {
     const ev = choice.event;
-    // Per eventi ramificati disegna una linea per ramo
+    const icon = ev.type === "combat" ? "⚔" : ev.type === "skillcheck" ? "🎲"
+      : ev.type === "requirement" ? "🔑" : ev.type === "shop" ? "🏪"
+      : ev.type === "loot" ? "🗡" : ev.type === "dialogue" ? "💬" : "";
     if (ev.type === "skillcheck") {
-      appendBranchLink(lines, source, ev.successBranch, "#6f8a57", visibleBounds, bounds);
-      appendBranchLink(lines, source, ev.failureBranch, "#b94a48", visibleBounds, bounds);
+      appendBranchLink(lines, source, ev.successBranch, "#6f8a57", visibleBounds, bounds, false, icon);
+      appendBranchLink(lines, source, ev.failureBranch, "#b94a48", visibleBounds, bounds, false, "");
     } else if (ev.type === "combat") {
-      appendBranchLink(lines, source, ev.victoryBranch, "#6f8a57", visibleBounds, bounds);
-      appendBranchLink(lines, source, ev.defeatBranch, "#b94a48", visibleBounds, bounds);
-      if (ev.retreatBranch) appendBranchLink(lines, source, ev.retreatBranch, "#6d84b5", visibleBounds, bounds, true);
+      appendBranchLink(lines, source, ev.victoryBranch, "#6f8a57", visibleBounds, bounds, false, icon);
+      appendBranchLink(lines, source, ev.defeatBranch, "#b94a48", visibleBounds, bounds, false, "");
+      if (ev.retreatBranch) appendBranchLink(lines, source, ev.retreatBranch, "#6d84b5", visibleBounds, bounds, true, "");
     } else if (ev.type === "requirement") {
-      appendBranchLink(lines, source, ev.metBranch, "#6f8a57", visibleBounds, bounds);
-      appendBranchLink(lines, source, ev.unmetBranch, "#b94a48", visibleBounds, bounds);
+      appendBranchLink(lines, source, ev.metBranch, "#6f8a57", visibleBounds, bounds, false, icon);
+      appendBranchLink(lines, source, ev.unmetBranch, "#b94a48", visibleBounds, bounds, false, "");
     } else {
       const branch = ev.branch;
-      if (branch) appendBranchLink(lines, source, branch, color, visibleBounds, bounds);
+      if (branch) appendBranchLink(lines, source, branch, color, visibleBounds, bounds, false, icon);
     }
   } else if (choice.targetId && choice.targetId !== DEATH_SENTINEL && choice.targetId !== STAY_SENTINEL) {
     const target = state.adventure.descriptions.find((d) => d.id === choice.targetId);
@@ -2669,13 +2684,13 @@ function appendDescriptionChoiceLinks(lines, source, choice, color, visibleBound
   }
 }
 
-function appendBranchLink(lines, source, branch, color, visibleBounds, bounds, dashed = false) {
+function appendBranchLink(lines, source, branch, color, visibleBounds, bounds, dashed = false, label = "") {
   if (!branch?.targetId || branch.targetId === DEATH_SENTINEL || branch.targetId === STAY_SENTINEL) return;
   const target = state.adventure.descriptions.find((d) => d.id === branch.targetId);
   if (!target) return;
   const targetEntry = nodeEntry(target, bounds);
   if (shouldRenderFlowLink(source, targetEntry, visibleBounds)) {
-    lines.push(linkPath(source, targetEntry, color, dashed));
+    lines.push(linkPath(source, targetEntry, color, dashed, label));
   }
 }
 
@@ -2695,10 +2710,19 @@ function outcomeLinkColor(key) {
   return "#b56d39";
 }
 
-function linkPath(source, target, color, dashed = false) {
+function linkPath(source, target, color, dashed = false, label = "") {
   const dx = Math.max(80, Math.abs(target.x - source.x) * 0.4);
   const dash = dashed ? ' stroke-dasharray="7 6"' : "";
-  return `<path d="M ${source.x} ${source.y} C ${source.x + dx} ${source.y}, ${target.x - dx} ${target.y}, ${target.x} ${target.y}" stroke="${color}" stroke-width="3" fill="none" marker-end="url(#arrow)" opacity="0.9"${dash} />`;
+  const path = `<path d="M ${source.x} ${source.y} C ${source.x + dx} ${source.y}, ${target.x - dx} ${target.y}, ${target.x} ${target.y}" stroke="${color}" stroke-width="3" fill="none" marker-end="url(#arrow)" opacity="0.9"${dash} />`;
+  if (!label) return path;
+  // Midpoint approssimato della cubica a t=0.5
+  const mx = Math.round((source.x + target.x) / 2);
+  const my = Math.round((source.y + target.y) / 2);
+  const badge = `<g transform="translate(${mx},${my})" class="flow-link-badge" pointer-events="none">
+    <circle r="9" fill="${color}" opacity="0.85"/>
+    <text text-anchor="middle" dominant-baseline="central" font-size="11" fill="white">${label}</text>
+  </g>`;
+  return path + badge;
 }
 
 function computeBoardBounds() {
@@ -5986,6 +6010,11 @@ function buildChoiceEditorMetadata(_choice) {
 
 function esc(str) {
   return String(str || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function truncate(str, max) {
+  str = String(str || "");
+  return str.length > max ? str.slice(0, max - 1) + "…" : str;
 }
 
 function pruneEmpty(object) {
