@@ -425,9 +425,13 @@ const MONSTER_STAT_ARCHETYPES = [
 
 const NODE_WIDTH = 280;
 const NODE_HEIGHT = 130;
-const CHOICE_BUS_GAP = 56;    // board px from scene right edge to choice circle center
-const CHOICE_SPACING = 36;    // board px vertical spacing between choice circles
-const CHOICE_NODE_R = 13;     // board px radius of choice circle
+const CHOICE_BUS_GAP = 72;    // board px from scene right edge to event node center
+const CHOICE_SPACING = 44;    // board px vertical spacing between event nodes
+const CHOICE_NODE_R = 13;     // compact mode radius
+const FLOW_EVENT_NODE_WIDTH = 138;
+const FLOW_EVENT_NODE_HEIGHT = 34;
+const FLOW_EVENT_ADD_NODE_WIDTH = 82;
+const FLOW_EVENT_ADD_NODE_HEIGHT = 28;
 const CREATE_MONSTER_OPTION = "__create_new__";
 const SCENE_IMAGE_ASPECT_RATIO = 2.48;
 const SCENE_IMAGE_TARGET_WIDTH = 1200;
@@ -490,6 +494,7 @@ const state = {
     currentProjectId: null,
     projectPickerOpen: false,
     flowBoardBounds: null,
+    selectedEventRef: null,
     copiedDescriptionPayload: null,
     lastCreatedDescriptionId: null
   }
@@ -586,6 +591,7 @@ function initializeEmptyWorkspace() {
   state.ui.sceneSavedAt = null;
   state.ui.flowZoom = 1;
   state.ui.currentProjectId = null;
+  state.ui.selectedEventRef = null;
   state.ui.lastCreatedDescriptionId = null;
 }
 
@@ -607,6 +613,7 @@ function openAdventureProject(payload, {
   state.ui.strictAlpha = strictAlpha;
   state.ui.flowZoom = Math.min(FLOW_ZOOM_MAX, Math.max(FLOW_ZOOM_MIN, Number(flowZoom || 1)));
   state.ui.currentProjectId = projectId;
+  state.ui.selectedEventRef = null;
   state.ui.lastCreatedDescriptionId = state.adventure.descriptions[state.adventure.descriptions.length - 1]?.id || null;
   if (persist) {
     persistLocalProject({ syncScene: false });
@@ -824,6 +831,8 @@ const els = {
   flowZoomLabel: document.getElementById("flow-zoom-label"),
   sceneEmpty: document.getElementById("scene-empty"),
   sceneEditor: document.getElementById("scene-editor"),
+  scenePanelTitle: document.getElementById("scene-panel-title"),
+  sceneTypeBadge: document.getElementById("scene-type-badge"),
   addSceneImageBtn: document.getElementById("add-scene-image-btn"),
   sceneImageInput: document.getElementById("scene-image-input"),
   sceneSaveStatus: document.getElementById("scene-save-status"),
@@ -1183,6 +1192,14 @@ function bindSceneEditor() {
   if (els.sceneKind) els.sceneKind.addEventListener("change", () => {});
 
   els.sceneTitle.addEventListener("input", (e) => {
+    const eventContext = getSelectedEventContext();
+    if (eventContext) {
+      eventContext.choice.text = e.target.value;
+      markSceneDirty();
+      scheduleFlowCardRefresh(eventContext.description.id);
+      scheduleJsonRender();
+      return;
+    }
     const scene = getSelectedScene();
     if (!scene) return;
     scene.title = e.target.value;
@@ -1192,6 +1209,16 @@ function bindSceneEditor() {
   });
 
   els.sceneOpeningText.addEventListener("input", (e) => {
+    const eventContext = getSelectedEventContext();
+    if (eventContext) {
+      if (eventContext.choice.event) {
+        eventContext.choice.event.text = e.target.value;
+        markSceneDirty();
+        scheduleFlowCardRefresh(eventContext.description.id);
+        scheduleJsonRender();
+      }
+      return;
+    }
     const scene = getSelectedScene();
     if (!scene) return;
     scene.text = e.target.value;
@@ -1213,7 +1240,7 @@ function readFileAsDataUrl(file) {
 }
 
 async function onSceneImageSelected(event) {
-  const scene = getSelectedScene();
+  const scene = getSelectedEventContext()?.choice?.event || getSelectedScene();
   const file = event.target.files?.[0];
   if (!scene || !file) return;
   try {
@@ -1239,7 +1266,7 @@ async function onSceneImageSelected(event) {
 }
 
 async function onSceneImageFrameInput() {
-  const scene = getSelectedScene();
+  const scene = getSelectedEventContext()?.choice?.event || getSelectedScene();
   if (!scene?.eventImage?.sourceDataUrl) return;
   scene.eventImage.zoom = Number(els.sceneImageZoom.value || 1);
   scene.eventImage.focusX = Number(els.sceneImageFocusX.value || 50);
@@ -1360,7 +1387,7 @@ function normalizeSceneImage(imageConfig) {
 }
 
 function removeSceneImage() {
-  const scene = getSelectedScene();
+  const scene = getSelectedEventContext()?.choice?.event || getSelectedScene();
   if (!scene) return;
   scene.eventImage = null;
   scene.image = null;
@@ -2307,6 +2334,14 @@ function syncChoiceCollectionFromContainer(container, choices) {
 }
 
 function syncCurrentSceneEditorStateFromDom() {
+  const eventContext = getSelectedEventContext();
+  if (eventContext) {
+    eventContext.choice.text = els.sceneTitle?.value ?? eventContext.choice.text;
+    if (eventContext.choice.event) {
+      eventContext.choice.event.text = els.sceneOpeningText?.value ?? eventContext.choice.event.text;
+    }
+    return;
+  }
   const desc = getSelectedScene();
   if (!desc) return;
   desc.title = els.sceneTitle?.value ?? desc.title;
@@ -2369,19 +2404,23 @@ function flashSaveAdventureButton() {
 function updateSceneSaveStatus() {
   if (!els.sceneSaveStatus) return;
   const scene = getSelectedScene();
+  const eventContext = getSelectedEventContext();
+  const subject = eventContext ? "Il nodo evento" : "Il nodo";
   els.sceneSaveStatus.textContent = !scene
     ? "Le modifiche del nodo vengono confermate quando salvi l'avventura o cambi evento."
     : state.ui.sceneDirty
-      ? "Hai modifiche non salvate. Usa Salva avventura per confermarle."
-      : `Nodo salvato${state.ui.sceneSavedAt ? ` alle ${formatSceneSaveTime(state.ui.sceneSavedAt)}` : ""}.`;
+      ? `Hai modifiche non salvate. Usa Salva avventura per confermare.`
+      : `${subject} è salvato${state.ui.sceneSavedAt ? ` alle ${formatSceneSaveTime(state.ui.sceneSavedAt)}` : ""}.`;
 }
 
 function switchSelectedScene(nextSceneId) {
-  if (!nextSceneId || nextSceneId === state.selectedDescriptionId) return;
+  if (!nextSceneId) return;
   const previousSceneId = state.selectedDescriptionId;
   saveCurrentScene({ renderFlow: false });
   state.selectedDescriptionId = nextSceneId;
+  state.ui.selectedEventRef = null;
   updateFlowCardSelection(previousSceneId, nextSceneId);
+  updateChoiceNodeSelection();
   renderSceneEditor();
 }
 
@@ -2407,6 +2446,7 @@ function renderFlowCards(bounds = computeBoardBounds()) {
 
   els.flowCanvas.appendChild(fragment);
   renderChoiceNodes(bounds);
+  updateChoiceNodeSelection();
   renderFlowStats();
   renderMinimap();
 }
@@ -2777,7 +2817,9 @@ function computeBoardBounds() {
   const minX = scenePositions.length ? Math.min(...scenePositions.map((point) => point.x), 0) : 0;
   const minY = scenePositions.length ? Math.min(...scenePositions.map((point) => point.y), 0) : 0;
   // Choice nodes extend beyond the scene card right edge
-  const choiceNodeExtra = metrics.compact ? 0 : CHOICE_BUS_GAP + CHOICE_NODE_R + 4;
+  const choiceNodeExtra = metrics.compact
+    ? CHOICE_BUS_GAP + CHOICE_NODE_R + 4
+    : CHOICE_BUS_GAP + Math.ceil(FLOW_EVENT_NODE_WIDTH / 2) + 10;
   const maxX = scenePositions.length ? Math.max(...scenePositions.map((point) => point.x + metrics.width + choiceNodeExtra), metrics.width) : metrics.width;
   const maxY = scenePositions.length ? Math.max(...scenePositions.map((point) => point.y + metrics.height), metrics.height) : metrics.height;
   const contentWidth = Math.max(metrics.width, maxX - minX);
@@ -2869,6 +2911,175 @@ function shouldRenderFlowLink(source, target, visibleBounds) {
     || maxY < visibleBounds.top
     || minY > visibleBounds.bottom
   );
+}
+
+function choiceEventType(choice) {
+  return choice?.event?.type || (choice?.targetId ? "transition" : "empty");
+}
+
+function choiceEventVisual(choice) {
+  const type = choiceEventType(choice);
+  const map = {
+    combat: { icon: "⚔", label: "Combattimento", className: "choice-node--combat", cardClass: "choice-card--combat" },
+    skillcheck: { icon: "🎲", label: "Prova", className: "choice-node--check", cardClass: "choice-card--skillcheck" },
+    requirement: { icon: "🔑", label: "Requisito", className: "choice-node--req", cardClass: "choice-card--requirement" },
+    shop: { icon: "🏪", label: "Negozio", className: "choice-node--shop", cardClass: "choice-card--shop" },
+    loot: { icon: "🗡", label: "Loot", className: "choice-node--loot", cardClass: "choice-card--loot" },
+    condition: { icon: "✦", label: "Condizione", className: "choice-node--condition", cardClass: "choice-card--condition" },
+    dialogue: { icon: "💬", label: "Dialogo", className: "choice-node--dialogue", cardClass: "choice-card--dialogue" },
+    transition: { icon: "→", label: "Transizione", className: "choice-node--nav", cardClass: "choice-card--transition" },
+    empty: { icon: "·", label: "Evento", className: "choice-node--empty", cardClass: "choice-card--empty" }
+  };
+  return map[type] || map.empty;
+}
+
+function eventPortsForType(eventType) {
+  if (eventType === "combat") return [
+    { id: "victory", label: "Vittoria" },
+    { id: "defeat", label: "Sconfitta" },
+    { id: "retreat", label: "Ritirata" }
+  ];
+  if (eventType === "skillcheck") return [
+    { id: "success", label: "Riuscita" },
+    { id: "failure", label: "Fallimento" }
+  ];
+  if (eventType === "requirement") return [
+    { id: "met", label: "Soddisfatto" },
+    { id: "unmet", label: "Non soddisfatto" }
+  ];
+  return [{ id: "next", label: "Continua" }];
+}
+
+function eventBranchByPortId(event, portId) {
+  if (!event) return null;
+  if (event.type === "combat") return portId === "victory"
+    ? event.victoryBranch
+    : portId === "defeat"
+      ? event.defeatBranch
+      : event.retreatBranch;
+  if (event.type === "skillcheck") return portId === "success" ? event.successBranch : event.failureBranch;
+  if (event.type === "requirement") return portId === "met" ? event.metBranch : event.unmetBranch;
+  return event.branch || null;
+}
+
+function summarizeChoiceFlow(choice) {
+  const visual = choiceEventVisual(choice);
+  if (choice?.event) {
+    const ports = eventPortsForType(choice.event.type);
+    const linked = ports.filter((port) => {
+      const branch = eventBranchByPortId(choice.event, port.id);
+      return Boolean(branch?.targetId || branch?.event);
+    });
+    if (!linked.length) return `${visual.label} · da collegare nella mappa`;
+    return `${visual.label} · ${linked.map((port) => port.label).join(" / ")}`;
+  }
+  if (choice?.targetId) {
+    return `${visual.label} · ${sceneTitleById(choice.targetId, "destinazione")}`;
+  }
+  return "Evento ancora da definire";
+}
+
+function buildAdventureGraphProjection(adventure = state.adventure) {
+  const graph = {
+    startNodeId: adventure.startingDescriptionId || "",
+    nodes: [],
+    edges: []
+  };
+  const nodeIndex = new Set();
+  const edgeIndex = new Set();
+
+  function addNode(node) {
+    if (nodeIndex.has(node.id)) return;
+    nodeIndex.add(node.id);
+    graph.nodes.push(node);
+  }
+
+  function addEdge(edge) {
+    const key = `${edge.fromNodeId}:${edge.fromPortId || ""}->${edge.toNodeId}`;
+    if (edgeIndex.has(key)) return;
+    edgeIndex.add(key);
+    graph.edges.push(edge);
+  }
+
+  function ensureEventNode(choice, event, ownerNodeId, ownerPortId, chainKey, options = {}) {
+    if (!event) return null;
+    const visual = choiceEventVisual({ ...choice, event, targetId: null });
+    const eventNodeId = options.eventNodeId || `${ownerNodeId}__${ownerPortId || "next"}__${chainKey}`;
+    addNode({
+      id: eventNodeId,
+      nodeType: "event",
+      eventType: event.type || "transition",
+      label: options.label || choice?.text || visual.label,
+      ports: eventPortsForType(event.type || "transition"),
+      ref: {
+        descriptionId: options.descriptionId || null,
+        choiceId: choice?.id || null,
+        ownerNodeId,
+        ownerPortId: ownerPortId || null
+      }
+    });
+    addEdge({
+      id: `${ownerNodeId}__${ownerPortId || "next"}__edge`,
+      fromNodeId: ownerNodeId,
+      fromPortId: ownerPortId || null,
+      toNodeId: eventNodeId
+    });
+
+    eventPortsForType(event.type || "transition").forEach((port) => {
+      const branch = eventBranchByPortId(event, port.id);
+      if (!branch) return;
+      if (branch.event) {
+        ensureEventNode(choice, branch.event, eventNodeId, port.id, `${port.id}__event`, {
+          label: `${visual.label} · ${port.label}`,
+          descriptionId: options.descriptionId || null
+        });
+        return;
+      }
+      if (branch.targetId && ![DEATH_SENTINEL, STAY_SENTINEL, RETRY_SENTINEL, NO_ESCAPE_SENTINEL].includes(branch.targetId)) {
+        addEdge({
+          id: `${eventNodeId}__${port.id}__${branch.targetId}`,
+          fromNodeId: eventNodeId,
+          fromPortId: port.id,
+          toNodeId: branch.targetId
+        });
+      }
+    });
+
+    return eventNodeId;
+  }
+
+  (adventure.descriptions || []).forEach((desc, descIndex) => {
+    addNode({
+      id: desc.id,
+      nodeType: "description",
+      title: desc.title || `Scena ${descIndex + 1}`,
+      ports: (desc.choices || []).map((choice, index) => ({
+        id: choice.id || `${desc.id}__choice_${index + 1}`,
+        portType: "choice",
+        label: choice.text || `Scelta ${index + 1}`
+      }))
+    });
+
+    (desc.choices || []).forEach((choice, index) => {
+      const portId = choice.id || `${desc.id}__choice_${index + 1}`;
+      if (choice.event) {
+        ensureEventNode(choice, choice.event, desc.id, portId, "event", {
+          descriptionId: desc.id
+        });
+      } else {
+        const syntheticTransition = {
+          type: "transition",
+          branch: { targetId: choice.targetId || null }
+        };
+        ensureEventNode(choice, syntheticTransition, desc.id, portId, "transition", {
+          label: choice.text || `Scelta ${index + 1}`,
+          descriptionId: desc.id
+        });
+      }
+    });
+  });
+
+  return graph;
 }
 
 function updateFlowViewportMetrics(bounds = computeBoardBounds()) {
@@ -2978,11 +3189,14 @@ function attachNavigateBtn(container, selector) {
 
 function renderFlowStats() {
   if (!els.flowStats) return;
-  const count = state.adventure.descriptions.length;
+  const graph = buildAdventureGraphProjection(state.adventure);
+  const descriptionCount = graph.nodes.filter((node) => node.nodeType === "description").length;
+  const eventCount = graph.nodes.filter((node) => node.nodeType === "event").length;
   const endings = state.adventure.descriptions.filter((d) => d.isEnding).length;
+  const baseLabel = `${descriptionCount} descr. · ${eventCount} eventi`;
   els.flowStats.textContent = endings > 0
-    ? `${count} nodi · ${endings} fin${endings === 1 ? "e" : "i"}`
-    : `${count} nodi`;
+    ? `${baseLabel} · ${endings} fin${endings === 1 ? "e" : "i"}`
+    : baseLabel;
 }
 
 // ─── Flow search / filter ─────────────────────────────────────────────────────
@@ -3221,13 +3435,7 @@ function showChoiceEventPicker(descId, choiceId, anchorRect) {
       scheduleFlowLinksRender();
       scheduleJsonRender();
       closeChoiceEventPicker();
-      // Apri subito il popover destinazioni per configurare i rami sulla mappa
-      requestAnimationFrame(() => {
-        const nodeEl = els.choiceNodesLayer?.querySelector(
-          `.choice-node[data-desc-id="${descId}"][data-choice-id="${choice.id}"]`
-        );
-        if (nodeEl) showChoiceTargetsPopover(descId, choice.id, nodeEl.getBoundingClientRect());
-      });
+      selectEventNode(descId, choice.id, { scrollIntoView: false });
     });
     picker.appendChild(btn);
   });
@@ -3314,8 +3522,7 @@ function showChoiceTargetsPopover(descId, choiceId, anchorRect) {
   detBtn.addEventListener("click", (e) => {
     e.stopPropagation();
     closeChoiceTargetsPopover();
-    switchSelectedScene(descId);
-    requestAnimationFrame(() => els.sceneEditor?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    selectEventNode(descId, choiceId);
   });
   footer.appendChild(detBtn);
   pop.appendChild(footer);
@@ -3466,6 +3673,7 @@ function refreshFlowCard(sceneId) {
     syncFlowCard(current, state.adventure.descriptions[sceneIndex], sceneIndex, bounds);
   }
   refreshChoiceNodes(sceneId, bounds);
+  updateChoiceNodeSelection();
 }
 
 function scheduleFlowCardRefresh(sceneId, delay = 300) {
@@ -3481,6 +3689,16 @@ function scheduleFlowCardRefresh(sceneId, delay = 300) {
 function updateFlowCardSelection(previousSceneId, nextSceneId) {
   if (previousSceneId) flowCardElement(previousSceneId)?.classList.remove("active");
   if (nextSceneId) flowCardElement(nextSceneId)?.classList.add("active");
+}
+
+function updateChoiceNodeSelection() {
+  const layer = els.choiceNodesLayer;
+  if (!layer) return;
+  layer.querySelectorAll(".choice-node[data-choice-id]").forEach((node) => {
+    const descId = node.dataset.descId || "";
+    const choiceId = node.dataset.choiceId || "";
+    node.classList.toggle("is-selected", isEventNodeSelected(descId, choiceId));
+  });
 }
 
 function scheduleFlowLinksRender(reason = "general") {
@@ -3600,14 +3818,34 @@ function updateChoiceNodePositions(descId, bounds = getCurrentFlowBoardBounds())
   if (!desc) return;
   choiceNodesBoardPositions(desc, bounds).forEach(({ choice, x, y }) => {
     const el = layer.querySelector(`.choice-node[data-desc-id="${descId}"][data-choice-id="${choice.id}"]`);
-    if (el) { el.style.left = `${x - CHOICE_NODE_R}px`; el.style.top = `${y - CHOICE_NODE_R}px`; }
+    if (el) applyChoiceNodeFrame(el, x, y, false);
   });
   const addEl = layer.querySelector(`.choice-node--add[data-desc-id="${descId}"]`);
   if (addEl) {
     const addPos = choiceAddNodeBoardPos(desc, bounds);
-    addEl.style.left = `${addPos.x - CHOICE_NODE_R}px`;
-    addEl.style.top = `${addPos.y - CHOICE_NODE_R}px`;
+    applyChoiceNodeFrame(addEl, addPos.x, addPos.y, true);
   }
+}
+
+function choiceNodeFrame(isAdd = false) {
+  const compact = isCompactFlowZoom();
+  if (isAdd) {
+    return compact
+      ? { width: CHOICE_NODE_R * 2, height: CHOICE_NODE_R * 2, compact: true }
+      : { width: FLOW_EVENT_ADD_NODE_WIDTH, height: FLOW_EVENT_ADD_NODE_HEIGHT, compact: false };
+  }
+  return compact
+    ? { width: CHOICE_NODE_R * 2, height: CHOICE_NODE_R * 2, compact: true }
+    : { width: FLOW_EVENT_NODE_WIDTH, height: FLOW_EVENT_NODE_HEIGHT, compact: false };
+}
+
+function applyChoiceNodeFrame(el, x, y, isAdd = false) {
+  const frame = choiceNodeFrame(isAdd);
+  el.style.left = `${x - frame.width / 2}px`;
+  el.style.top = `${y - frame.height / 2}px`;
+  el.style.width = `${frame.width}px`;
+  el.style.height = `${frame.height}px`;
+  el.classList.toggle("choice-node--compact", frame.compact);
 }
 
 function createChoiceNodeEl(desc, choice, x, y) {
@@ -3615,31 +3853,25 @@ function createChoiceNodeEl(desc, choice, x, y) {
   el.type = "button";
   el.dataset.descId = desc.id;
   el.dataset.choiceId = choice.id;
-  el.style.left = `${x - CHOICE_NODE_R}px`;
-  el.style.top = `${y - CHOICE_NODE_R}px`;
-  el.style.width = el.style.height = `${CHOICE_NODE_R * 2}px`;
   el.title = choice.text || `Scelta ${(desc.choices || []).indexOf(choice) + 1}`;
-  const ev = choice.event;
-  const icon = ev?.type === "combat"     ? "⚔"
-    : ev?.type === "skillcheck"          ? "🎲"
-    : ev?.type === "requirement"         ? "🔑"
-    : ev?.type === "dialogue"            ? "💬"
-    : ev?.type === "shop"                ? "🏪"
-    : ev?.type === "loot"                ? "🗡"
-    : choice.targetId                    ? "→"
-    : "·";
-  el.textContent = icon;
-  const typeClass = ev?.type === "combat"     ? "choice-node--combat"
-    : ev?.type === "skillcheck"               ? "choice-node--check"
-    : ev?.type === "requirement"              ? "choice-node--req"
-    : ev?.type === "shop"                     ? "choice-node--shop"
-    : ev?.type === "loot"                     ? "choice-node--loot"
-    : choice.targetId                         ? "choice-node--nav"
-    : "choice-node--empty";
-  el.className = `choice-node ${typeClass}`;
+  const visual = choiceEventVisual(choice);
+  const label = choice.text || visual.label;
+  el.className = `choice-node ${visual.className}`;
+  el.classList.toggle("is-selected", isEventNodeSelected(desc.id, choice.id));
+  el.innerHTML = `
+    <span class="choice-node__icon">${visual.icon}</span>
+    <span class="choice-node__label">${esc(truncate(label, 18))}</span>
+    <span class="choice-node__meta">${esc(visual.label)}</span>
+  `;
+  applyChoiceNodeFrame(el, x, y, false);
   el.addEventListener("click", (e) => {
     e.stopPropagation();
-    switchSelectedScene(desc.id);
+    closeChoiceTargetsPopover();
+    closeChoiceEventPicker();
+    selectEventNode(desc.id, choice.id);
+  });
+  el.addEventListener("dblclick", (e) => {
+    e.stopPropagation();
     const c = desc.choices?.find((x) => x.id === choice.id);
     if (c?.event || c?.targetId) {
       showChoiceTargetsPopover(desc.id, choice.id, el.getBoundingClientRect());
@@ -3680,10 +3912,11 @@ function createChoiceAddNodeEl(desc, x, y) {
   el.type = "button";
   el.className = "choice-node choice-node--add";
   el.dataset.descId = desc.id;
-  el.style.left = `${x - CHOICE_NODE_R}px`;
-  el.style.top = `${y - CHOICE_NODE_R}px`;
-  el.style.width = el.style.height = `${CHOICE_NODE_R * 2}px`;
-  el.textContent = "+";
+  el.innerHTML = `
+    <span class="choice-node__icon">+</span>
+    <span class="choice-node__label">Nuovo evento</span>
+  `;
+  applyChoiceNodeFrame(el, x, y, true);
   el.title = "Aggiungi scelta";
   el.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -3720,19 +3953,29 @@ function addChoiceAndPickEvent(descId) {
   });
 }
 
-function renderSceneEditor() {
-  const desc = getSelectedScene();
-  const visible = Boolean(desc);
-  els.sceneEmpty.classList.toggle("hidden", visible);
-  els.sceneEditor.classList.toggle("hidden", !visible);
-  updateSceneSaveStatus();
-  if (!desc) return;
+function setSceneTypeBadge(label, modifier = "description") {
+  if (!els.sceneTypeBadge) return;
+  els.sceneTypeBadge.textContent = label;
+  els.sceneTypeBadge.className = `scene-type-badge scene-type-badge--${modifier}`;
+  els.sceneTypeBadge.classList.remove("hidden");
+}
 
+function renderDescriptionEditor(desc) {
+  if (els.scenePanelTitle) els.scenePanelTitle.textContent = "Descrizione selezionata";
+  els.sceneTitle.disabled = false;
   els.sceneTitle.value = desc.title || "";
+  els.sceneOpeningText.disabled = false;
   els.sceneOpeningText.value = desc.text || "";
+  els.sceneOpeningText.placeholder = "";
   if (els.sceneIsEnding) els.sceneIsEnding.checked = Boolean(desc.isEnding);
 
   renderSceneImagePreview(desc);
+  setSceneTypeBadge("Descrizione", "description");
+  if (els.duplicateSceneBtn) els.duplicateSceneBtn.disabled = false;
+  if (els.deleteSceneBtn) els.deleteSceneBtn.disabled = false;
+  if (els.addSceneImageBtn) els.addSceneImageBtn.disabled = false;
+  if (els.replaceSceneImageBtn) els.replaceSceneImageBtn.disabled = false;
+  if (els.removeSceneImageBtn) els.removeSceneImageBtn.disabled = false;
 
   // Nascondi sezioni v1 non più presenti nel modello v2
   if (els.sceneKind) els.sceneKind.closest("label")?.classList.add("hidden");
@@ -3744,10 +3987,207 @@ function renderSceneEditor() {
     els.sceneChoicesSection.open = true;
   }
   if (els.sceneChoicesSummary) els.sceneChoicesSummary.textContent = "Scelte";
-  if (els.sceneChoicesHint) els.sceneChoicesHint.textContent = "Ogni scelta può avere una navigazione diretta o un evento (combattimento, prova, requisito...).";
-  if (els.addChoiceBtn) els.addChoiceBtn.textContent = "Aggiungi scelta";
+  if (els.sceneChoicesHint) els.sceneChoicesHint.textContent = "Lavora prima nella mappa: ogni scelta genera un nodo evento. Qui rifinisci solo payload, requisiti e opzioni avanzate.";
+  if (els.addChoiceBtn) {
+    els.addChoiceBtn.textContent = "Aggiungi scelta";
+    els.addChoiceBtn.classList.remove("hidden");
+  }
 
   renderChoices(desc);
+}
+
+function buildSelectedEventPayloadCard(desc, choice) {
+  const visual = choiceEventVisual(choice);
+  const card = document.createElement("div");
+  card.className = `choice-card event-focus-card ${visual.cardClass}`;
+
+  const top = document.createElement("div");
+  top.className = "choice-card-summary";
+  const badge = document.createElement("span");
+  badge.className = `choice-card-summary-badge ${visual.className}`;
+  badge.innerHTML = `<span class="choice-card-summary-icon">${visual.icon}</span><span class="choice-card-summary-label">${esc(visual.label)}</span>`;
+  const meta = document.createElement("span");
+  meta.className = "choice-card-summary-hint";
+  meta.textContent = `Evento agganciato a: ${desc.title || "Descrizione senza titolo"}`;
+  top.append(badge, meta);
+
+  const typeRow = document.createElement("div");
+  typeRow.className = "choice-event-row";
+  const typeLabel = document.createElement("label");
+  typeLabel.textContent = "Tipo evento ";
+  const eventSelect = document.createElement("select");
+  [
+    { value: "", label: "Navigazione diretta" },
+    { value: "combat", label: "Combattimento" },
+    { value: "skillcheck", label: "Prova (skill check)" },
+    { value: "requirement", label: "Requisito oggetto" },
+    { value: "loot", label: "Loot" },
+    { value: "condition", label: "Condizione" },
+    { value: "transition", label: "Transizione" },
+    { value: "dialogue", label: "Dialogo NPC" },
+    { value: "shop", label: "Negozio" }
+  ].forEach(({ value, label }) => {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = label;
+    eventSelect.appendChild(option);
+  });
+  eventSelect.value = choice.event?.type || "";
+  typeLabel.appendChild(eventSelect);
+  typeRow.appendChild(typeLabel);
+
+  const flagsRow = document.createElement("div");
+  flagsRow.className = "choice-flags-row";
+  const hiddenLabel = document.createElement("label");
+  const hiddenChk = document.createElement("input");
+  hiddenChk.type = "checkbox";
+  hiddenChk.checked = Boolean(choice.hidden);
+  hiddenChk.addEventListener("change", (event) => {
+    choice.hidden = event.target.checked;
+    onChoiceChange(desc, choice);
+  });
+  hiddenLabel.append(hiddenChk, " Nascosta");
+
+  const burnLabel = document.createElement("label");
+  const burnChk = document.createElement("input");
+  burnChk.type = "checkbox";
+  burnChk.checked = Boolean(choice.burnAfterUse);
+  burnChk.addEventListener("change", (event) => {
+    choice.burnAfterUse = event.target.checked;
+    onChoiceChange(desc, choice);
+  });
+  burnLabel.append(burnChk, " Brucia dopo uso");
+  flagsRow.append(hiddenLabel, burnLabel);
+
+  const mapHint = makeHint("Questo è il payload del nodo evento selezionato. Per i collegamenti usa drag dal pallino o doppio clic sul nodo nella mappa.");
+  mapHint.classList.add("choice-card-map-hint");
+
+  const config = document.createElement("div");
+  config.className = "choice-event-config";
+
+  function setDirectNavigationFallback() {
+    if (!choice.event) return;
+    if (!choice.targetId) {
+      const fallbackTarget = choice.event.branch?.targetId
+        || choice.event.successBranch?.targetId
+        || choice.event.victoryBranch?.targetId
+        || choice.event.metBranch?.targetId
+        || null;
+      if (fallbackTarget) choice.targetId = fallbackTarget;
+    }
+    choice.event = null;
+  }
+
+  function rebuildConfig() {
+    config.innerHTML = "";
+    const eventType = eventSelect.value;
+    if (!eventType) {
+      setDirectNavigationFallback();
+      config.appendChild(buildTargetRow("Destinazione", choice.targetId || "", (value) => {
+        choice.targetId = value || null;
+        onChoiceChange(desc, choice);
+      }));
+      onChoiceChange(desc, choice);
+      return;
+    }
+    if (!choice.event || choice.event.type !== eventType) {
+      choice.event = createDefaultEvent(eventType);
+      choice.targetId = null;
+      onChoiceChange(desc, choice);
+    }
+    const ev = choice.event;
+    switch (eventType) {
+      case "skillcheck":  buildSkillCheckConfig(config, ev, desc, choice); break;
+      case "combat":      buildCombatConfig(config, ev, desc, choice); break;
+      case "requirement": buildRequirementConfig(config, ev, desc, choice); break;
+      case "loot":        buildLootEventConfig(config, ev, desc, choice); break;
+      case "condition":   buildConditionConfig(config, ev, desc, choice); break;
+      case "transition":  buildTransitionConfig(config, ev, desc, choice); break;
+      default:
+        config.appendChild(makeHint(`Configurazione per "${eventType}" in costruzione.`));
+    }
+  }
+
+  eventSelect.addEventListener("change", () => {
+    rebuildConfig();
+    renderSceneEditor();
+  });
+  rebuildConfig();
+
+  card.append(top, typeRow, flagsRow, mapHint, config);
+  return card;
+}
+
+function renderEventEditor(eventContext) {
+  const { description: desc, choice, visual } = eventContext;
+  const eventPayload = choice.event || null;
+
+  if (els.scenePanelTitle) els.scenePanelTitle.textContent = "Nodo evento selezionato";
+  els.sceneTitle.disabled = false;
+  els.sceneTitle.value = choice.text || "";
+  els.sceneOpeningText.disabled = !eventPayload;
+  els.sceneOpeningText.value = eventPayload?.text || "";
+  els.sceneOpeningText.placeholder = eventPayload
+    ? "Testo interno del nodo evento"
+    : "La navigazione diretta non ha un testo evento separato.";
+  if (els.sceneIsEnding) els.sceneIsEnding.checked = false;
+
+  setSceneTypeBadge(visual.label, choice.event?.type || "transition");
+
+  const supportsImage = Boolean(choice.event && ["combat", "loot", "shop", "transition", "dialogue"].includes(choice.event.type));
+  if (!supportsImage) {
+    els.sceneImagePreview.classList.add("hidden");
+    els.sceneImageThumb.removeAttribute("src");
+    els.sceneImageName.textContent = "Immagine evento";
+  } else {
+    renderSceneImagePreview(choice.event);
+  }
+
+  if (els.addSceneImageBtn) els.addSceneImageBtn.disabled = !supportsImage;
+  if (els.replaceSceneImageBtn) els.replaceSceneImageBtn.disabled = !supportsImage;
+  if (els.removeSceneImageBtn) els.removeSceneImageBtn.disabled = !supportsImage;
+  if (els.duplicateSceneBtn) els.duplicateSceneBtn.disabled = true;
+  if (els.deleteSceneBtn) els.deleteSceneBtn.disabled = true;
+
+  if (els.sceneKind) els.sceneKind.closest("label")?.classList.add("hidden");
+  if (els.sceneCombatConfig)  els.sceneCombatConfig.classList.add("hidden");
+  if (els.sceneOutcomesSection) els.sceneOutcomesSection.classList.add("hidden");
+  document.getElementById("scene-loot-section")?.classList.add("hidden");
+
+  if (els.sceneChoicesSection) {
+    els.sceneChoicesSection.classList.remove("hidden");
+    els.sceneChoicesSection.open = true;
+  }
+  if (els.sceneChoicesSummary) {
+    els.sceneChoicesSummary.textContent = `${visual.label} · payload`;
+  }
+  if (els.sceneChoicesHint) {
+    els.sceneChoicesHint.textContent = `Stai lavorando sull’evento della scelta dentro "${desc.title || "Descrizione senza titolo"}".`;
+  }
+  if (els.addChoiceBtn) {
+    els.addChoiceBtn.classList.add("hidden");
+  }
+  els.choiceList.innerHTML = "";
+  els.choiceList.appendChild(buildSelectedEventPayloadCard(desc, choice));
+}
+
+function renderSceneEditor() {
+  const desc = getSelectedScene();
+  const eventContext = getSelectedEventContext();
+  const visible = Boolean(desc);
+  els.sceneEmpty.classList.toggle("hidden", visible);
+  els.sceneEditor.classList.toggle("hidden", !visible);
+  if (!visible) {
+    if (els.scenePanelTitle) els.scenePanelTitle.textContent = "Evento selezionato";
+    els.sceneTypeBadge?.classList.add("hidden");
+  }
+  updateSceneSaveStatus();
+  if (!desc) return;
+  if (eventContext) {
+    renderEventEditor(eventContext);
+  } else {
+    renderDescriptionEditor(desc);
+  }
   updateSceneStatusDot();
 }
 
@@ -3869,8 +4309,8 @@ function onChoiceChange(desc, choice) {
 // Costruisce il DOM di un choice card per il nuovo modello
 function buildChoiceCard(desc, choice, index) {
   const card = document.createElement("div");
-  const evType = choice.event?.type || (choice.targetId ? "nav" : "empty");
-  card.className = `choice-card choice-card--${evType}`;
+  const initialVisual = choiceEventVisual(choice);
+  card.className = `choice-card ${initialVisual.cardClass}`;
 
   // ── Header ────────────────────────────────────────────────────────────────
   const header = document.createElement("div");
@@ -3883,6 +4323,7 @@ function buildChoiceCard(desc, choice, index) {
   textInput.addEventListener("input", (e) => {
     choice.text = e.target.value;
     onChoiceChange(desc, choice);
+    refreshCardSummary();
   });
 
   const removeBtn = document.createElement("button");
@@ -3898,6 +4339,24 @@ function buildChoiceCard(desc, choice, index) {
 
   header.append(textInput, removeBtn);
 
+  const summary = document.createElement("div");
+  summary.className = "choice-card-summary";
+  const summaryBadge = document.createElement("span");
+  const summaryIcon = document.createElement("span");
+  summaryIcon.className = "choice-card-summary-icon";
+  const summaryLabel = document.createElement("span");
+  summaryLabel.className = "choice-card-summary-label";
+  const summaryHint = document.createElement("span");
+  summaryHint.className = "choice-card-summary-hint";
+  summaryBadge.append(summaryIcon, summaryLabel);
+  summary.append(summaryBadge, summaryHint);
+
+  const advanced = document.createElement("details");
+  advanced.className = "choice-card-advanced";
+  if (!choice.event && !choice.targetId) advanced.open = true;
+  const advancedSummary = document.createElement("summary");
+  advancedSummary.textContent = "Dettagli avanzati";
+
   // ── Flags ─────────────────────────────────────────────────────────────────
   const flagsRow = document.createElement("div");
   flagsRow.className = "choice-flags-row";
@@ -3909,6 +4368,7 @@ function buildChoiceCard(desc, choice, index) {
   hiddenChk.addEventListener("change", (e) => {
     choice.hidden = e.target.checked;
     onChoiceChange(desc, choice);
+    refreshCardSummary();
   });
   hiddenLabel.append(hiddenChk, " Nascosta");
 
@@ -3919,6 +4379,7 @@ function buildChoiceCard(desc, choice, index) {
   burnChk.addEventListener("change", (e) => {
     choice.burnAfterUse = e.target.checked;
     onChoiceChange(desc, choice);
+    refreshCardSummary();
   });
   burnLabel.append(burnChk, " Brucia dopo uso");
 
@@ -3956,6 +4417,22 @@ function buildChoiceCard(desc, choice, index) {
   const eventConfig = document.createElement("div");
   eventConfig.className = "choice-event-config";
 
+  const mapHint = document.createElement("p");
+  mapHint.className = "hint choice-card-map-hint";
+  mapHint.textContent = "Usa la mappa per collegare gli esiti. Qui rifinisci solo i dettagli avanzati.";
+
+  function refreshCardSummary() {
+    const visual = choiceEventVisual(choice);
+    card.className = `choice-card ${visual.cardClass}`;
+    summaryBadge.className = `choice-card-summary-badge ${visual.className}`;
+    summaryIcon.textContent = visual.icon;
+    summaryLabel.textContent = visual.label;
+    const notes = [summarizeChoiceFlow(choice)];
+    if (choice.hidden) notes.push("Nascosta");
+    if (choice.burnAfterUse) notes.push("Brucia dopo uso");
+    summaryHint.textContent = notes.join(" · ");
+  }
+
   function rebuildEventConfig() {
     eventConfig.innerHTML = "";
     const evType = eventSelect.value;
@@ -3965,6 +4442,7 @@ function buildChoiceCard(desc, choice, index) {
       eventConfig.appendChild(buildTargetRow("Destinazione", choice.targetId || "", (v) => {
         choice.targetId = v || null;
         onChoiceChange(desc, choice);
+        refreshCardSummary();
       }));
     } else {
       // Assicura che event esista e abbia il tipo giusto
@@ -3985,12 +4463,16 @@ function buildChoiceCard(desc, choice, index) {
           eventConfig.appendChild(makeHint(`Configurazione per "${evType}" in costruzione.`));
       }
     }
+    refreshCardSummary();
   }
 
   eventSelect.addEventListener("change", rebuildEventConfig);
   rebuildEventConfig();
 
-  card.append(header, flagsRow, eventRow, eventConfig);
+  advanced.append(advancedSummary, flagsRow, eventRow, mapHint, eventConfig);
+  refreshCardSummary();
+
+  card.append(header, summary, advanced);
   return card;
 }
 
@@ -5918,6 +6400,44 @@ function hydrateMonsterSelect(select, value = "") {
 
 function getSelectedScene() {
   return state.adventure.descriptions.find((d) => d.id === state.selectedDescriptionId) || null;
+}
+
+function getSelectedEventContext() {
+  const ref = state.ui.selectedEventRef;
+  if (!ref?.descriptionId || !ref?.choiceId) return null;
+  const description = state.adventure.descriptions.find((desc) => desc.id === ref.descriptionId) || null;
+  if (!description) return null;
+  const choiceIndex = (description.choices || []).findIndex((choice) => choice.id === ref.choiceId);
+  if (choiceIndex === -1) return null;
+  const choice = description.choices[choiceIndex];
+  return {
+    description,
+    choice,
+    choiceIndex,
+    visual: choiceEventVisual(choice)
+  };
+}
+
+function isEventNodeSelected(descId, choiceId) {
+  return state.ui.selectedEventRef?.descriptionId === descId
+    && state.ui.selectedEventRef?.choiceId === choiceId;
+}
+
+function selectEventNode(descId, choiceId, { scrollIntoView = true } = {}) {
+  if (!descId || !choiceId) return;
+  const desc = state.adventure.descriptions.find((entry) => entry.id === descId);
+  const choice = desc?.choices?.find((entry) => entry.id === choiceId);
+  if (!desc || !choice) return;
+  const previousSceneId = state.selectedDescriptionId;
+  saveCurrentScene({ renderFlow: false });
+  state.selectedDescriptionId = descId;
+  state.ui.selectedEventRef = { descriptionId: descId, choiceId };
+  updateFlowCardSelection(previousSceneId, descId);
+  updateChoiceNodeSelection();
+  renderSceneEditor();
+  if (scrollIntoView) {
+    requestAnimationFrame(() => els.sceneEditor?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }
 }
 
 function getSelectedMonster() { return null; } // no more separate monster model

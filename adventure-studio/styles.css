@@ -799,9 +799,69 @@ button.small {
 .choice-card--shop    { border-left-color: #5a9e6a; }
 .choice-card--dialogue { border-left-color: #7a5fa0; }
 .choice-card--transition { border-left-color: #888; }
+.choice-card--condition { border-left-color: #8a6d5a; }
 
 .combat-group-card {
   padding-top: 12px;
+}
+
+.choice-card-summary {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0 10px;
+}
+
+.choice-card-summary-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.04);
+}
+
+.choice-card-summary-icon {
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.choice-card-summary-label {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.choice-card-summary-hint {
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.choice-card-advanced {
+  margin-top: 8px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  padding-top: 10px;
+}
+
+.choice-card-advanced > summary {
+  cursor: pointer;
+  color: #d7c49b;
+  font-size: 0.83rem;
+  list-style: none;
+}
+
+.choice-card-advanced > summary::-webkit-details-marker {
+  display: none;
+}
+
+.choice-card-advanced[open] > summary {
+  margin-bottom: 12px;
+}
+
+.choice-card-map-hint {
+  margin: 0 0 12px;
 }
 
 .choice-divider {
@@ -1571,11 +1631,12 @@ button.small {
 
 .choice-node {
   position: absolute;
-  border-radius: 50%;
+  border-radius: 12px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: 0.8rem;
+  justify-content: flex-start;
+  gap: 7px;
+  font-size: 0.75rem;
   line-height: 1;
   border: 1.5px solid;
   cursor: pointer;
@@ -1583,12 +1644,20 @@ button.small {
   transition: transform 0.1s, filter 0.1s;
   background: var(--panel);
   user-select: none;
-  padding: 0;
+  padding: 0 10px;
+  text-align: left;
+  overflow: hidden;
 }
 .choice-node:hover {
-  transform: scale(1.2);
+  transform: scale(1.03);
   filter: brightness(1.35);
   z-index: 10;
+}
+
+.choice-node.is-selected {
+  box-shadow: 0 0 0 2px rgba(200, 154, 58, 0.55), 0 0 16px rgba(200, 154, 58, 0.18);
+  filter: brightness(1.12);
+  z-index: 12;
 }
 
 .choice-node--nav    { border-color: #b56d39; color: #d4956a; }
@@ -1597,9 +1666,43 @@ button.small {
 .choice-node--req    { border-color: #6d84b5; color: #8ba3cc; }
 .choice-node--shop   { border-color: #5a9e6a; color: #7bc48a; }
 .choice-node--loot   { border-color: #6f8a57; color: #92ae74; }
+.choice-node--condition { border-color: #8a6d5a; color: #c39b7f; }
+.choice-node--dialogue { border-color: #7a5fa0; color: #b999dd; }
 .choice-node--empty  { border-color: rgba(255,255,255,0.18); color: var(--muted); border-style: dashed; }
-.choice-node--add    { border-color: rgba(255,255,255,0.15); color: rgba(200,130,58,0.65); border-style: dashed; font-size: 1rem; font-weight: 700; }
+.choice-node--add    { border-color: rgba(255,255,255,0.15); color: rgba(200,130,58,0.8); border-style: dashed; font-size: 1rem; font-weight: 700; justify-content: center; }
 .choice-node--add:hover { border-color: var(--accent); color: var(--accent); }
+
+.choice-node__icon {
+  flex: 0 0 auto;
+  font-size: 0.9rem;
+}
+
+.choice-node__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.choice-node__meta {
+  color: var(--muted);
+  font-size: 0.67rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-left: auto;
+}
+
+.choice-node--compact {
+  border-radius: 50%;
+  justify-content: center;
+  padding: 0;
+}
+
+.choice-node--compact .choice-node__label,
+.choice-node--compact .choice-node__meta {
+  display: none;
+}
 
 /* Drag handle on choice nodes — visible on hover */
 .choice-node-link {
@@ -2372,6 +2475,49 @@ button.small {
   background: rgba(202, 101, 91, 0.15);
   color: #e07e76;
   border-color: rgba(202, 101, 91, 0.35);
+}
+
+.scene-type-badge--transition,
+.scene-type-badge--event {
+  background: rgba(181, 109, 57, 0.14);
+  color: var(--accent);
+  border-color: rgba(181, 109, 57, 0.3);
+}
+
+.scene-type-badge--skillcheck {
+  background: rgba(200, 168, 75, 0.14);
+  color: #d4b85a;
+  border-color: rgba(200, 168, 75, 0.3);
+}
+
+.scene-type-badge--requirement {
+  background: rgba(109, 132, 181, 0.14);
+  color: #8ba3cc;
+  border-color: rgba(109, 132, 181, 0.3);
+}
+
+.scene-type-badge--loot {
+  background: rgba(111, 138, 87, 0.14);
+  color: #92ae74;
+  border-color: rgba(111, 138, 87, 0.3);
+}
+
+.scene-type-badge--shop {
+  background: rgba(90, 158, 106, 0.14);
+  color: #7bc48a;
+  border-color: rgba(90, 158, 106, 0.3);
+}
+
+.scene-type-badge--dialogue {
+  background: rgba(122, 95, 160, 0.14);
+  color: #b999dd;
+  border-color: rgba(122, 95, 160, 0.3);
+}
+
+.scene-type-badge--condition {
+  background: rgba(138, 109, 90, 0.14);
+  color: #c39b7f;
+  border-color: rgba(138, 109, 90, 0.3);
 }
 
 /* ─── Archetype picker (inline nel combat group) ──────────────────────────── */
