@@ -1837,8 +1837,8 @@ button.small {
 }
 
 .flow-card {
-  padding: 15px;
-  border-radius: 16px;
+  padding: 10px 12px;
+  border-radius: 14px;
   border: 1px solid rgba(255,255,255,0.13);
   background:
     linear-gradient(180deg, rgba(52, 65, 85, 0.94), rgba(30, 38, 52, 0.96));
@@ -1951,8 +1951,9 @@ button.small {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 10px;
+  gap: 8px;
+  margin-bottom: 0;
+  min-width: 0;
 }
 
 .flow-card-head span {
@@ -1965,6 +1966,7 @@ button.small {
   gap: 5px;
   flex-wrap: wrap;
   justify-content: flex-end;
+  flex-shrink: 0;
 }
 
 .flow-badge {
@@ -2256,6 +2258,13 @@ button.small {
 .flow-card-title {
   cursor: text;
   transition: color 0.15s;
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.98rem;
+  line-height: 1.15;
 }
 .flow-card-title:hover {
   color: var(--accent);

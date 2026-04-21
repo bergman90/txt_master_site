@@ -119,3 +119,42 @@ Formato consigliato:
   - si mostra per `key` quando serve `lockId`
   - si mostra per `armor` quando serve `armorType`
 - Il flag `Quest` resta rapido nella testata della card, fuori dal pannello avanzato.
+
+## 2026-04-21 â€” pass pulizia copy UI evento
+
+- Ripulita la schermata evento avanzata da copy ridondante che spiegava la stessa cosa piu volte.
+- Rimossi i testi di contesto troppo verbosi in:
+  - `Comportamento della scelta`
+  - `Tipo di evento`
+  - area `Combattimento`
+- Tolto anche il meta testo del nodo detached quando non aggiunge orientamento reale.
+- Lasciato solo un hint sintetico per i casi agganciati a una scena, cosi` la schermata resta piu leggibile e focalizzata sui controlli.
+
+## 2026-04-21 â€” pass combattimento senza gruppo predefinito
+
+- Il nodo evento `Combattimento` non nasce piu con un `Gruppo 1` auto-generato.
+- Rimossa anche la forzatura che reinseriva un gruppo vuoto quando `combatGroups` era una lista vuota.
+- Ora la flow card parte pulita e i gruppi si aggiungono solo dal picker o dal pulsante esplicito.
+
+## 2026-04-21 â€” micro pass pulizia caption rami combattimento
+
+- Rimossi i caption descrittivi sotto i rami `Vittoria` e `Ritirata` nel blocco combattimento.
+- Lasciato per ora il testo di `Sconfitta`, che spiega ancora un default strutturale (`Morte`).
+
+## 2026-04-21 â€” pass allineamento ritenta skill check
+
+- Allineato il ramo di fallimento dello skill check tra quick card e pannello avanzato.
+- Il selector avanzato usa ora la stessa hydrator del quick menu, quindi mostra anche l'opzione `Ritenta`.
+- Centralizzato il supporto a hydrator target custom dentro `buildTargetRow` / `buildBranchRow`, cosi` altri rami speciali possono riusare lo stesso pattern.
+
+## 2026-04-21 â€” pass scene card compatte sulla flow board
+
+- Ridotte le dimensioni base dei nodi scena sulla flow board per avvicinarle ai nodi prova/evento.
+- Rimossa la preview del testo scena dal corpo della card, cosi` la board resta piu ordinata.
+- Confermato il quick menu scena come punto di editing rapido da click singolo:
+  - titolo
+  - testo iniziale della scena
+- Rifinito anche il CSS della scena-card per il nuovo formato compatto:
+  - padding piu stretto
+  - titolo ellittico su una riga
+  - badge che non spingono il layout fuori asse

@@ -423,8 +423,8 @@ const MONSTER_STAT_ARCHETYPES = [
   { id: "boss",            label: "Boss",              icon: "💀", hint: "scontro finale, fase berserk",        hitPoints: 28, attackBonus: 5, defense: 14, damageMin: 4, damageMax: 9, goldReward: 25, abilityIds: ["enemy_howl_of_dread", "enemy_enrage"],    hasBerserkerPhase: true  }
 ];
 
-const NODE_WIDTH = 280;
-const NODE_HEIGHT = 130;
+const NODE_WIDTH = 168;
+const NODE_HEIGHT = 56;
 const CHOICE_BUS_GAP = 72;    // board px from scene right edge to event node center
 const CHOICE_SPACING = 44;    // board px vertical spacing between event nodes
 const CHOICE_NODE_R = 13;     // compact mode radius
@@ -3024,7 +3024,6 @@ function buildFlowCardMarkup(desc, index) {
         ${choiceCount > 0 ? `<span class="flow-badge flow-badge--choices" title="${choiceCount} scelta/e">${choiceCount}</span>` : ""}
       </span>
     </div>
-    ${desc.text ? `<p class="flow-card-snippet">${esc(truncate(desc.text, 90))}</p>` : ""}
   `;
 }
 
@@ -5524,10 +5523,6 @@ function buildChoiceBehaviorSettings(desc, choice, onRefresh = () => {}) {
   title.className = "choice-settings-block__title";
   title.textContent = "Comportamento della scelta";
 
-  const hint = document.createElement("p");
-  hint.className = "choice-settings-block__hint";
-  hint.textContent = "Queste opzioni agiscono sulla scelta che conduce al nodo, non sul contenuto interno dell'evento.";
-
   const grid = document.createElement("div");
   grid.className = "choice-settings-grid";
 
@@ -5556,7 +5551,7 @@ function buildChoiceBehaviorSettings(desc, choice, onRefresh = () => {}) {
     })
   );
 
-  block.append(title, hint, grid);
+  block.append(title, grid);
   return block;
 }
 
@@ -5571,11 +5566,7 @@ function buildEventTypeField(eventSelect) {
   title.className = "choice-event-row__title";
   title.textContent = "Tipo di evento";
 
-  const hint = document.createElement("span");
-  hint.className = "choice-event-row__hint";
-  hint.textContent = "Definisce il payload del nodo. I collegamenti continuano a vivere nella mappa di flusso.";
-
-  copy.append(title, hint);
+  copy.append(title);
 
   const control = document.createElement("div");
   control.className = "choice-event-row__control";
@@ -5599,9 +5590,10 @@ function buildSelectedEventPayloadCard(desc, choice) {
   const meta = document.createElement("span");
   meta.className = "choice-card-summary-hint";
   meta.textContent = detached
-    ? "Nodo evento indipendente del grafo"
-    : `Evento agganciato a: ${desc.title || "Descrizione senza titolo"}`;
-  top.append(badge, meta);
+    ? ""
+    : `Scelta in: ${desc.title || "Descrizione senza titolo"}`;
+  top.append(badge);
+  if (meta.textContent) top.append(meta);
 
   const eventSelect = document.createElement("select");
   [
@@ -5622,9 +5614,6 @@ function buildSelectedEventPayloadCard(desc, choice) {
   });
   eventSelect.value = choice.event?.type || "";
   const typeRow = buildEventTypeField(eventSelect);
-
-  const mapHint = makeHint("Collegamenti ed esiti si gestiscono dalla mappa. Qui rifinisci il nodo e il comportamento della scelta che lo richiama.");
-  mapHint.classList.add("choice-card-map-hint");
 
   const config = document.createElement("div");
   config.className = "choice-event-config";
@@ -5682,7 +5671,7 @@ function buildSelectedEventPayloadCard(desc, choice) {
 
   const behaviorBlock = buildChoiceBehaviorSettings(desc, choice);
 
-  card.append(top, typeRow, behaviorBlock, mapHint, config);
+  card.append(top, typeRow, behaviorBlock, config);
   return card;
 }
 
@@ -5733,9 +5722,11 @@ function renderEventEditor(eventContext) {
     els.sceneChoicesSummary.textContent = `${visual.label} · payload`;
   }
   if (els.sceneChoicesHint) {
-    els.sceneChoicesHint.textContent = detached
-      ? "Nodo evento indipendente del grafo. Usa i connettori sulla mappa per collegarlo liberamente."
-      : `Stai lavorando sull’evento della scelta dentro "${desc.title || "Descrizione senza titolo"}".`;
+    const hintText = detached
+      ? ""
+      : `Evento della scelta in "${desc.title || "Descrizione senza titolo"}".`;
+    els.sceneChoicesHint.textContent = hintText;
+    els.sceneChoicesHint.classList.toggle("hidden", !hintText);
   }
   if (els.addChoiceBtn) {
     els.addChoiceBtn.classList.add("hidden");
@@ -6059,7 +6050,10 @@ function buildTargetRow(labelText, currentValue, onChange, options = {}) {
   const label = document.createElement("label");
   label.textContent = labelText + " ";
   const select = document.createElement("select");
-  hydrateDescriptionTargetSelectAdvanced(select, currentValue, options);
+  const hydrateTargetSelect = typeof options.hydrateTargetSelect === "function"
+    ? options.hydrateTargetSelect
+    : hydrateDescriptionTargetSelectAdvanced;
+  hydrateTargetSelect(select, currentValue, options);
   select.addEventListener("change", (e) => { if (!e.target._hydrating) onChange(e.target.value); });
   label.appendChild(select);
   return label;
@@ -6107,7 +6101,10 @@ function buildBranchRow(labelText, branch, desc, choice, options = {}) {
   wrap.appendChild(buildTargetRow(labelText, branch.targetId || "", (v) => {
     branch.targetId = v || defaultTargetId || null;
     onChoiceChange(desc, choice);
-  }, { includeEmpty: options.includeEmptyTarget !== false }));
+  }, {
+    includeEmpty: options.includeEmptyTarget !== false,
+    hydrateTargetSelect: options.hydrateTargetSelect
+  }));
   const textInput = document.createElement("input");
   textInput.type = "text";
   textInput.placeholder = options.textPlaceholder || "Testo ramo (opzionale)";
@@ -6213,7 +6210,9 @@ function buildSkillCheckConfig(container, ev, desc, choice) {
     makeHint("Riuscita:"),
     buildBranchRow("→ Destinazione successo", ev.successBranch, desc, choice),
     makeHint("Fallimento:"),
-    buildBranchRow("→ Destinazione fallimento", ev.failureBranch, desc, choice)
+    buildBranchRow("→ Destinazione fallimento", ev.failureBranch, desc, choice, {
+      hydrateTargetSelect: hydrateFailureTargetSelect
+    })
   );
 }
 
@@ -6438,7 +6437,7 @@ function buildTransitionConfig(container, ev, desc, choice) {
 function createDefaultEvent(type) {
   const emptyBranch = () => ({ text: null, loot: [], condition: null, unlockChoiceId: null, burnAfterUse: false, targetId: null, event: null });
   switch (type) {
-    case "combat":      return { type: "combat", text: null, image: null, combatGroups: [createDefaultCombatGroup()], victoryBranch: emptyBranch(), defeatBranch: { ...emptyBranch(), targetId: DEATH_SENTINEL }, retreatBranch: null };
+    case "combat":      return { type: "combat", text: null, image: null, combatGroups: [], victoryBranch: emptyBranch(), defeatBranch: { ...emptyBranch(), targetId: DEATH_SENTINEL }, retreatBranch: null };
     case "skillcheck":  return { type: "skillcheck", text: null, attribute: "", difficulty: 12, successBranch: emptyBranch(), failureBranch: { ...emptyBranch(), targetId: STAY_SENTINEL }, burnOnFailure: false };
     case "requirement": return { type: "requirement", text: null, itemId: null, itemCategory: null, effectId: null, consumeOnMet: false, metBranch: emptyBranch(), unmetBranch: emptyBranch() };
     case "loot":        return { type: "loot", text: null, image: null, loot: [], branch: emptyBranch() };
@@ -6475,7 +6474,6 @@ function createEmptyEventBranch() {
 
 function ensureCombatEventDefaults(ev) {
   ev.combatGroups = Array.isArray(ev.combatGroups) ? ev.combatGroups : [];
-  if (!ev.combatGroups.length) ev.combatGroups.push(createDefaultCombatGroup());
   ev.victoryBranch = ev.victoryBranch || createEmptyEventBranch();
   ev.defeatBranch = ev.defeatBranch || createEmptyEventBranch();
   if (!ev.defeatBranch.targetId) ev.defeatBranch.targetId = DEATH_SENTINEL;
@@ -6590,8 +6588,6 @@ function buildCombatConfig(container, ev, desc, choice) {
   }
   refreshOverview();
 
-  const hint = makeHint("Manteniamo qui solo le informazioni che servono davvero: roster, quantita, statistiche essenziali, loot e rami dell'esito.");
-
   const addBar = document.createElement("div");
   addBar.className = "combat-group-toolbar";
 
@@ -6663,9 +6659,7 @@ function buildCombatConfig(container, ev, desc, choice) {
   const branchSection = document.createElement("div");
   branchSection.className = "combat-branch-grid";
   branchSection.append(
-    buildBranchRow("Vittoria", ev.victoryBranch, desc, choice, {
-      caption: "Se vinci puoi proseguire verso una nuova scena o verso un altro nodo evento."
-    }),
+    buildBranchRow("Vittoria", ev.victoryBranch, desc, choice),
     buildBranchRow("Sconfitta", ev.defeatBranch, desc, choice, {
       includeEmptyTarget: false,
       defaultTargetId: DEATH_SENTINEL,
@@ -6689,13 +6683,11 @@ function buildCombatConfig(container, ev, desc, choice) {
   function rerenderRetreat() {
     retreatSection.innerHTML = "";
     if (!ev.retreatBranch) return;
-    retreatSection.appendChild(buildBranchRow("Ritirata", ev.retreatBranch, desc, choice, {
-      caption: "Usalo solo negli scontri in cui la fuga ha davvero senso."
-    }));
+    retreatSection.appendChild(buildBranchRow("Ritirata", ev.retreatBranch, desc, choice));
   }
   rerenderRetreat();
 
-  container.append(overview, hint, addBar, groupList, branchSection, retreatToggle, retreatSection);
+  container.append(overview, addBar, groupList, branchSection, retreatToggle, retreatSection);
 }
 
 function buildCombatGroupRow(group, gi, ev, desc, choice, rerender, refreshOverview = null) {
@@ -6897,7 +6889,7 @@ function buildCombatGroupRow(group, gi, ev, desc, choice, rerender, refreshOverv
 
 function createDefaultEvent(type) {
   switch (type) {
-    case "combat":      return { type: "combat", text: null, image: null, combatGroups: [createDefaultCombatGroup()], victoryBranch: createEmptyEventBranch(), defeatBranch: { ...createEmptyEventBranch(), targetId: DEATH_SENTINEL }, retreatBranch: null };
+    case "combat":      return { type: "combat", text: null, image: null, combatGroups: [], victoryBranch: createEmptyEventBranch(), defeatBranch: { ...createEmptyEventBranch(), targetId: DEATH_SENTINEL }, retreatBranch: null };
     case "skillcheck":  return { type: "skillcheck", text: null, attribute: "", difficulty: 12, successBranch: createEmptyEventBranch(), failureBranch: { ...createEmptyEventBranch(), targetId: STAY_SENTINEL }, burnOnFailure: false };
     case "requirement": return { type: "requirement", text: null, itemId: null, itemCategory: null, effectId: null, consumeOnMet: false, metBranch: createEmptyEventBranch(), unmetBranch: createEmptyEventBranch() };
     case "loot":        return { type: "loot", text: null, image: null, loot: [], branch: createEmptyEventBranch() };
@@ -10353,7 +10345,9 @@ function buildSkillCheckConfig(container, ev, desc, choice) {
     buildEventSection(
       "Ramo di fallimento",
       "Decidi cosa accade quando la prova viene mancata.",
-      buildBranchRow("Destinazione fallimento", ev.failureBranch, desc, choice)
+      buildBranchRow("Destinazione fallimento", ev.failureBranch, desc, choice, {
+        hydrateTargetSelect: hydrateFailureTargetSelect
+      })
     )
   );
 }
