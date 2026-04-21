@@ -818,6 +818,56 @@ button.small {
   min-height: 42px;
 }
 
+.loot-picker-control--muted {
+  opacity: 0.78;
+}
+
+.loot-picker-family-hint {
+  margin: -2px 0 2px;
+  color: #d7c49b;
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.loot-picker-suggestions {
+  display: none;
+  gap: 6px;
+  margin-top: -2px;
+}
+
+.loot-picker-suggestion,
+.loot-picker-suggestions__empty {
+  width: 100%;
+  padding: 9px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.loot-picker-suggestion {
+  display: grid;
+  gap: 3px;
+  text-align: left;
+  color: var(--text);
+}
+
+.loot-picker-suggestion strong {
+  font-size: 0.92rem;
+  line-height: 1.3;
+}
+
+.loot-picker-suggestion span,
+.loot-picker-suggestions__empty {
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.loot-picker-suggestion:hover {
+  border-color: rgba(232, 170, 92, 0.45);
+  background: rgba(232, 170, 92, 0.1);
+}
+
 .loot-picker--compact {
   flex: 1 1 320px;
   min-width: 240px;
@@ -906,6 +956,13 @@ button.small {
   margin-bottom: 12px;
 }
 
+.combat-group-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .combat-group-stats-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -930,7 +987,6 @@ button.small {
 
 .combat-group-advanced > summary {
   cursor: pointer;
-  color: #d7c49b;
   list-style: none;
 }
 
@@ -1408,8 +1464,6 @@ button.small {
 
 .choice-card-advanced > summary {
   cursor: pointer;
-  color: #d7c49b;
-  font-size: 0.83rem;
   list-style: none;
 }
 
@@ -1616,16 +1670,57 @@ button.small {
 
 .loot-advanced > summary {
   cursor: pointer;
-  font-size: 0.80rem;
-  color: var(--muted);
-  padding: 6px 0;
   list-style: none;
 }
-.loot-advanced > summary::before {
-  content: "▸ ";
+
+.choice-card-advanced > summary,
+.combat-group-advanced > summary,
+.loot-advanced > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(232, 170, 92, 0.34);
+  border-radius: 10px;
+  background: rgba(232, 170, 92, 0.1);
+  color: #f2dcc0;
+  font-size: 0.84rem;
+  font-weight: 700;
+  line-height: 1.3;
+  transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease;
 }
-.loot-advanced[open] > summary::before {
-  content: "▾ ";
+
+.choice-card-advanced > summary::after,
+.combat-group-advanced > summary::after,
+.loot-advanced > summary::after {
+  content: "Apri";
+  flex-shrink: 0;
+  color: #d7c49b;
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.choice-card-advanced[open] > summary::after,
+.combat-group-advanced[open] > summary::after,
+.loot-advanced[open] > summary::after {
+  content: "Chiudi";
+}
+
+.choice-card-advanced > summary:hover,
+.combat-group-advanced > summary:hover,
+.loot-advanced > summary:hover,
+.choice-card-advanced > summary:focus-visible,
+.combat-group-advanced > summary:focus-visible,
+.loot-advanced > summary:focus-visible {
+  color: #fff0dc;
+  background: rgba(232, 170, 92, 0.16);
+  border-color: rgba(232, 170, 92, 0.56);
+  outline: none;
 }
 
 .quest-hint {
@@ -2439,6 +2534,23 @@ button.small {
   padding: 3px 0;
 }
 .ctp-details-btn:hover { color: var(--accent); background: none; }
+
+.ctp-details-btn--primary {
+  margin-top: 2px;
+  padding: 10px 12px;
+  border: 1px solid rgba(232, 170, 92, 0.38);
+  border-radius: 10px;
+  background: rgba(232, 170, 92, 0.12);
+  color: #f2dcc0;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.ctp-details-btn--primary:hover {
+  color: #fff0dc;
+  background: rgba(232, 170, 92, 0.18);
+  border-color: rgba(232, 170, 92, 0.6);
+}
 
 .flow-event-quick-menu {
   min-width: 280px;

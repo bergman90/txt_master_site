@@ -114,7 +114,7 @@ const MONSTER_PRESETS = [
     damageMax: 6,
     goldReward: 11,
     loot: [
-      { itemId: "rusted_blade", itemName: "Spada corrosa", quantity: 1, category: "weapon", rarity: "common", effectIds: [] },
+      { itemId: "spada_1", itemName: "Spada ★", quantity: 1, category: "weapon", rarity: "common", effectIds: [] },
       { itemId: "coins", itemName: "Monete", quantity: 11, category: "treasure", rarity: "common", effectIds: ["trade_value"] }
     ]
   },
@@ -129,7 +129,7 @@ const MONSTER_PRESETS = [
     damageMax: 4,
     goldReward: 6,
     loot: [
-      { itemId: "dagger", itemName: "Pugnale", quantity: 1, category: "weapon", rarity: "common", effectIds: [] },
+      { itemId: "pugnale_1", itemName: "Pugnale ★", quantity: 1, category: "weapon", rarity: "common", effectIds: [] },
       { itemId: "coins", itemName: "Monete", quantity: 6, category: "treasure", rarity: "common", effectIds: ["trade_value"] }
     ]
   },
@@ -267,7 +267,7 @@ const MONSTER_PRESETS = [
     damageMax: 7,
     goldReward: 25,
     loot: [
-      { itemId: "rusted_blade", itemName: "Spada corrosa", quantity: 1, category: "weapon", rarity: "common", effectIds: [] },
+      { itemId: "spada_2", itemName: "Spada ★★", quantity: 1, category: "weapon", rarity: "uncommon", effectIds: [] },
       { itemId: "chain_mail", itemName: "Cotta di maglia rinforzata", quantity: 1, category: "armor", rarity: "uncommon", effectIds: ["defense_surge"] }
     ]
   },
@@ -3849,7 +3849,20 @@ function closeChoiceEventPicker() {
 let _flowEventQuickMenuCleanup = null;
 let _flowSceneQuickMenuCleanup = null;
 
+function flushQuickMenuDraft(menuId) {
+  const menu = document.getElementById(menuId);
+  if (!menu) return;
+  const active = document.activeElement;
+  if (!active || !menu.contains(active)) return;
+  if (active.matches("input, textarea, select")) {
+    active.dispatchEvent(new Event("input", { bubbles: true }));
+    active.dispatchEvent(new Event("change", { bubbles: true }));
+    active.blur();
+  }
+}
+
 function closeFlowEventQuickMenu() {
+  flushQuickMenuDraft("flow-event-quick-menu");
   document.getElementById("flow-event-quick-menu")?.remove();
   if (_flowEventQuickMenuCleanup) {
     document.removeEventListener("pointerdown", _flowEventQuickMenuCleanup, true);
@@ -3858,6 +3871,7 @@ function closeFlowEventQuickMenu() {
 }
 
 function closeFlowSceneQuickMenu() {
+  flushQuickMenuDraft("flow-scene-quick-menu");
   document.getElementById("flow-scene-quick-menu")?.remove();
   if (_flowSceneQuickMenuCleanup) {
     document.removeEventListener("pointerdown", _flowSceneQuickMenuCleanup, true);
@@ -4620,21 +4634,10 @@ function showFlowEventQuickMenu(descId, choiceId, anchorRect) {
     const footer = document.createElement("div");
     footer.className = "ctp-footer";
 
-    const linksBtn = document.createElement("button");
-    linksBtn.type = "button";
-    linksBtn.className = "ctp-details-btn";
-    linksBtn.textContent = "Apri collegamenti e rami";
-    linksBtn.addEventListener("click", (event) => {
-      event.stopPropagation();
-      closeFlowEventQuickMenu();
-      showChoiceTargetsPopover(descId, choiceId, anchorRect);
-    });
-    footer.appendChild(linksBtn);
-
     const advancedBtn = document.createElement("button");
     advancedBtn.type = "button";
-    advancedBtn.className = "ctp-details-btn";
-    advancedBtn.textContent = "Apri dettagli avanzati nel pannello";
+    advancedBtn.className = "ctp-details-btn ctp-details-btn--primary";
+    advancedBtn.textContent = "Vai a opzioni avanzate";
     advancedBtn.addEventListener("click", (event) => {
       event.stopPropagation();
       selectEventNode(descId, choiceId);
@@ -4723,8 +4726,8 @@ function showChoiceTargetsPopover(descId, choiceId, anchorRect) {
   footer.className = "ctp-footer";
   const detBtn = document.createElement("button");
   detBtn.type = "button";
-  detBtn.className = "ctp-details-btn";
-  detBtn.textContent = "⚙ Dettagli avanzati";
+  detBtn.className = "ctp-details-btn ctp-details-btn--primary";
+  detBtn.textContent = "Vai a opzioni avanzate";
   detBtn.addEventListener("click", (e) => {
     e.stopPropagation();
     closeChoiceTargetsPopover();
@@ -6521,7 +6524,6 @@ function buildCombatGroupRow(group, gi, ev, desc, choice, rerender, refreshOverv
 
   function refreshNotes() {
     const parts = [];
-    if (group.description) parts.push(group.description);
     if (group.abilityIds.length) parts.push(`Abilita preset: ${group.abilityIds.join(", ")}`);
     if (group.hasBerserkerPhase) parts.push("Ha una fase furia.");
     notes.textContent = parts.join(" | ") || "Preset per mostri pronti, archetipi per crearne uno da zero con statistiche di base.";
@@ -6614,7 +6616,20 @@ function buildCombatGroupRow(group, gi, ev, desc, choice, rerender, refreshOverv
     refreshSummary();
   });
   countLabel.appendChild(countInput);
-  identityGrid.append(nameLabel, countLabel);
+
+  const berserkLabel = document.createElement("label");
+  berserkLabel.className = "combat-group-toggle";
+  berserkLabel.textContent = "Fase furia ";
+  const berserkCheckbox = document.createElement("input");
+  berserkCheckbox.type = "checkbox";
+  berserkCheckbox.checked = Boolean(group.hasBerserkerPhase);
+  berserkCheckbox.addEventListener("change", (event) => {
+    group.hasBerserkerPhase = event.target.checked;
+    onChoiceChange(desc, choice);
+    refreshSummary();
+  });
+  berserkLabel.appendChild(berserkCheckbox);
+  identityGrid.append(nameLabel, countLabel, berserkLabel);
 
   const statsGrid = document.createElement("div");
   statsGrid.className = "combat-group-stats-grid";
@@ -6634,29 +6649,6 @@ function buildCombatGroupRow(group, gi, ev, desc, choice, rerender, refreshOverv
   const advancedSummary = document.createElement("summary");
   advancedSummary.textContent = "Modifica loot e dettagli avanzati";
   advanced.appendChild(advancedSummary);
-
-  const descriptionLabel = document.createElement("label");
-  descriptionLabel.textContent = "Descrizione breve ";
-  const descriptionInput = document.createElement("textarea");
-  descriptionInput.rows = 2;
-  descriptionInput.value = group.description || "";
-  descriptionInput.addEventListener("input", (event) => {
-    group.description = event.target.value;
-    onChoiceChange(desc, choice);
-    refreshNotes();
-  });
-  descriptionLabel.appendChild(descriptionInput);
-
-  const berserkLabel = document.createElement("label");
-  const berserkCheckbox = document.createElement("input");
-  berserkCheckbox.type = "checkbox";
-  berserkCheckbox.checked = Boolean(group.hasBerserkerPhase);
-  berserkCheckbox.addEventListener("change", (event) => {
-    group.hasBerserkerPhase = event.target.checked;
-    onChoiceChange(desc, choice);
-    refreshSummary();
-  });
-  berserkLabel.append(berserkCheckbox, " Abilita fase furia");
 
   const lootWrap = document.createElement("div");
   lootWrap.className = "combat-group-loot";
@@ -6688,7 +6680,7 @@ function buildCombatGroupRow(group, gi, ev, desc, choice, rerender, refreshOverv
   rerenderLoot();
   lootWrap.append(lootHeader, lootList);
 
-  advanced.append(descriptionLabel, berserkLabel, lootWrap);
+  advanced.append(lootWrap);
   card.append(header, summary, sourceGrid, identityGrid, statsGrid, notes, advanced);
   return card;
 }
@@ -7773,7 +7765,6 @@ function cleanAdventure(adventure) {
     monsterId: group.monsterId || undefined,
     count: (group.count > 1) ? group.count : undefined,
     name: group.name || undefined,
-    description: group.description || undefined,
     hitPoints: group.hitPoints || 0,
     attackBonus: group.attackBonus || 0,
     defense: group.defense || 0,
@@ -9121,21 +9112,60 @@ const BASE_TIER_LOOT_PRESETS = [
   { id: "rope", name: "Corda", category: "utility", rarity: "common", effectIds: [] },
   { id: "flint_and_steel", name: "Acciarino e Pietra Focaia", category: "utility", rarity: "common", effectIds: [] },
   { id: "grappling_hook", name: "Rampino", category: "utility", rarity: "uncommon", effectIds: [] },
-  { id: "pugnale_1", name: "Pugnale ★", category: "weapon", rarity: "common", effectIds: [] },
-  { id: "spada_corta_2", name: "Spada corta ★★", category: "weapon", rarity: "uncommon", effectIds: [] },
-  { id: "spada_3", name: "Spada ★★★", category: "weapon", rarity: "rare", effectIds: ["cleanse_exposed"] },
-  { id: "spadone_1", name: "Spadone ★", category: "weapon", rarity: "uncommon", effectIds: [] },
-  { id: "ascia_2h_2", name: "Ascia a due mani ★★", category: "weapon", rarity: "rare", effectIds: ["apply_staggered"] },
-  { id: "alabarda_3", name: "Alabarda ★★★", category: "weapon", rarity: "mythic", effectIds: ["apply_staggered", "bonus_damage"] },
-  { id: "randello_1", name: "Randello ★", category: "weapon", rarity: "common", effectIds: [] },
-  { id: "mazza_2", name: "Mazza ★★", category: "weapon", rarity: "uncommon", effectIds: ["apply_staggered"] },
-  { id: "martello_da_guerra_3", name: "Martello da guerra ★★★", category: "weapon", rarity: "rare", effectIds: ["apply_staggered"] },
-  { id: "arco_leggero_1", name: "Arco leggero ★", category: "weapon", rarity: "common", effectIds: [] },
-  { id: "arco_corto_2", name: "Arco corto ★★", category: "weapon", rarity: "uncommon", effectIds: [] },
-  { id: "arco_del_cacciatore_3", name: "Arco del cacciatore ★★★", category: "weapon", rarity: "rare", effectIds: ["guaranteed_crit"] },
-  { id: "bastone_da_viaggio_1", name: "Bastone da viaggio ★", category: "weapon", rarity: "common", effectIds: ["recover_boost"] },
-  { id: "bastone_ferrato_2", name: "Bastone ferrato ★★", category: "weapon", rarity: "uncommon", effectIds: ["recover_boost"] },
-  { id: "bastone_degli_anziani_3", name: "Bastone degli Anziani ★★★", category: "weapon", rarity: "rare", effectIds: ["recover_boost", "check_bonus"] },
+  { id: "pugnale_1", name: "Pugnale ★", category: "weapon", rarity: "common", familyId: "blade_1h", tier: 1, effectIds: [] },
+  { id: "pugnale_2", name: "Pugnale ★★", category: "weapon", rarity: "uncommon", familyId: "blade_1h", tier: 2, effectIds: [] },
+  { id: "pugnale_3", name: "Pugnale ★★★", category: "weapon", rarity: "rare", familyId: "blade_1h", tier: 3, effectIds: ["cleanse_exposed"] },
+  { id: "spada_corta_1", name: "Spada corta ★", category: "weapon", rarity: "common", familyId: "blade_1h", tier: 1, effectIds: [] },
+  { id: "spada_corta_2", name: "Spada corta ★★", category: "weapon", rarity: "uncommon", familyId: "blade_1h", tier: 2, effectIds: [] },
+  { id: "spada_corta_3", name: "Spada corta ★★★", category: "weapon", rarity: "rare", familyId: "blade_1h", tier: 3, effectIds: ["cleanse_exposed"] },
+  { id: "spada_1", name: "Spada ★", category: "weapon", rarity: "common", familyId: "blade_1h", tier: 1, effectIds: [] },
+  { id: "spada_2", name: "Spada ★★", category: "weapon", rarity: "uncommon", familyId: "blade_1h", tier: 2, effectIds: [] },
+  { id: "spada_3", name: "Spada ★★★", category: "weapon", rarity: "rare", familyId: "blade_1h", tier: 3, effectIds: ["cleanse_exposed"] },
+  { id: "spadone_1", name: "Spadone ★", category: "weapon", rarity: "uncommon", familyId: "blade_2h", tier: 1, effectIds: [] },
+  { id: "spadone_2", name: "Spadone ★★", category: "weapon", rarity: "rare", familyId: "blade_2h", tier: 2, effectIds: ["apply_staggered"] },
+  { id: "spadone_3", name: "Spadone ★★★", category: "weapon", rarity: "mythic", familyId: "blade_2h", tier: 3, effectIds: ["apply_staggered", "bonus_damage"] },
+  { id: "ascia_2h_1", name: "Ascia a due mani ★", category: "weapon", rarity: "uncommon", familyId: "blade_2h", tier: 1, effectIds: [] },
+  { id: "ascia_2h_2", name: "Ascia a due mani ★★", category: "weapon", rarity: "rare", familyId: "blade_2h", tier: 2, effectIds: ["apply_staggered"] },
+  { id: "ascia_2h_3", name: "Ascia a due mani ★★★", category: "weapon", rarity: "mythic", familyId: "blade_2h", tier: 3, effectIds: ["apply_staggered", "bonus_damage"] },
+  { id: "alabarda_1", name: "Alabarda ★", category: "weapon", rarity: "uncommon", familyId: "blade_2h", tier: 1, effectIds: [] },
+  { id: "alabarda_2", name: "Alabarda ★★", category: "weapon", rarity: "rare", familyId: "blade_2h", tier: 2, effectIds: ["apply_staggered"] },
+  { id: "alabarda_3", name: "Alabarda ★★★", category: "weapon", rarity: "mythic", familyId: "blade_2h", tier: 3, effectIds: ["apply_staggered", "bonus_damage"] },
+  { id: "randello_1", name: "Randello ★", category: "weapon", rarity: "common", familyId: "blunt_1h", tier: 1, effectIds: [] },
+  { id: "randello_2", name: "Randello ★★", category: "weapon", rarity: "uncommon", familyId: "blunt_1h", tier: 2, effectIds: ["apply_staggered"] },
+  { id: "randello_3", name: "Randello ★★★", category: "weapon", rarity: "rare", familyId: "blunt_1h", tier: 3, effectIds: ["apply_staggered"] },
+  { id: "mazza_1", name: "Mazza ★", category: "weapon", rarity: "common", familyId: "blunt_1h", tier: 1, effectIds: [] },
+  { id: "mazza_2", name: "Mazza ★★", category: "weapon", rarity: "uncommon", familyId: "blunt_1h", tier: 2, effectIds: ["apply_staggered"] },
+  { id: "mazza_3", name: "Mazza ★★★", category: "weapon", rarity: "rare", familyId: "blunt_1h", tier: 3, effectIds: ["apply_staggered"] },
+  { id: "martello_da_guerra_1", name: "Martello da guerra ★", category: "weapon", rarity: "common", familyId: "blunt_1h", tier: 1, effectIds: [] },
+  { id: "martello_da_guerra_2", name: "Martello da guerra ★★", category: "weapon", rarity: "uncommon", familyId: "blunt_1h", tier: 2, effectIds: ["apply_staggered"] },
+  { id: "martello_da_guerra_3", name: "Martello da guerra ★★★", category: "weapon", rarity: "rare", familyId: "blunt_1h", tier: 3, effectIds: ["apply_staggered"] },
+  { id: "grande_mazza_1", name: "Grande mazza ★", category: "weapon", rarity: "uncommon", familyId: "blunt_2h", tier: 1, effectIds: ["apply_staggered"] },
+  { id: "grande_mazza_2", name: "Grande mazza ★★", category: "weapon", rarity: "rare", familyId: "blunt_2h", tier: 2, effectIds: ["apply_staggered"] },
+  { id: "grande_mazza_3", name: "Grande mazza ★★★", category: "weapon", rarity: "mythic", familyId: "blunt_2h", tier: 3, effectIds: ["apply_staggered", "bonus_damage"] },
+  { id: "maglio_1", name: "Maglio ★", category: "weapon", rarity: "uncommon", familyId: "blunt_2h", tier: 1, effectIds: ["apply_staggered"] },
+  { id: "maglio_2", name: "Maglio ★★", category: "weapon", rarity: "rare", familyId: "blunt_2h", tier: 2, effectIds: ["apply_staggered"] },
+  { id: "maglio_3", name: "Maglio ★★★", category: "weapon", rarity: "mythic", familyId: "blunt_2h", tier: 3, effectIds: ["apply_staggered", "bonus_damage"] },
+  { id: "maul_1", name: "Maul ★", category: "weapon", rarity: "uncommon", familyId: "blunt_2h", tier: 1, effectIds: ["apply_staggered"] },
+  { id: "maul_2", name: "Maul ★★", category: "weapon", rarity: "rare", familyId: "blunt_2h", tier: 2, effectIds: ["apply_staggered"] },
+  { id: "maul_3", name: "Maul ★★★", category: "weapon", rarity: "mythic", familyId: "blunt_2h", tier: 3, effectIds: ["apply_staggered", "bonus_damage"] },
+  { id: "arco_leggero_1", name: "Arco leggero ★", category: "weapon", rarity: "common", familyId: "bow", tier: 1, effectIds: [] },
+  { id: "arco_leggero_2", name: "Arco leggero ★★", category: "weapon", rarity: "uncommon", familyId: "bow", tier: 2, effectIds: [] },
+  { id: "arco_leggero_3", name: "Arco leggero ★★★", category: "weapon", rarity: "rare", familyId: "bow", tier: 3, effectIds: ["guaranteed_crit"] },
+  { id: "arco_corto_1", name: "Arco corto ★", category: "weapon", rarity: "common", familyId: "bow", tier: 1, effectIds: [] },
+  { id: "arco_corto_2", name: "Arco corto ★★", category: "weapon", rarity: "uncommon", familyId: "bow", tier: 2, effectIds: [] },
+  { id: "arco_corto_3", name: "Arco corto ★★★", category: "weapon", rarity: "rare", familyId: "bow", tier: 3, effectIds: ["guaranteed_crit"] },
+  { id: "arco_del_cacciatore_1", name: "Arco del cacciatore ★", category: "weapon", rarity: "common", familyId: "bow", tier: 1, effectIds: [] },
+  { id: "arco_del_cacciatore_2", name: "Arco del cacciatore ★★", category: "weapon", rarity: "uncommon", familyId: "bow", tier: 2, effectIds: [] },
+  { id: "arco_del_cacciatore_3", name: "Arco del cacciatore ★★★", category: "weapon", rarity: "rare", familyId: "bow", tier: 3, effectIds: ["guaranteed_crit"] },
+  { id: "bastone_da_viaggio_1", name: "Bastone da viaggio ★", category: "weapon", rarity: "common", familyId: "staff", tier: 1, effectIds: ["recover_boost"] },
+  { id: "bastone_da_viaggio_2", name: "Bastone da viaggio ★★", category: "weapon", rarity: "uncommon", familyId: "staff", tier: 2, effectIds: ["recover_boost"] },
+  { id: "bastone_da_viaggio_3", name: "Bastone da viaggio ★★★", category: "weapon", rarity: "rare", familyId: "staff", tier: 3, effectIds: ["recover_boost", "check_bonus"] },
+  { id: "bastone_ferrato_1", name: "Bastone ferrato ★", category: "weapon", rarity: "common", familyId: "staff", tier: 1, effectIds: ["recover_boost"] },
+  { id: "bastone_ferrato_2", name: "Bastone ferrato ★★", category: "weapon", rarity: "uncommon", familyId: "staff", tier: 2, effectIds: ["recover_boost"] },
+  { id: "bastone_ferrato_3", name: "Bastone ferrato ★★★", category: "weapon", rarity: "rare", familyId: "staff", tier: 3, effectIds: ["recover_boost", "check_bonus"] },
+  { id: "bastone_degli_anziani_1", name: "Bastone degli Anziani ★", category: "weapon", rarity: "common", familyId: "staff", tier: 1, effectIds: ["recover_boost"] },
+  { id: "bastone_degli_anziani_2", name: "Bastone degli Anziani ★★", category: "weapon", rarity: "uncommon", familyId: "staff", tier: 2, effectIds: ["recover_boost"] },
+  { id: "bastone_degli_anziani_3", name: "Bastone degli Anziani ★★★", category: "weapon", rarity: "rare", familyId: "staff", tier: 3, effectIds: ["recover_boost", "check_bonus"] },
   { id: "cuoio_1", name: "Cuoio ★", category: "armor", rarity: "common", armorType: "light", effectIds: [] },
   { id: "cuoio_borchiato_2", name: "Cuoio borchiato ★★", category: "armor", rarity: "uncommon", armorType: "light", effectIds: [] },
   { id: "cotta_di_maglia_1", name: "Cotta di maglia ★", category: "armor", rarity: "uncommon", armorType: "medium", effectIds: [] },
@@ -9225,17 +9255,29 @@ const TIER_LOOT_PRESETS = [
   ...ACCESSORY_PICKER_PRESETS
 ];
 
+LOOT_PRESETS.splice(0, LOOT_PRESETS.length, ...BASE_TIER_LOOT_PRESETS, ...ACCESSORY_LOOT_PRESETS);
+
 const LEGACY_LOOT_PRESET_ALIASES = {
   dagger: "pugnale_1",
-  long_dagger: "spada_corta_2",
-  shadow_blade: "spada_3",
-  rusted_blade: "spada_corta_2",
+  long_dagger: "pugnale_2",
+  shadow_blade: "pugnale_3",
+  scimitarra_1: "spada_1",
+  scimitarra_2: "spada_2",
+  scimitarra_3: "spada_3",
+  ascia_da_guerra_1: "spada_1",
+  ascia_da_guerra_2: "spada_2",
+  ascia_da_guerra_3: "spada_3",
+  rusted_blade: "spada_1",
   short_sword: "spada_corta_2",
   longsword: "spada_3",
-  hatchet: "pugnale_1",
-  battle_axe: "spada_corta_2",
+  ancestor_blade: "spada_3",
+  hatchet: "spada_1",
+  battle_axe: "spadone_2",
   war_axe: "ascia_2h_2",
-  great_axe: "alabarda_3",
+  great_axe: "ascia_2h_3",
+  flagello_1: "maglio_1",
+  flagello_2: "maglio_2",
+  flagello_3: "maglio_3",
   shortbow: "arco_leggero_1",
   short_bow: "arco_corto_2",
   hunter_bow: "arco_del_cacciatore_3",
@@ -9243,6 +9285,7 @@ const LEGACY_LOOT_PRESET_ALIASES = {
   walking_staff: "bastone_da_viaggio_1",
   iron_staff: "bastone_ferrato_2",
   elder_staff: "bastone_degli_anziani_3",
+  void_staff: "bastone_degli_anziani_3",
   camp_buckler: "buckler_1",
   iron_shield: "scudo_rotondo_1",
   tower_shield: "scudo_pesante_1",
@@ -9289,48 +9332,86 @@ function lootPresetTierInfo(preset) {
   return { value: "base", label: "Base", sort: 0 };
 }
 
+const ACCESSORY_SET_TOOLTIP_TEXT = {
+  guardia: "Riduce l'impatto dei critici subiti.",
+  baluardo: "Rafforza la difesa dopo una guardia efficace.",
+  mente: "Migliora il colpo successivo dopo difesa o concentrazione.",
+  respiro: "Potenzia recupero di stamina e recupero fiato.",
+  ombra: "Pulisce Scoperto e protegge l'esposizione.",
+  fuga: "Migliora ritirata e uscita dal combattimento.",
+  passo: "Riduce la fatica e sostiene la stamina.",
+  difesa: "Aumenta la difesa passiva.",
+  lama: "Aumenta il danno inflitto.",
+  sapere: "Aumenta le prove e i check.",
+  preda: "Aumenta pressione offensiva e precisione letale.",
+  impatto: "Può sbilanciare il nemico.",
+  brace: "Infligge ritorsione quando difendi.",
+  sigillo: "Aiuta ad aprire passaggi e rami narrativi.",
+  mercato: "Aumenta valore di vendita e resa economica."
+};
+
 function lootPresetFamilyInfo(preset) {
-  if (!preset) return { value: "misc", label: "Altro" };
+  if (!preset) return { value: "misc", label: "Altro", sort: 999 };
   if (preset.accessoryConcrete) {
     const setLabel = accessorySetOptionByValue(preset.effectSetId)?.label || preset.effectSetId || "Accessorio";
-    return { value: `accessory_${preset.effectSetId}`, label: `Set ${setLabel}` };
+    return {
+      value: `accessory_${preset.effectSetId}`,
+      label: `Set ${setLabel}`,
+      sort: 50,
+      tooltip: ACCESSORY_SET_TOOLTIP_TEXT[preset.effectSetId] || "Bonus passivo del set accessorio."
+    };
   }
   if (preset.category === "weapon") {
-    if (/^(pugnale|spada_corta|spada_)/.test(preset.id)) return { value: "blade_1h", label: "Taglio 1 mano" };
-    if (/^(spadone|ascia_2h|alabarda)/.test(preset.id)) return { value: "blade_2h", label: "Taglio 2 mani" };
-    if (/^(randello|mazza_|martello_da_guerra)/.test(preset.id)) return { value: "blunt_1h", label: "Mazze 1 mano" };
-    if (/^(grande_mazza|maglio|maul)/.test(preset.id)) return { value: "blunt_2h", label: "Mazze 2 mani" };
-    if (/^arco_/.test(preset.id)) return { value: "bow", label: "Archi" };
-    if (/^bastone_/.test(preset.id)) return { value: "staff", label: "Bastoni" };
-    return { value: "weapon_misc", label: "Armi" };
+    if (preset.familyId === "blade_1h") return { value: "blade_1h", label: "Lame 1 mano", sort: 10 };
+    if (preset.familyId === "blade_2h") return { value: "blade_2h", label: "Lame 2 mani", sort: 11 };
+    if (preset.familyId === "blunt_1h") return { value: "blunt_1h", label: "Mazze 1 mano", sort: 12 };
+    if (preset.familyId === "blunt_2h") return { value: "blunt_2h", label: "Mazze 2 mani", sort: 13 };
+    if (preset.familyId === "bow") return { value: "bow", label: "Archi", sort: 14 };
+    if (preset.familyId === "staff") return { value: "staff", label: "Bastoni", sort: 15 };
+    if (/^(pugnale|spada_corta|spada_)/.test(preset.id)) return { value: "blade_1h", label: "Lame 1 mano", sort: 10 };
+    if (/^(spadone|ascia_2h|alabarda)/.test(preset.id)) return { value: "blade_2h", label: "Lame 2 mani", sort: 11 };
+    if (/^(randello|mazza_|martello_da_guerra)/.test(preset.id)) return { value: "blunt_1h", label: "Mazze 1 mano", sort: 12 };
+    if (/^(grande_mazza|maglio|maul)/.test(preset.id)) return { value: "blunt_2h", label: "Mazze 2 mani", sort: 13 };
+    if (/^arco_/.test(preset.id)) return { value: "bow", label: "Archi", sort: 14 };
+    if (/^bastone_/.test(preset.id)) return { value: "staff", label: "Bastoni", sort: 15 };
+    return { value: "weapon_misc", label: "Armi", sort: 19 };
   }
   if (preset.category === "armor") {
-    if (preset.armorType === "light") return { value: "armor_light", label: "Armature leggere" };
-    if (preset.armorType === "medium") return { value: "armor_medium", label: "Armature medie" };
-    if (preset.armorType === "heavy") return { value: "armor_heavy", label: "Armature pesanti" };
-    return { value: "armor_misc", label: "Armature" };
+    if (preset.armorType === "light") return { value: "armor_light", label: "Armature leggere", sort: 30 };
+    if (preset.armorType === "medium") return { value: "armor_medium", label: "Armature medie", sort: 31 };
+    if (preset.armorType === "heavy") return { value: "armor_heavy", label: "Armature pesanti", sort: 32 };
+    return { value: "armor_misc", label: "Armature", sort: 39 };
   }
   if (preset.category === "shield") {
     return /^scudo_pesante/.test(preset.id)
-      ? { value: "shield_heavy", label: "Scudi pesanti" }
-      : { value: "shield_light", label: "Scudi leggeri" };
+      ? { value: "shield_heavy", label: "Scudi pesanti", sort: 34 }
+      : { value: "shield_light", label: "Scudi leggeri", sort: 33 };
   }
   if (preset.category === "consumable") {
-    if ((preset.effectIds || []).includes("restore_all") || (preset.effectIds || []).includes("restore_hp")) return { value: "consumable_recovery", label: "Recupero" };
-    if ((preset.effectIds || []).includes("defense_potion")) return { value: "consumable_defense", label: "Difesa" };
-    if ((preset.effectIds || []).includes("direct_damage") || (preset.effectIds || []).includes("apply_staggered")) return { value: "consumable_offense", label: "Offensivi" };
-    return { value: "consumable_misc", label: "Consumabili" };
+    if ((preset.effectIds || []).includes("restore_all") || (preset.effectIds || []).includes("restore_hp")) return { value: "consumable_recovery", label: "Recupero", sort: 70 };
+    if ((preset.effectIds || []).includes("defense_potion")) return { value: "consumable_defense", label: "Difesa", sort: 71 };
+    if ((preset.effectIds || []).includes("direct_damage") || (preset.effectIds || []).includes("apply_staggered")) return { value: "consumable_offense", label: "Offensivi", sort: 72 };
+    return { value: "consumable_misc", label: "Consumabili", sort: 73 };
   }
-  if (preset.category === "utility") return { value: "utility", label: "Strumenti" };
-  if (preset.category === "key") return { value: "key", label: "Chiavi narrative" };
+  if (preset.category === "utility") return { value: "utility", label: "Strumenti", sort: 74 };
+  if (preset.category === "key") return { value: "key", label: "Chiavi narrative", sort: 75 };
   if (preset.category === "treasure") {
-    if ((preset.effectIds || []).includes("check_bonus")) return { value: "treasure_arcane", label: "Arcani e documenti" };
-    return { value: "treasure", label: "Tesori" };
+    if ((preset.effectIds || []).includes("check_bonus")) return { value: "treasure_arcane", label: "Arcani e documenti", sort: 76 };
+    return { value: "treasure", label: "Tesori", sort: 77 };
   }
-  if (preset.category === "relic") return { value: "relic", label: "Reliquie" };
-  if (preset.id === "custom") return { value: "custom", label: "Personalizzato" };
+  if (preset.category === "relic") return { value: "relic", label: "Reliquie", sort: 78 };
+  if (preset.id === "custom") return { value: "custom", label: "Personalizzato", sort: 90 };
   const categoryLabel = ITEM_CATEGORIES.find((entry) => entry.value === preset.category)?.label || preset.category || "Altro";
-  return { value: `category_${preset.category || "misc"}`, label: categoryLabel };
+  return { value: `category_${preset.category || "misc"}`, label: categoryLabel, sort: 95 };
+}
+
+function compareLootPresets(a, b) {
+  const familyA = lootPresetFamilyInfo(a);
+  const familyB = lootPresetFamilyInfo(b);
+  return familyA.sort - familyB.sort
+    || familyA.label.localeCompare(familyB.label, "it")
+    || a.name.localeCompare(b.name, "it")
+    || a.id.localeCompare(b.id, "it");
 }
 
 function lootPresetSearchText(preset) {
@@ -9377,11 +9458,15 @@ function mountLootPicker(select, value = "", options = {}) {
     searchInput.type = "search";
     searchInput.placeholder = settings.searchPlaceholder;
     searchInput.autocomplete = "off";
+    const familyHint = document.createElement("p");
+    familyHint.className = "loot-picker-family-hint";
+    const suggestions = document.createElement("div");
+    suggestions.className = "loot-picker-suggestions";
     const itemSelect = document.createElement("select");
     itemSelect.className = "loot-picker-control loot-picker-control--item";
 
     filters.append(tierSelect, familySelect, searchInput);
-    root.append(filters, itemSelect);
+    root.append(filters, familyHint, suggestions, itemSelect);
     select.style.display = "none";
     select.insertAdjacentElement("afterend", root);
 
@@ -9392,7 +9477,7 @@ function mountLootPicker(select, value = "", options = {}) {
       return selectableLootPresets({
         includeCustom: settings.includeCustom,
         includeAccessoryPickers: settings.includeAccessoryPickers
-      });
+      }).sort(compareLootPresets);
     }
 
     function renderTierOptions(allPresets) {
@@ -9422,16 +9507,25 @@ function mountLootPicker(select, value = "", options = {}) {
         const info = lootPresetFamilyInfo(preset);
         if (!map.has(info.value)) map.set(info.value, info);
       });
-      const optionsData = [...map.values()].sort((a, b) => a.value === "all" ? -1 : b.value === "all" ? 1 : a.label.localeCompare(b.label, "it"));
+      const optionsData = [...map.values()].sort((a, b) =>
+        a.value === "all" ? -1
+          : b.value === "all" ? 1
+          : (a.sort ?? 999) - (b.sort ?? 999) || a.label.localeCompare(b.label, "it")
+      );
       familySelect.innerHTML = "";
       optionsData.forEach((optionData) => {
         const option = document.createElement("option");
         option.value = optionData.value;
         option.textContent = optionData.label;
+        if (optionData.tooltip) option.title = optionData.tooltip;
         if (optionData.value === state.family) option.selected = true;
         familySelect.appendChild(option);
       });
       if (!optionsData.some((entry) => entry.value === state.family)) state.family = "all";
+      const activeFamily = optionsData.find((entry) => entry.value === state.family) || optionsData[0] || null;
+      familySelect.title = activeFamily?.tooltip || "";
+      familyHint.textContent = activeFamily?.tooltip || "";
+      familyHint.style.display = activeFamily?.tooltip ? "" : "none";
     }
 
     function visiblePresets(allPresets) {
@@ -9441,7 +9535,52 @@ function mountLootPicker(select, value = "", options = {}) {
         if (state.family !== "all" && lootPresetFamilyInfo(preset).value !== state.family) return false;
         if (query && !lootPresetSearchText(preset).includes(query)) return false;
         return true;
+      }).sort(compareLootPresets);
+    }
+
+    function applyPresetSelection(presetId = "") {
+      syncing = true;
+      select.value = presetId || "";
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+      syncing = false;
+      syncFromSelect({ preserveFilters: true });
+    }
+
+    function renderSuggestions(filtered) {
+      const query = normalizeLootLookupKey(state.search);
+      suggestions.innerHTML = "";
+      if (!query) {
+        suggestions.style.display = "none";
+        itemSelect.classList.remove("loot-picker-control--muted");
+        return;
+      }
+      const topMatches = filtered.slice(0, 8);
+      if (!topMatches.length) {
+        const empty = document.createElement("div");
+        empty.className = "loot-picker-suggestions__empty";
+        empty.textContent = "Nessun item corrisponde a questa ricerca.";
+        suggestions.appendChild(empty);
+        suggestions.style.display = "";
+        itemSelect.classList.add("loot-picker-control--muted");
+        return;
+      }
+      topMatches.forEach((preset) => {
+        const option = document.createElement("button");
+        option.type = "button";
+        option.className = "loot-picker-suggestion";
+        const familyInfo = lootPresetFamilyInfo(preset);
+        option.title = familyInfo.tooltip || "";
+        option.innerHTML = `<strong>${esc(preset.name)}</strong><span>${esc(familyInfo.label)}</span>`;
+        option.addEventListener("click", () => {
+          state.value = preset.id;
+          searchInput.value = "";
+          state.search = "";
+          applyPresetSelection(preset.id);
+        });
+        suggestions.appendChild(option);
       });
+      suggestions.style.display = "";
+      itemSelect.classList.add("loot-picker-control--muted");
     }
 
     function render() {
@@ -9449,6 +9588,7 @@ function mountLootPicker(select, value = "", options = {}) {
       renderTierOptions(allPresets);
       renderFamilyOptions(allPresets);
       const filtered = visiblePresets(allPresets);
+      renderSuggestions(filtered);
       itemSelect.innerHTML = "";
       if (settings.includeNone) {
         const noneOpt = document.createElement("option");
@@ -9489,16 +9629,19 @@ function mountLootPicker(select, value = "", options = {}) {
       state.family = event.target.value || "all";
       render();
     });
-    searchInput.addEventListener("input", (event) => {
+      searchInput.addEventListener("input", (event) => {
       state.search = event.target.value || "";
       render();
     });
+    searchInput.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter") return;
+      const firstSuggestion = suggestions.querySelector(".loot-picker-suggestion");
+      if (!firstSuggestion) return;
+      event.preventDefault();
+      firstSuggestion.click();
+    });
     itemSelect.addEventListener("change", (event) => {
-      syncing = true;
-      select.value = event.target.value || "";
-      select.dispatchEvent(new Event("change", { bubbles: true }));
-      syncing = false;
-      syncFromSelect({ preserveFilters: true });
+      applyPresetSelection(event.target.value || "");
     });
     select.addEventListener("change", () => {
       if (syncing) return;
