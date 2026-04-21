@@ -2389,10 +2389,102 @@ function clonePresetLoot(lootList) {
   }));
 }
 
+const MONSTER_LOOT_RARITY_DROP_CHANCE = {
+  common: 0.3,
+  uncommon: 0.125,
+  rare: 0.05,
+  epic: 0.02,
+  mythic: 0.02,
+  legendary: 0.005,
+  unique: 0.005
+};
+
+function lootDropChanceForRarity(rarity = "common") {
+  return MONSTER_LOOT_RARITY_DROP_CHANCE[normalizeString(rarity)] ?? MONSTER_LOOT_RARITY_DROP_CHANCE.common;
+}
+
+function cloneLootEntry(loot) {
+  return {
+    itemId: loot.itemId || "",
+    itemName: loot.itemName || "",
+    quantity: loot.quantity ?? 1,
+    lockId: loot.lockId || "",
+    category: loot.category || "",
+    rarity: loot.rarity || "common",
+    armorType: loot.armorType || "light",
+    effectIds: Array.isArray(loot.effectIds) ? [...loot.effectIds] : [],
+    effectSetId: loot.effectSetId || "",
+    tier: Number(loot.tier) || undefined,
+    expanded: true
+  };
+}
+
+function rollSignatureLootDrops(lootList) {
+  return clonePresetLoot(lootList).filter((loot) => Math.random() < lootDropChanceForRarity(loot.rarity));
+}
+
+function monsterLootProfileKind(monsterLike) {
+  const profile = `${monsterLike?.id || ""} ${monsterLike?.name || monsterLike?.label || ""} ${monsterLike?.description || monsterLike?.hint || ""}`.toLowerCase();
+  if (/(lupo|segugio|ragno|sanguisuga|beast|hound|wolf|spider|leech|predatore)/.test(profile)) return "beast";
+  if (/(scheletro|revenant|devoto|catacomba|crypt|grave|undead|custode del bronzo)/.test(profile)) return "undead";
+  if (/(guardiano_elite|elite|boss|capobanda|magister|knight|ritualista)/.test(profile)) return "elite";
+  if (/(cult|cultista|goblin|guard|guardia|band|soldato|assassino|gregario|bruto|cavaliere|humanoid)/.test(profile)) return "humanoid";
+  return "default";
+}
+
+function buildFallbackRandomLootForMonster(monsterLike) {
+  const drops = [];
+  const profileKind = monsterLootProfileKind(monsterLike);
+  const goldMax = Math.max(4, Number(monsterLike?.goldReward) || 4);
+
+  function addPresetLoot(presetId, quantityMin = 1, quantityMax = quantityMin) {
+    const loot = createLootFromPreset(presetId);
+    loot.quantity = randomInt(quantityMin, quantityMax);
+    loot.expanded = true;
+    drops.push(loot);
+  }
+
+  if (profileKind === "beast") {
+    if (Math.random() < 0.65) addPresetLoot("wolf_pelt");
+    else if (Math.random() < 0.5) addPresetLoot("travel_rations");
+    else addPresetLoot("coins", 2, goldMax);
+  } else if (profileKind === "undead") {
+    if (Math.random() < 0.7) addPresetLoot("coins", 3, goldMax + 2);
+    else addPresetLoot("rusted_blade");
+  } else if (profileKind === "elite") {
+    if (Math.random() < 0.55) addPresetLoot("coins", 6, goldMax + 6);
+    else if (Math.random() < 0.6) addPresetLoot("arcane_scroll");
+    else addPresetLoot("warding_dust");
+  } else if (profileKind === "humanoid") {
+    if (Math.random() < 0.55) addPresetLoot("coins", 4, goldMax + 3);
+    else if (Math.random() < 0.5) addPresetLoot("healing_potion");
+    else addPresetLoot("camp_buckler");
+  } else {
+    if (Math.random() < 0.6) addPresetLoot("coins", 2, goldMax);
+    else if (Math.random() < 0.5) addPresetLoot("torch");
+    else addPresetLoot("healing_potion");
+  }
+
+  return drops.map(cloneLootEntry);
+}
+
 function buildMonsterLootFromPreset(preset) {
-  const fixedLoot = clonePresetLoot(preset.loot || []);
+  const fixedLoot = rollSignatureLootDrops(preset.loot || []);
   const variableLoot = generateVariableLootForMonster(preset);
-  return mergeLootEntries([...fixedLoot, ...variableLoot]);
+  const merged = mergeLootEntries([...fixedLoot, ...variableLoot]);
+  return merged.length ? merged : mergeLootEntries(buildFallbackRandomLootForMonster(preset));
+}
+
+function buildMonsterLootFromArchetype(archetype) {
+  const monsterLike = {
+    id: archetype?.id || "",
+    name: archetype?.label || "",
+    description: archetype?.hint || "",
+    goldReward: archetype?.goldReward || 0
+  };
+  const variableLoot = generateVariableLootForMonster(monsterLike);
+  const merged = mergeLootEntries(variableLoot);
+  return merged.length ? merged : mergeLootEntries(buildFallbackRandomLootForMonster(monsterLike));
 }
 
 function generateVariableLootForMonster(preset) {
@@ -3853,11 +3945,33 @@ function flushQuickMenuDraft(menuId) {
   const menu = document.getElementById(menuId);
   if (!menu) return;
   const active = document.activeElement;
-  if (!active || !menu.contains(active)) return;
-  if (active.matches("input, textarea, select")) {
-    active.dispatchEvent(new Event("input", { bubbles: true }));
-    active.dispatchEvent(new Event("change", { bubbles: true }));
+  const controls = [...menu.querySelectorAll("input, textarea, select")];
+  controls.forEach((control) => {
+    control.dispatchEvent(new Event("input", { bubbles: true }));
+    control.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  if (active && menu.contains(active) && active.matches("input, textarea, select")) {
     active.blur();
+  }
+}
+
+function getGraphContextOpeningText(context) {
+  if (!context) return "";
+  if (context.detached) {
+    return context.choice?.event?.text || "";
+  }
+  return context.description?.text || "";
+}
+
+function setGraphContextOpeningText(context, nextText) {
+  if (!context) return;
+  if (context.detached) {
+    if (!context.choice?.event) return;
+    context.choice.event.text = nextText;
+    return;
+  }
+  if (context.description) {
+    context.description.text = nextText;
   }
 }
 
@@ -3893,6 +4007,69 @@ function appendQuickMenuRow(menu, labelText, control) {
   row.append(label, control);
   menu.appendChild(row);
   return control;
+}
+
+function clampFloatingMenuPosition(menu, left, top, padding = 8) {
+  const width = menu.offsetWidth || parseInt(menu.style.maxWidth, 10) || 320;
+  const height = menu.offsetHeight || 360;
+  return {
+    left: clamp(left, padding, Math.max(padding, window.innerWidth - width - padding)),
+    top: clamp(top, padding, Math.max(padding, window.innerHeight - height - padding))
+  };
+}
+
+function setFloatingMenuPosition(menu, left, top) {
+  const next = clampFloatingMenuPosition(menu, left, top);
+  menu.style.left = `${next.left}px`;
+  menu.style.top = `${next.top}px`;
+}
+
+function makeFloatingMenuDraggable(menu, handle) {
+  if (!menu || !handle) return;
+  menu.classList.add("choice-targets-popover--draggable");
+  handle.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0) return;
+    if (event.target.closest("button, input, textarea, select, summary, a")) return;
+    const startLeft = parseFloat(menu.style.left || "0");
+    const startTop = parseFloat(menu.style.top || "0");
+    const startX = event.clientX;
+    const startY = event.clientY;
+    menu.classList.add("choice-targets-popover--dragging");
+    handle.setPointerCapture?.(event.pointerId);
+    event.preventDefault();
+
+    const onMove = (moveEvent) => {
+      setFloatingMenuPosition(
+        menu,
+        startLeft + (moveEvent.clientX - startX),
+        startTop + (moveEvent.clientY - startY)
+      );
+    };
+    const stopDrag = () => {
+      menu.classList.remove("choice-targets-popover--dragging");
+      document.removeEventListener("pointermove", onMove, true);
+      document.removeEventListener("pointerup", stopDrag, true);
+      document.removeEventListener("pointercancel", stopDrag, true);
+    };
+
+    document.addEventListener("pointermove", onMove, true);
+    document.addEventListener("pointerup", stopDrag, true);
+    document.addEventListener("pointercancel", stopDrag, true);
+  });
+}
+
+function appendQuickMenuCloseButton(header, onClose) {
+  const closeBtn = document.createElement("button");
+  closeBtn.type = "button";
+  closeBtn.className = "ctp-close-btn";
+  closeBtn.setAttribute("aria-label", "Chiudi card");
+  closeBtn.textContent = "×";
+  closeBtn.addEventListener("click", (event) => {
+    event.stopPropagation();
+    onClose?.();
+  });
+  header.appendChild(closeBtn);
+  return closeBtn;
 }
 
 function showFlowSceneQuickMenu(sceneId, anchorRect) {
@@ -3931,6 +4108,15 @@ function showFlowSceneQuickMenu(sceneId, anchorRect) {
       els.sceneEditor.scrollIntoView({ behavior: "smooth", block: "start" });
     });
     header.appendChild(advancedBtn);
+    header.innerHTML = "";
+    const sceneBadge = document.createElement("span");
+    sceneBadge.className = "ctp-type-badge";
+    sceneBadge.textContent = "Scena";
+    const sceneActions = document.createElement("div");
+    sceneActions.className = "ctp-header-actions";
+    sceneActions.appendChild(advancedBtn);
+    appendQuickMenuCloseButton(sceneActions, closeFlowSceneQuickMenu);
+    header.append(sceneBadge, sceneActions);
     menu.appendChild(header);
 
     const titleWrap = document.createElement("div");
@@ -3983,6 +4169,8 @@ function showFlowSceneQuickMenu(sceneId, anchorRect) {
 
   rebuild();
   document.body.appendChild(menu);
+  setFloatingMenuPosition(menu, left, top);
+  makeFloatingMenuDraggable(menu, menu.querySelector(".ctp-header"));
   requestAnimationFrame(() => {
     _flowSceneQuickMenuCleanup = (event) => {
       if (menu.contains(event.target)) return;
@@ -4067,6 +4255,15 @@ function showFlowEventQuickMenu(descId, choiceId, anchorRect) {
       showChoiceEventPicker(descId, choiceId, anchorRect);
     });
     header.appendChild(changeBtn);
+    header.innerHTML = "";
+    const eventBadge = document.createElement("span");
+    eventBadge.className = "ctp-type-badge";
+    eventBadge.textContent = `${visual.icon} ${liveChoice.text || visual.label}`;
+    const eventActions = document.createElement("div");
+    eventActions.className = "ctp-header-actions";
+    eventActions.appendChild(changeBtn);
+    appendQuickMenuCloseButton(eventActions, closeFlowEventQuickMenu);
+    header.append(eventBadge, eventActions);
     menu.appendChild(header);
 
     const sceneTextWrap = document.createElement("div");
@@ -4074,14 +4271,14 @@ function showFlowEventQuickMenu(descId, choiceId, anchorRect) {
     const sceneTextLabel = document.createElement("label");
     sceneTextLabel.className = "flow-event-quick-scene-copy__label";
     sceneTextLabel.textContent = "Testo iniziale della scena";
-    const sceneTextInput = createQuickMenuTextarea(liveContext.description?.text || "", 4, "Scrivi qui l'apertura narrativa della scena...");
+    const sceneTextInput = createQuickMenuTextarea(getGraphContextOpeningText(liveContext), 4, "Scrivi qui l'apertura narrativa della scena...");
     sceneTextInput.addEventListener("input", (event) => {
       const nextContext = getGraphChoiceContext(descId, choiceId);
-      const nextDescription = nextContext?.description;
-      if (!nextDescription) return;
-      nextDescription.text = event.target.value;
+      if (!nextContext) return;
+      setGraphContextOpeningText(nextContext, event.target.value);
       markSceneDirty();
       refreshFlowCard(descId);
+      renderChoiceNodes();
       scheduleJsonRender();
       renderSceneEditor();
     });
@@ -4649,6 +4846,8 @@ function showFlowEventQuickMenu(descId, choiceId, anchorRect) {
 
   rebuild();
   document.body.appendChild(menu);
+  setFloatingMenuPosition(menu, left, top);
+  makeFloatingMenuDraggable(menu, menu.querySelector(".ctp-header"));
   requestAnimationFrame(() => {
     _flowEventQuickMenuCleanup = (event) => {
       if (menu.contains(event.target)) return;
@@ -4698,6 +4897,15 @@ function showChoiceTargetsPopover(descId, choiceId, anchorRect) {
     showChoiceEventPicker(descId, choiceId, anchorRect);
   });
   header.appendChild(changeBtn);
+  header.innerHTML = "";
+  const targetBadge = document.createElement("span");
+  targetBadge.className = "ctp-type-badge";
+  targetBadge.textContent = `${typeEntry.icon} ${typeEntry.label}`;
+  const targetActions = document.createElement("div");
+  targetActions.className = "ctp-header-actions";
+  targetActions.appendChild(changeBtn);
+  appendQuickMenuCloseButton(targetActions, closeChoiceTargetsPopover);
+  header.append(targetBadge, targetActions);
   pop.appendChild(header);
 
   // Righe rami: label colorata + select scene
@@ -4741,6 +4949,8 @@ function showChoiceTargetsPopover(descId, choiceId, anchorRect) {
   };
   setTimeout(() => document.addEventListener("pointerdown", handleOutside, { once: true }), 0);
   document.body.appendChild(pop);
+  setFloatingMenuPosition(pop, left, top);
+  makeFloatingMenuDraggable(pop, pop.querySelector(".ctp-header"));
 }
 
 function closeChoiceTargetsPopover() {
@@ -5569,7 +5779,7 @@ function createMonsterFromArchetype(archetype) {
     goldReward: archetype.goldReward,
     abilityIds: [...archetype.abilityIds],
     hasBerserkerPhase: archetype.hasBerserkerPhase,
-    loot: [{ itemId: "coins", itemName: "Monete", quantity: archetype.goldReward, category: "treasure", rarity: "common", effectIds: ["trade_value"] }],
+    loot: buildMonsterLootFromArchetype(archetype),
     sourceType: "archetype",
     archetypeId: archetype.id
   };
@@ -6287,7 +6497,7 @@ function applyPresetToCombatGroup(group, preset) {
     goldReward: preset.goldReward,
     abilityIds: [...(preset.abilityIds || [])],
     hasBerserkerPhase: Boolean(preset.hasBerserkerPhase),
-    loot: cloneLootDraft(preset.loot || [])
+    loot: cloneLootDraft(buildMonsterLootFromPreset(preset))
   });
 }
 
@@ -6308,7 +6518,7 @@ function applyArchetypeToCombatGroup(group, archetype) {
     goldReward: template.goldReward,
     abilityIds: [...(template.abilityIds || [])],
     hasBerserkerPhase: Boolean(template.hasBerserkerPhase),
-    loot: group.loot?.length ? cloneLootDraft(group.loot) : cloneLootDraft(template.loot || [])
+    loot: cloneLootDraft(template.loot || [])
   });
 }
 
@@ -7244,11 +7454,14 @@ function renderLootList(container, items, options = {}) {
     const armorTypeSelect  = node.querySelector('[data-field="armorType"]');
     const questInline      = node.querySelector('[data-field="questItem"]');
     const customRow        = node.querySelector('[data-role="custom-row"]');
+    const categoryRow      = categorySelect?.closest("label");
+    const rarityRow        = raritySelect?.closest("label");
     const accessoryConfig  = node.querySelector('[data-role="accessory-config"]');
     const chipsContainer   = node.querySelector('[data-role="effect-chips"]');
     const effectHelp       = node.querySelector('[data-role="effect-help"]');
     const addEffectBtn     = node.querySelector('[data-action="add-effect"]');
     const quantityField    = node.querySelector('[data-field="quantity"]');
+    const lootAdvanced     = node.querySelector(".loot-advanced");
 
     const selectedPreset = lootPresetById(runtimeLootItemId(loot))
       ? runtimeLootItemId(loot)
@@ -7436,14 +7649,25 @@ function renderLootList(container, items, options = {}) {
     }
 
     function syncVisibility() {
+      const isCustomLoot = select.value === "custom";
+      const isAccessoryLoot = isAccessoryCategory(loot.category);
+      const needsArmorType = loot.category === "armor";
+      const needsLockId = loot.category === "key";
+      const showAdvanced = isCustomLoot || needsArmorType || needsLockId;
+      if (categoryRow) categoryRow.style.display = isCustomLoot ? "" : "none";
+      if (rarityRow) rarityRow.style.display = isCustomLoot ? "" : "none";
       // lock row: solo se categoria key
-      lockRow.style.display = loot.category === "key" ? "" : "none";
+      lockRow.style.display = needsLockId ? "" : "none";
       // armor type row: solo se categoria armor
-      if (armorTypeRow) armorTypeRow.style.display = loot.category === "armor" ? "" : "none";
+      if (armorTypeRow) armorTypeRow.style.display = needsArmorType ? "" : "none";
       // custom row: solo se preset custom
-      customRow.style.display = select.value === "custom" ? "" : "none";
-      if (categorySelect) categorySelect.disabled = isAccessoryCategory(loot.category);
-      if (raritySelect) raritySelect.disabled = isAccessoryCategory(loot.category);
+      customRow.style.display = isCustomLoot ? "" : "none";
+      if (categorySelect) categorySelect.disabled = !isCustomLoot || isAccessoryLoot;
+      if (raritySelect) raritySelect.disabled = !isCustomLoot || isAccessoryLoot;
+      if (lootAdvanced) {
+        lootAdvanced.style.display = showAdvanced ? "" : "none";
+        if (!showAdvanced) lootAdvanced.open = false;
+      }
       renderAccessoryConfig();
     }
 
@@ -7468,8 +7692,7 @@ function renderLootList(container, items, options = {}) {
     node.open = loot.expanded !== false;
     updateLootHeader();
     // Auto-espandi opzioni avanzate per categorie che le richiedono
-    const lootAdvanced = node.querySelector(".loot-advanced");
-    if (lootAdvanced && (loot.category === "key" || loot.category === "armor" || loot.questItem)) {
+    if (lootAdvanced && (loot.category === "key" || loot.category === "armor" || select.value === "custom")) {
       lootAdvanced.open = true;
     }
 
@@ -7581,7 +7804,7 @@ function renderLootList(container, items, options = {}) {
       syncVisibility();
       updateLockHint();
       // Auto-espandi opzioni avanzate quando si seleziona key o armor
-      if (lootAdvanced && (loot.category === "key" || loot.category === "armor")) {
+      if (lootAdvanced && (loot.category === "key" || loot.category === "armor" || select.value === "custom")) {
         lootAdvanced.open = true;
       }
       onChange();
@@ -9099,15 +9322,21 @@ function pruneEmpty(object) {
 
 const BASE_TIER_LOOT_PRESETS = [
   { id: "coins", name: "Monete", category: "treasure", rarity: "common", effectIds: ["trade_value"] },
-  { id: "healing_potion", name: "Pozione curativa ★", category: "consumable", rarity: "common", effectIds: ["restore_hp"] },
-  { id: "healing_potion_2", name: "Pozione curativa ★★", category: "consumable", rarity: "uncommon", effectIds: ["restore_hp"] },
-  { id: "healing_potion_3", name: "Pozione curativa ★★★", category: "consumable", rarity: "rare", effectIds: ["restore_hp"] },
-  { id: "travel_rations", name: "Razioni da viaggio ★", category: "consumable", rarity: "common", effectIds: ["restore_hp", "recover_boost"] },
-  { id: "travel_rations_2", name: "Razioni da viaggio ★★", category: "consumable", rarity: "uncommon", effectIds: ["restore_hp", "recover_boost"] },
-  { id: "travel_rations_3", name: "Razioni da viaggio ★★★", category: "consumable", rarity: "rare", effectIds: ["restore_hp", "recover_boost"] },
-  { id: "alchemic_fire", name: "Fuoco alchemico", category: "consumable", rarity: "rare", effectIds: ["direct_damage", "apply_staggered"] },
-  { id: "warding_dust", name: "Polvere di guardia", category: "consumable", rarity: "rare", effectIds: ["defense_potion"] },
-  { id: "phoenix_tear", name: "Lacrima della Fenice", category: "consumable", rarity: "mythic", effectIds: ["restore_all"] },
+  { id: "healing_potion", name: "Pozione curativa ★", category: "consumable", rarity: "common", tier: 1, effectIds: ["restore_hp"] },
+  { id: "healing_potion_2", name: "Pozione curativa ★★", category: "consumable", rarity: "uncommon", tier: 2, effectIds: ["restore_hp"] },
+  { id: "healing_potion_3", name: "Pozione curativa ★★★", category: "consumable", rarity: "rare", tier: 3, effectIds: ["restore_hp"] },
+  { id: "travel_rations", name: "Razioni da viaggio ★", category: "consumable", rarity: "common", tier: 1, effectIds: ["restore_hp", "recover_boost"] },
+  { id: "travel_rations_2", name: "Razioni da viaggio ★★", category: "consumable", rarity: "uncommon", tier: 2, effectIds: ["restore_hp", "recover_boost"] },
+  { id: "travel_rations_3", name: "Razioni da viaggio ★★★", category: "consumable", rarity: "rare", tier: 3, effectIds: ["restore_hp", "recover_boost"] },
+  { id: "alchemic_fire", name: "Fuoco alchemico ★", category: "consumable", rarity: "common", tier: 1, effectIds: ["direct_damage"] },
+  { id: "alchemic_fire_2", name: "Fuoco alchemico ★★", category: "consumable", rarity: "uncommon", tier: 2, effectIds: ["direct_damage", "apply_staggered"] },
+  { id: "alchemic_fire_3", name: "Fuoco alchemico ★★★", category: "consumable", rarity: "rare", tier: 3, effectIds: ["direct_damage", "apply_staggered", "bonus_damage"] },
+  { id: "warding_dust", name: "Polvere di guardia ★", category: "consumable", rarity: "common", tier: 1, effectIds: ["defense_potion"] },
+  { id: "warding_dust_2", name: "Polvere di guardia ★★", category: "consumable", rarity: "uncommon", tier: 2, effectIds: ["defense_potion", "guarded_surge"] },
+  { id: "warding_dust_3", name: "Polvere di guardia ★★★", category: "consumable", rarity: "rare", tier: 3, effectIds: ["defense_potion", "guarded_surge", "crit_guard"] },
+  { id: "phoenix_tear", name: "Lacrima della Fenice ★", category: "consumable", rarity: "uncommon", tier: 1, effectIds: ["restore_all"] },
+  { id: "phoenix_tear_2", name: "Lacrima della Fenice ★★", category: "consumable", rarity: "rare", tier: 2, effectIds: ["restore_all", "recover_boost"] },
+  { id: "phoenix_tear_3", name: "Lacrima della Fenice ★★★", category: "consumable", rarity: "mythic", tier: 3, effectIds: ["restore_all", "recover_boost", "focus_surge"] },
   { id: "torch", name: "Torcia", category: "utility", rarity: "common", effectIds: [] },
   { id: "rope", name: "Corda", category: "utility", rarity: "common", effectIds: [] },
   { id: "flint_and_steel", name: "Acciarino e Pietra Focaia", category: "utility", rarity: "common", effectIds: [] },
@@ -9206,28 +9435,28 @@ const ACCESSORY_SLOT_OPTIONS = [
 ];
 
 const ACCESSORY_SET_OPTIONS = [
-  { value: "guardia", label: "Guardia", suffix: "della Guardia", rarityByTier: ["rare", "mythic", "legendary"], effectIdsByTier: [["crit_guard"], ["crit_guard"], ["crit_guard"]] },
-  { value: "baluardo", label: "Baluardo", suffix: "del Baluardo", rarityByTier: ["rare", "mythic", "legendary"], effectIdsByTier: [["guarded_surge"], ["guarded_surge"], ["guarded_surge"]] },
-  { value: "mente", label: "Mente", suffix: "della Mente", rarityByTier: ["rare", "mythic", "legendary"], effectIdsByTier: [["focus_surge"], ["focus_surge"], ["focus_surge"]] },
-  { value: "respiro", label: "Respiro", suffix: "del Respiro", rarityByTier: ["rare", "mythic", "legendary"], effectIdsByTier: [["recover_boost"], ["recover_boost"], ["recover_boost"]] },
-  { value: "ombra", label: "Ombra", suffix: "dell'Ombra", rarityByTier: ["rare", "mythic", "legendary"], effectIdsByTier: [["cleanse_exposed"], ["cleanse_exposed"], ["cleanse_exposed"]] },
-  { value: "fuga", label: "Fuga", suffix: "della Fuga", rarityByTier: ["rare", "mythic", "legendary"], effectIdsByTier: [["escape"], ["escape"], ["escape"]] },
-  { value: "passo", label: "Passo", suffix: "del Passo", rarityByTier: ["rare", "mythic", "legendary"], effectIdsByTier: [["fatigue_relief"], ["fatigue_relief"], ["fatigue_relief"]] },
-  { value: "difesa", label: "Difesa", suffix: "della Difesa", rarityByTier: ["rare", "mythic", "legendary"], effectIdsByTier: [["defense_surge"], ["defense_surge"], ["defense_surge"]] },
-  { value: "lama", label: "Lama", suffix: "della Lama", rarityByTier: ["rare", "mythic", "legendary"], effectIdsByTier: [["bonus_damage"], ["bonus_damage"], ["bonus_damage"]] },
-  { value: "sapere", label: "Sapere", suffix: "del Sapere", rarityByTier: ["rare", "mythic", "legendary"], effectIdsByTier: [["check_bonus"], ["check_bonus"], ["check_bonus"]] },
-  { value: "preda", label: "Preda", suffix: "della Preda", rarityByTier: ["rare", "mythic", "legendary"], effectIdsByTier: [["guaranteed_crit"], ["guaranteed_crit"], ["guaranteed_crit"]] },
-  { value: "impatto", label: "Impatto", suffix: "dell'Impatto", rarityByTier: ["rare", "mythic", "legendary"], effectIdsByTier: [["apply_staggered"], ["apply_staggered"], ["apply_staggered"]] },
-  { value: "brace", label: "Brace", suffix: "della Brace", rarityByTier: ["rare", "mythic", "legendary"], effectIdsByTier: [["ember_retaliation"], ["ember_retaliation"], ["ember_retaliation"]] },
-  { value: "sigillo", label: "Sigillo", suffix: "del Sigillo", rarityByTier: ["rare", "mythic", "legendary"], effectIdsByTier: [["key_access"], ["key_access"], ["key_access"]] },
-  { value: "mercato", label: "Mercato", suffix: "del Mercato", rarityByTier: ["rare", "mythic", "legendary"], effectIdsByTier: [["trade_value"], ["trade_value"], ["trade_value"]] }
+  { value: "guardia", label: "Guardia", suffix: "della Guardia", rarityByTier: ["uncommon", "rare", "mythic"], effectIdsByTier: [["crit_guard"], ["crit_guard"], ["crit_guard"]] },
+  { value: "baluardo", label: "Baluardo", suffix: "del Baluardo", rarityByTier: ["uncommon", "rare", "mythic"], effectIdsByTier: [["guarded_surge"], ["guarded_surge"], ["guarded_surge"]] },
+  { value: "mente", label: "Mente", suffix: "della Mente", rarityByTier: ["uncommon", "rare", "mythic"], effectIdsByTier: [["focus_surge"], ["focus_surge"], ["focus_surge"]] },
+  { value: "respiro", label: "Respiro", suffix: "del Respiro", rarityByTier: ["uncommon", "rare", "mythic"], effectIdsByTier: [["recover_boost"], ["recover_boost"], ["recover_boost"]] },
+  { value: "ombra", label: "Ombra", suffix: "dell'Ombra", rarityByTier: ["uncommon", "rare", "mythic"], effectIdsByTier: [["cleanse_exposed"], ["cleanse_exposed"], ["cleanse_exposed"]] },
+  { value: "fuga", label: "Fuga", suffix: "della Fuga", rarityByTier: ["uncommon", "rare", "mythic"], effectIdsByTier: [["escape"], ["escape"], ["escape"]] },
+  { value: "passo", label: "Passo", suffix: "del Passo", rarityByTier: ["uncommon", "rare", "mythic"], effectIdsByTier: [["fatigue_relief"], ["fatigue_relief"], ["fatigue_relief"]] },
+  { value: "difesa", label: "Difesa", suffix: "della Difesa", rarityByTier: ["uncommon", "rare", "mythic"], effectIdsByTier: [["defense_surge"], ["defense_surge"], ["defense_surge"]] },
+  { value: "lama", label: "Lama", suffix: "della Lama", rarityByTier: ["uncommon", "rare", "mythic"], effectIdsByTier: [["bonus_damage"], ["bonus_damage"], ["bonus_damage"]] },
+  { value: "sapere", label: "Sapere", suffix: "del Sapere", rarityByTier: ["uncommon", "rare", "mythic"], effectIdsByTier: [["check_bonus"], ["check_bonus"], ["check_bonus"]] },
+  { value: "preda", label: "Preda", suffix: "della Preda", rarityByTier: ["uncommon", "rare", "mythic"], effectIdsByTier: [["guaranteed_crit"], ["guaranteed_crit"], ["guaranteed_crit"]] },
+  { value: "impatto", label: "Impatto", suffix: "dell'Impatto", rarityByTier: ["uncommon", "rare", "mythic"], effectIdsByTier: [["apply_staggered"], ["apply_staggered"], ["apply_staggered"]] },
+  { value: "brace", label: "Brace", suffix: "della Brace", rarityByTier: ["uncommon", "rare", "mythic"], effectIdsByTier: [["ember_retaliation"], ["ember_retaliation"], ["ember_retaliation"]] },
+  { value: "sigillo", label: "Sigillo", suffix: "del Sigillo", rarityByTier: ["uncommon", "rare", "mythic"], effectIdsByTier: [["key_access"], ["key_access"], ["key_access"]] },
+  { value: "mercato", label: "Mercato", suffix: "del Mercato", rarityByTier: ["uncommon", "rare", "mythic"], effectIdsByTier: [["trade_value"], ["trade_value"], ["trade_value"]] }
 ];
 
 const ACCESSORY_PICKER_PRESETS = ACCESSORY_SLOT_OPTIONS.map((slot) => ({
   id: slot.pickerId,
   name: `Accessorio: ${slot.label}`,
   category: slot.value,
-  rarity: "rare",
+  rarity: "uncommon",
   effectIds: [],
   accessoryPicker: true,
   effectSetId: slot.defaultSetId,
@@ -9387,12 +9616,7 @@ function lootPresetFamilyInfo(preset) {
       ? { value: "shield_heavy", label: "Scudi pesanti", sort: 34 }
       : { value: "shield_light", label: "Scudi leggeri", sort: 33 };
   }
-  if (preset.category === "consumable") {
-    if ((preset.effectIds || []).includes("restore_all") || (preset.effectIds || []).includes("restore_hp")) return { value: "consumable_recovery", label: "Recupero", sort: 70 };
-    if ((preset.effectIds || []).includes("defense_potion")) return { value: "consumable_defense", label: "Difesa", sort: 71 };
-    if ((preset.effectIds || []).includes("direct_damage") || (preset.effectIds || []).includes("apply_staggered")) return { value: "consumable_offense", label: "Offensivi", sort: 72 };
-    return { value: "consumable_misc", label: "Consumabili", sort: 73 };
-  }
+  if (preset.category === "consumable") return { value: "consumable", label: "Consumabili", sort: 70 };
   if (preset.category === "utility") return { value: "utility", label: "Strumenti", sort: 74 };
   if (preset.category === "key") return { value: "key", label: "Chiavi narrative", sort: 75 };
   if (preset.category === "treasure") {
@@ -9897,18 +10121,66 @@ function normalizeLootDraftToTierCatalog(loot) {
   if (!loot) return loot;
   const preset = lootPresetById(loot.itemId || loot.itemName);
   if (!preset || preset.id === "custom") return loot;
+  const normalizedPreset = normalizeLootPresetRarityByTier(preset);
   return {
     ...loot,
-    itemId: preset.id,
-    itemName: preset.name,
-    category: preset.category || loot.category || "",
-    rarity: preset.rarity || loot.rarity || "common",
-    armorType: preset.category === "armor" ? (preset.armorType || loot.armorType || "light") : (loot.armorType || "light"),
-    effectIds: [...(preset.effectIds || loot.effectIds || [])],
-    effectSetId: preset.effectSetId || loot.effectSetId || "",
-    tier: preset.tier || loot.tier
+    itemId: normalizedPreset.id,
+    itemName: normalizedPreset.name,
+    category: normalizedPreset.category || loot.category || "",
+    rarity: normalizedPreset.rarity || loot.rarity || "common",
+    armorType: normalizedPreset.category === "armor" ? (normalizedPreset.armorType || loot.armorType || "light") : (loot.armorType || "light"),
+    effectIds: [...(normalizedPreset.effectIds || loot.effectIds || [])],
+    effectSetId: normalizedPreset.effectSetId || loot.effectSetId || "",
+    tier: normalizedPreset.tier || loot.tier
   };
 }
+
+const TIER_ALLOWED_RARITIES = {
+  1: ["common", "uncommon"],
+  2: ["uncommon", "rare"],
+  3: ["rare", "mythic"]
+};
+
+const RARITY_PROGRESS_ORDER = ["common", "uncommon", "rare", "epic", "mythic", "legendary", "unique"];
+
+function inferLootTierValue(snapshot) {
+  const explicitTier = Number(snapshot?.tier);
+  if (explicitTier >= 1 && explicitTier <= 3) return explicitTier;
+  const starTier = (snapshot?.name?.match(/★/g) || []).length;
+  return starTier >= 1 && starTier <= 3 ? starTier : null;
+}
+
+function normalizeRarityForTier(rarity = "common", tier = null) {
+  const normalizedRarity = normalizeString(rarity) || "common";
+  if (normalizedRarity === "unique" || !tier || !TIER_ALLOWED_RARITIES[tier]) return normalizedRarity;
+  if (TIER_ALLOWED_RARITIES[tier].includes(normalizedRarity)) return normalizedRarity;
+  const allowed = TIER_ALLOWED_RARITIES[tier];
+  const rarityIndex = RARITY_PROGRESS_ORDER.indexOf(normalizedRarity);
+  const minIndex = RARITY_PROGRESS_ORDER.indexOf(allowed[0]);
+  const maxIndex = RARITY_PROGRESS_ORDER.indexOf(allowed[allowed.length - 1]);
+  if (rarityIndex !== -1 && rarityIndex < minIndex) return allowed[0];
+  return allowed[allowed.length - 1];
+}
+
+function normalizeLootPresetRarityByTier(preset) {
+  if (!preset || preset.id === "custom") return preset;
+  const tier = inferLootTierValue(preset);
+  if (!tier) return preset;
+  return {
+    ...preset,
+    rarity: normalizeRarityForTier(preset.rarity || "common", tier)
+  };
+}
+
+function applyTierRarityRuleToPresetList(list) {
+  list.forEach((preset) => {
+    Object.assign(preset, normalizeLootPresetRarityByTier(preset));
+  });
+}
+
+applyTierRarityRuleToPresetList(BASE_TIER_LOOT_PRESETS);
+applyTierRarityRuleToPresetList(ACCESSORY_PICKER_PRESETS);
+applyTierRarityRuleToPresetList(ACCESSORY_LOOT_PRESETS);
 
 MONSTER_PRESETS.forEach((preset) => {
   preset.loot = (preset.loot || []).map((loot) => normalizeLootDraftToTierCatalog(loot));
