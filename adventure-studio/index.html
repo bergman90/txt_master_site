@@ -455,6 +455,7 @@
       <p class="hint loot-error" data-role="loot-error" style="display:none"></p>
 
       <label>Quantita<input data-field="quantity" type="number" min="1" value="1"></label>
+      <div data-role="accessory-config" class="accessory-config" style="display:none"></div>
 
       <div class="loot-effects-section">
         <div class="loot-effects-header">
@@ -561,15 +562,55 @@
   <!-- Save toast -->
   <div id="save-toast" class="save-toast" aria-live="polite">Avventura salvata!</div>
 
-  <!-- Node Picker — appare su N, toolbar o drag-to-create. In v2 solo 2 tipi. -->
+  <!-- Node Picker — aggiunge nodi scena o nodi evento indipendenti -->
   <div id="node-picker" class="node-picker hidden" role="dialog" aria-label="Aggiungi nodo">
     <div id="node-picker-step1">
-      <div class="node-picker-title">Aggiungi nodo</div>
+      <div class="node-picker-title">Aggiungi nodo al grafo</div>
       <div class="node-picker-grid">
         <button class="node-picker-btn node-picker-btn--description" data-kind="description" title="Nodo narrativo con scelte">
           <span class="node-picker-icon">&#x1F4D6;</span>
           <span class="node-picker-label">Scena</span>
           <span class="node-picker-hint">Testo + scelte</span>
+        </button>
+        <button class="node-picker-btn node-picker-btn--transition" data-kind="transition" title="Nodo evento di transizione">
+          <span class="node-picker-icon">&#x2192;</span>
+          <span class="node-picker-label">Transizione</span>
+          <span class="node-picker-hint">Passaggio / snodo</span>
+        </button>
+        <button class="node-picker-btn node-picker-btn--combat" data-kind="combat" title="Nodo evento di combattimento">
+          <span class="node-picker-icon">&#x2694;</span>
+          <span class="node-picker-label">Combattimento</span>
+          <span class="node-picker-hint">Mostri + esiti</span>
+        </button>
+        <button class="node-picker-btn node-picker-btn--check" data-kind="skillcheck" title="Nodo evento skill check">
+          <span class="node-picker-icon">&#x1F3B2;</span>
+          <span class="node-picker-label">Skill check</span>
+          <span class="node-picker-hint">Riuscita / fallimento</span>
+        </button>
+        <button class="node-picker-btn node-picker-btn--requirement" data-kind="requirement" title="Nodo evento requisito">
+          <span class="node-picker-icon">&#x1F511;</span>
+          <span class="node-picker-label">Requisito</span>
+          <span class="node-picker-hint">Oggetti, chiavi, effetti</span>
+        </button>
+        <button class="node-picker-btn node-picker-btn--loot" data-kind="loot" title="Nodo evento loot">
+          <span class="node-picker-icon">&#x1F4E6;</span>
+          <span class="node-picker-label">Loot</span>
+          <span class="node-picker-hint">Ricompense e bottino</span>
+        </button>
+        <button class="node-picker-btn node-picker-btn--condition" data-kind="condition" title="Nodo evento condizione">
+          <span class="node-picker-icon">&#x2728;</span>
+          <span class="node-picker-label">Condizione</span>
+          <span class="node-picker-hint">Stati e flag</span>
+        </button>
+        <button class="node-picker-btn node-picker-btn--shop" data-kind="shop" title="Nodo evento negozio">
+          <span class="node-picker-icon">&#x1F3EA;</span>
+          <span class="node-picker-label">Negozio</span>
+          <span class="node-picker-hint">Compra / vendi</span>
+        </button>
+        <button class="node-picker-btn node-picker-btn--dialogue" data-kind="dialogue" title="Nodo evento dialogo">
+          <span class="node-picker-icon">&#x1F4AC;</span>
+          <span class="node-picker-label">Dialogo</span>
+          <span class="node-picker-hint">NPC + risposte</span>
         </button>
         <button class="node-picker-btn node-picker-btn--final" data-kind="final" title="Epilogo / fine percorso">
           <span class="node-picker-icon">&#x1F3C1;</span>
