@@ -2733,15 +2733,6 @@ function syncChoiceCollectionFromContainer(container, choices) {
 
     choice.text = card.querySelector('[data-field="text"]')?.value ?? choice.text;
     choice.endingText = card.querySelector('[data-field="endingText"]')?.value ?? choice.endingText;
-    choice.requiredLockId = normalizeString(card.querySelector('[data-field="requiredLockId"]')?.value) || "";
-    choice.requiredLockLabel = card.querySelector('[data-field="requiredLockLabel"]')?.value ?? choice.requiredLockLabel;
-    choice.requiredItemId = normalizeString(card.querySelector('[data-field="requiredItemIdCustom"]')?.value)
-      || normalizeString(card.querySelector('[data-field="requiredItemId"]')?.value)
-      || "";
-    choice.requiredItemCategory = normalizeString(card.querySelector('[data-field="requiredItemCategory"]')?.value) || "";
-    choice.requiredEffectId = normalizeString(card.querySelector('[data-field="requiredEffectId"]')?.value) || "";
-    choice.consumeOnUse = Boolean(card.querySelector('[data-field="consumeOnUse"]')?.checked);
-
     const attribute = normalizeString(card.querySelector('[data-field="checkAttribute"]')?.value);
     const successSceneId = normalizeString(card.querySelector('[data-field="checkSuccess"]')?.value);
     const failureSceneId = normalizeString(card.querySelector('[data-field="checkFailure"]')?.value)
@@ -4632,39 +4623,44 @@ function showFlowEventQuickMenu(descId, choiceId, anchorRect) {
       const modeSelect = document.createElement("select");
       modeSelect.className = "ctp-scene-select";
       [
-        { value: "itemId", label: "ID oggetto" },
-        { value: "itemCategory", label: "Categoria" },
-        { value: "effectId", label: "Effetto" }
+        { value: "presetItem", label: "Oggetto dal catalogo" },
+        { value: "key", label: "Chiave" },
+        { value: "questItem", label: "Quest item unico" }
       ].forEach(({ value, label }) => {
         const option = document.createElement("option");
         option.value = value;
         option.textContent = label;
         modeSelect.appendChild(option);
       });
-      const currentMode = eventPayload.itemId ? "itemId" : eventPayload.itemCategory ? "itemCategory" : "effectId";
-      modeSelect.value = currentMode;
+      modeSelect.value = eventPayload.requirementMode
+        || (eventPayload.lockId ? "key" : eventPayload.questItemId ? "questItem" : "presetItem");
       appendQuickMenuRow(menu, "Requisito", modeSelect);
 
       const syncRequirementValue = () => {
         const mode = modeSelect.value;
         let control = null;
         const onValueChange = (nextValue) => {
-          eventPayload.itemId = mode === "itemId" ? (nextValue || null) : null;
-          eventPayload.itemCategory = mode === "itemCategory" ? (nextValue || null) : null;
-          eventPayload.effectId = mode === "effectId" ? (nextValue || null) : null;
+          eventPayload.requirementMode = mode;
+          eventPayload.itemId = mode === "presetItem" ? (nextValue || null) : null;
+          eventPayload.lockId = mode === "key" ? (nextValue || null) : null;
+          eventPayload.questItemId = mode === "questItem" ? (nextValue || null) : null;
           onChoiceChange(desc, liveChoice);
           renderSceneEditor();
         };
 
-        if (mode === "itemCategory") {
-          control = createQuickMenuSelect(hydrateCategorySelect, eventPayload.itemCategory || "");
+        if (mode === "key") {
+          control = createQuickMenuSelect(hydrateKeySelect, eventPayload.lockId || "");
           control.addEventListener("change", (event) => onValueChange(event.target.value));
-        } else if (mode === "effectId") {
-          control = createQuickMenuSelect((select, value) => hydrateEffectSelect(select, value, ""), eventPayload.effectId || "");
+        } else if (mode === "questItem") {
+          control = createQuickMenuSelect(hydrateQuestItemSelect, eventPayload.questItemId || "");
           control.addEventListener("change", (event) => onValueChange(event.target.value));
         } else {
-          control = createQuickMenuTextInput(eventPayload.itemId || "", "ID o nome oggetto");
-          control.addEventListener("input", (event) => onValueChange(event.target.value));
+          control = createQuickMenuSelect((select, value) => hydrateLootSelect(select, value, {
+            includeCustom: false,
+            compact: true,
+            noneLabel: "— Seleziona oggetto —"
+          }), eventPayload.itemId || "");
+          control.addEventListener("change", (event) => onValueChange(event.target.value));
         }
 
         appendQuickMenuRow(menu, "Valore", control);
@@ -4672,26 +4668,20 @@ function showFlowEventQuickMenu(descId, choiceId, anchorRect) {
 
       modeSelect.addEventListener("change", () => {
         const mode = modeSelect.value;
-        eventPayload.itemId = mode === "itemId" ? (eventPayload.itemId || "") : null;
-        eventPayload.itemCategory = mode === "itemCategory" ? (eventPayload.itemCategory || "") : null;
-        eventPayload.effectId = mode === "effectId" ? (eventPayload.effectId || "") : null;
+        eventPayload.requirementMode = mode;
+        eventPayload.itemId = mode === "presetItem" ? (eventPayload.itemId || "") : null;
+        eventPayload.lockId = mode === "key" ? (eventPayload.lockId || "") : null;
+        eventPayload.questItemId = mode === "questItem" ? (eventPayload.questItemId || "") : null;
         onChoiceChange(desc, liveChoice);
         renderSceneEditor();
         rebuild();
       });
 
       syncRequirementValue();
+      const consumeLabel = document.createElement("div");
+      consumeLabel.style.display = "none";
+      const consumeInput = document.createComment("requirement consumption is implicit");
 
-      const consumeLabel = document.createElement("label");
-      consumeLabel.className = "flow-event-quick-menu__check";
-      const consumeInput = document.createElement("input");
-      consumeInput.type = "checkbox";
-      consumeInput.checked = Boolean(eventPayload.consumeOnMet);
-      consumeInput.addEventListener("change", (event) => {
-        eventPayload.consumeOnMet = Boolean(event.target.checked);
-        onChoiceChange(desc, liveChoice);
-        renderSceneEditor();
-      });
       consumeLabel.append(consumeInput, " Consuma oggetto se il requisito è soddisfatto");
       menu.appendChild(consumeLabel);
     } else if (eventPayload.type === "loot") {
@@ -6439,7 +6429,7 @@ function createDefaultEvent(type) {
   switch (type) {
     case "combat":      return { type: "combat", text: null, image: null, combatGroups: [], victoryBranch: emptyBranch(), defeatBranch: { ...emptyBranch(), targetId: DEATH_SENTINEL }, retreatBranch: null };
     case "skillcheck":  return { type: "skillcheck", text: null, attribute: "", difficulty: 12, successBranch: emptyBranch(), failureBranch: { ...emptyBranch(), targetId: STAY_SENTINEL }, burnOnFailure: false };
-    case "requirement": return { type: "requirement", text: null, itemId: null, itemCategory: null, effectId: null, consumeOnMet: false, metBranch: emptyBranch(), unmetBranch: emptyBranch() };
+case "requirement": return { type: "requirement", text: null, requirementMode: "presetItem", itemId: null, lockId: null, questItemId: null, metBranch: emptyBranch(), unmetBranch: emptyBranch() };
     case "loot":        return { type: "loot", text: null, image: null, loot: [], branch: emptyBranch() };
     case "condition":   return { type: "condition", text: null, conditionId: "", branch: emptyBranch() };
     case "shop":        return { type: "shop", text: null, image: null, items: [], branch: emptyBranch() };
@@ -6891,7 +6881,7 @@ function createDefaultEvent(type) {
   switch (type) {
     case "combat":      return { type: "combat", text: null, image: null, combatGroups: [], victoryBranch: createEmptyEventBranch(), defeatBranch: { ...createEmptyEventBranch(), targetId: DEATH_SENTINEL }, retreatBranch: null };
     case "skillcheck":  return { type: "skillcheck", text: null, attribute: "", difficulty: 12, successBranch: createEmptyEventBranch(), failureBranch: { ...createEmptyEventBranch(), targetId: STAY_SENTINEL }, burnOnFailure: false };
-    case "requirement": return { type: "requirement", text: null, itemId: null, itemCategory: null, effectId: null, consumeOnMet: false, metBranch: createEmptyEventBranch(), unmetBranch: createEmptyEventBranch() };
+case "requirement": return { type: "requirement", text: null, requirementMode: "presetItem", itemId: null, lockId: null, questItemId: null, metBranch: createEmptyEventBranch(), unmetBranch: createEmptyEventBranch() };
     case "loot":        return { type: "loot", text: null, image: null, loot: [], branch: createEmptyEventBranch() };
     case "condition":   return { type: "condition", text: null, conditionId: "", branch: createEmptyEventBranch() };
     case "shop":        return { type: "shop", text: null, image: null, items: [], branch: createEmptyEventBranch() };
@@ -6967,7 +6957,6 @@ function renderChoiceCards(container, choices, handlers) {
     hydrateFailureTargetSelect(node.querySelector('[data-field="checkFailure"]'), choice.skillCheck?.failureSceneId || "");
     attachNavigateBtn(node, '[data-field="checkFailure"]');
     node.querySelector('[data-field="checkDifficulty"]').value = choice.skillCheck?.difficulty ?? "";
-    node.querySelector('[data-field="consumeOnUse"]').checked = Boolean(choice.consumeOnUse);
     node.querySelector('[data-field="burnOnFailure"]').checked = Boolean(choice.skillCheck?.burnOnFailure);
     node.querySelector('[data-field="hidden"]').checked = Boolean(choice.hidden);
 
@@ -7442,6 +7431,8 @@ function renderLootList(container, items, options = {}) {
     const lockIdInput      = node.querySelector('[data-field="lockId"]');
     const lockHint         = node.querySelector('[data-role="lock-hint"]');
     const lockRow          = node.querySelector('[data-role="lock-row"]');
+    const questItemIdInput = node.querySelector('[data-field="questItemId"]');
+    const questItemIdRow   = node.querySelector('[data-role="quest-item-id-row"]');
     const armorTypeRow     = node.querySelector('[data-role="armor-type-row"]');
     const armorTypeSelect  = node.querySelector('[data-field="armorType"]');
     const questInline      = node.querySelector('[data-field="questItem"]');
@@ -7466,6 +7457,7 @@ function renderLootList(container, items, options = {}) {
     customInput.value    = selectedPreset === "custom" ? loot.itemName || "" : "";
     customInput.disabled = selectedPreset !== "custom";
     lockIdInput.value    = loot.lockId || "";
+    if (questItemIdInput) questItemIdInput.value = loot.questItemId || "";
     questInline.checked  = Boolean(loot.questItem);
     quantityField.value  = loot.quantity ?? 1;
 
@@ -7633,7 +7625,7 @@ function renderLootList(container, items, options = {}) {
       if (!id) { lockHint.textContent = ""; return; }
       // lockId è ora usato nei Requirement event; cerca nelle choices
       const matches = (state.adventure.descriptions || []).flatMap((d) =>
-        (d.choices || []).filter((c) => c.event?.type === "requirement" && c.event?.itemId === id).map(() => d.title || d.id)
+        (d.choices || []).filter((c) => c.event?.type === "requirement" && c.event?.lockId === id).map(() => d.title || d.id)
       );
       lockHint.textContent = matches.length
         ? `Collegato a: ${[...new Set(matches)].join(", ")}`
@@ -7645,11 +7637,13 @@ function renderLootList(container, items, options = {}) {
       const isAccessoryLoot = isAccessoryCategory(loot.category);
       const needsArmorType = loot.category === "armor";
       const needsLockId = loot.category === "key";
-      const showAdvanced = isCustomLoot || needsArmorType || needsLockId;
+      const needsQuestItemId = Boolean(questInline?.checked);
+      const showAdvanced = isCustomLoot || needsArmorType || needsLockId || needsQuestItemId;
       if (categoryRow) categoryRow.style.display = isCustomLoot ? "" : "none";
       if (rarityRow) rarityRow.style.display = isCustomLoot ? "" : "none";
       // lock row: solo se categoria key
       lockRow.style.display = needsLockId ? "" : "none";
+      if (questItemIdRow) questItemIdRow.style.display = needsQuestItemId ? "" : "none";
       // armor type row: solo se categoria armor
       if (armorTypeRow) armorTypeRow.style.display = needsArmorType ? "" : "none";
       // custom row: solo se preset custom
@@ -7684,7 +7678,7 @@ function renderLootList(container, items, options = {}) {
     node.open = loot.expanded !== false;
     updateLootHeader();
     // Auto-espandi opzioni avanzate per categorie che le richiedono
-    if (lootAdvanced && (loot.category === "key" || loot.category === "armor" || select.value === "custom")) {
+    if (lootAdvanced && (loot.category === "key" || loot.category === "armor" || select.value === "custom" || questInline.checked)) {
       lootAdvanced.open = true;
     }
 
@@ -7823,9 +7817,21 @@ function renderLootList(container, items, options = {}) {
 
     questInline.addEventListener("change", (event) => {
       loot.questItem = Boolean(event.target.checked);
+      if (!loot.questItem) {
+        loot.questItemId = "";
+        if (questItemIdInput) questItemIdInput.value = "";
+      }
+      syncVisibility();
       updateLootHeader();
       onChange();
     });
+
+    if (questItemIdInput) {
+      questItemIdInput.addEventListener("input", (event) => {
+        loot.questItemId = normalizeString(event.target.value) || "";
+        onChange();
+      });
+    }
 
     quantityField.addEventListener("input", (event) => {
       loot.quantity = Number(event.target.value || 1);
@@ -7954,6 +7960,7 @@ function cleanAdventure(adventure) {
     quantity: loot.quantity,
     lockId: normalizeString(loot.lockId),
     questItem: loot.questItem ? true : undefined,
+    questItemId: normalizeString(loot.questItemId),
     category: normalizeString(loot.category),
     rarity: normalizeString(loot.rarity),
     armorType: loot.category === "armor" ? (loot.armorType || "light") : undefined,
@@ -8018,10 +8025,10 @@ function cleanAdventure(adventure) {
         return pruneEmpty({
           type: "requirement",
           text: ev.text || undefined,
+          requirementMode: ev.requirementMode || (ev.lockId ? "key" : ev.questItemId ? "questItem" : "presetItem"),
           itemId: ev.itemId || undefined,
-          itemCategory: ev.itemCategory || undefined,
-          effectId: ev.effectId || undefined,
-          consumeOnMet: ev.consumeOnMet ? true : undefined,
+          lockId: ev.lockId || undefined,
+          questItemId: ev.questItemId || undefined,
           metBranch: serializeBranch(ev.metBranch) || {},
           unmetBranch: serializeBranch(ev.unmetBranch) || {}
         });
@@ -8240,12 +8247,6 @@ function normalizeImportedChoice(choice, index) {
     _failureLootDraft: choice.skillCheck?.failureLoot
       ? (choice.skillCheck.failureLoot || []).map((l) => normalizeLoot(l))
       : [],
-    requiredLockId: normalizeString(choice.requiredLockId),
-    requiredLockLabel: normalizeString(choice.requiredLockLabel),
-    requiredItemId: normalizeString(choice.requiredItemId),
-    requiredItemCategory: normalizeString(choice.requiredItemCategory),
-    requiredEffectId: normalizeString(choice.requiredEffectId),
-    consumeOnUse: Boolean(choice.consumeOnUse),
     hidden: Boolean(choice.hidden) || undefined,
     generatedCheckGate: Boolean(choice.generatedCheckGate || choice._editor?.generatedCheckGate)
   };
@@ -8953,6 +8954,7 @@ function normalizeLoot(loot) {
   normalized.quantity = snapshot.quantity ?? 1;
   normalized.lockId = snapshot.lockId || "";
   normalized.questItem = Boolean(snapshot.questItem);
+  normalized.questItemId = snapshot.questItemId || "";
   normalized.category = snapshot.category || "";
   normalized.rarity = snapshot.rarity || "common";
   normalized.armorType = snapshot.category === "armor" ? (snapshot.armorType || "light") : "light";
@@ -8971,19 +8973,6 @@ function normalizeChoice(choice, index = 1) {
   normalized.text = snapshot.text ?? defaults.text;
   normalized.endingText = snapshot.endingText ?? defaults.endingText;
   normalized.targetSceneId = normalizeString(snapshot.targetSceneId) || null;
-  normalized.requiredLockId = snapshot.requiredLockId || defaults.requiredLockId;
-  normalized.requiredLockLabel = snapshot.requiredLockLabel || defaults.requiredLockLabel;
-  // backward compat: if lockId is set, clear requiredItemId to avoid "multiple requirements" error
-  if (normalized.requiredLockId) {
-    normalized.requiredItemId = "";
-    normalized.requiredItemCategory = "";
-    normalized.requiredEffectId = "";
-  } else {
-    normalized.requiredItemId = snapshot.requiredItemId || defaults.requiredItemId;
-    normalized.requiredItemCategory = snapshot.requiredItemCategory || defaults.requiredItemCategory;
-    normalized.requiredEffectId = snapshot.requiredEffectId || defaults.requiredEffectId;
-  }
-  normalized.consumeOnUse = Boolean(snapshot.consumeOnUse);
   normalized.hidden = Boolean(snapshot.hidden) || undefined;
   if (snapshot.skillCheck) {
     const sc = snapshot.skillCheck;
@@ -9086,6 +9075,12 @@ function validateAdventure(adventure, cleaned = cleanAdventure(adventure), optio
     if (loot.rarity && !validRarities.has(loot.rarity)) {
       errors.push(`${ownerLabel}: rarita non valida (${loot.rarity}).`);
     }
+    if (loot.category === "key" && !normalizeString(loot.lockId)) {
+      errors.push(`${ownerLabel}: il loot ${loot.itemName || loot.itemId} e una key ma non ha lockId.`);
+    }
+    if (loot.questItemId && !loot.questItem) {
+      errors.push(`${ownerLabel}: il loot ${loot.itemName || loot.itemId} ha questItemId ma non e marcato come quest item.`);
+    }
     (loot.effectIds || []).forEach((effectId) => {
       if (!validEffects.has(effectId)) {
         errors.push(`${ownerLabel}: effectId non valido (${effectId}).`);
@@ -9132,8 +9127,12 @@ function validateAdventure(adventure, cleaned = cleanAdventure(adventure), optio
         validateBranch(ev.failureBranch, `fallimento di ${label}`, descId);
         break;
       case "requirement":
-        if (!ev.itemId && !ev.itemCategory && !ev.effectId) {
-          errors.push(`${label} in ${descId}: evento requisito senza alcun requisito specificato.`);
+        if ((ev.requirementMode || "presetItem") === "key") {
+          if (!ev.lockId) errors.push(`${label} in ${descId}: requirement key senza lockId.`);
+        } else if ((ev.requirementMode || "presetItem") === "questItem") {
+          if (!ev.questItemId) errors.push(`${label} in ${descId}: requirement quest item senza questItemId.`);
+        } else if (!ev.itemId) {
+          errors.push(`${label} in ${descId}: evento requisito senza itemId.`);
         }
         validateBranch(ev.metBranch, `soddisfatto di ${label}`, descId);
         validateBranch(ev.unmetBranch, `non soddisfatto di ${label}`, descId);
@@ -9234,6 +9233,52 @@ function validateAdventure(adventure, cleaned = cleanAdventure(adventure), optio
 
   // — Raggiungibilita
   const reachable = new Set();
+  const allLootEntries = [
+    ...(cleaned.starterKitItems || []),
+    ...(cleaned.descriptions || []).flatMap((desc) =>
+      (desc.choices || []).flatMap((choice) => choice.event?.loot || [])
+    ),
+    ...(cleaned.eventNodes || []).flatMap((node) => {
+      const ev = node.event;
+      if (!ev) return [];
+      if (ev.type === "loot") return ev.loot || [];
+      if (ev.type === "combat") return (ev.combatGroups || []).flatMap((group) => group.loot || []);
+      return [];
+    })
+  ];
+  const knownLockIds = new Set(allLootEntries.map((loot) => normalizeString(loot?.lockId)).filter(Boolean));
+  const knownQuestItemIds = new Set();
+  allLootEntries.forEach((loot) => {
+    const questItemId = normalizeString(loot?.questItemId);
+    if (!questItemId) return;
+    if (knownQuestItemIds.has(questItemId)) {
+      errors.push(`Quest item ID duplicato: "${questItemId}". Ogni quest item referenziabile deve avere un ID univoco.`);
+      return;
+    }
+    knownQuestItemIds.add(questItemId);
+  });
+  const validateRequirementReferences = (ev, label, descId) => {
+    if (!ev) return;
+    if (ev.type === "requirement") {
+      const mode = ev.requirementMode || (ev.lockId ? "key" : ev.questItemId ? "questItem" : "presetItem");
+      if (mode === "key" && ev.lockId && !knownLockIds.has(normalizeString(ev.lockId))) {
+        errors.push(`${label} in ${descId}: requirement key punta a lockId inesistente (${ev.lockId}).`);
+      }
+      if (mode === "questItem" && ev.questItemId && !knownQuestItemIds.has(normalizeString(ev.questItemId))) {
+        errors.push(`${label} in ${descId}: requirement quest item punta a questItemId inesistente (${ev.questItemId}).`);
+      }
+    }
+    ["victoryBranch", "defeatBranch", "retreatBranch", "successBranch", "failureBranch", "metBranch", "unmetBranch", "branch"].forEach((branchKey) => {
+      if (ev?.[branchKey]?.event) validateRequirementReferences(ev[branchKey].event, label, descId);
+    });
+  };
+  (cleaned.descriptions || []).forEach((desc) => {
+    (desc.choices || []).forEach((choice) => validateRequirementReferences(choice.event, `Scelta "${choice.text || desc.id}"`, desc.id));
+  });
+  (cleaned.eventNodes || []).forEach((node) => {
+    validateRequirementReferences(node.event, `Nodo evento "${node.text || node.id}"`, node.id);
+  });
+
   if (descriptionIds.has(cleaned.startingDescriptionId)) {
     const queue = [cleaned.startingDescriptionId];
     const collectTargets = (branch) => {
@@ -10109,6 +10154,40 @@ function hydrateKeySelect(select, value = "") {
   }
 }
 
+function hydrateQuestItemSelect(select, value = "") {
+  select.innerHTML = "";
+  const noneOpt = document.createElement("option");
+  noneOpt.value = "";
+  noneOpt.textContent = "— Seleziona quest item —";
+  if (!value) noneOpt.selected = true;
+  select.appendChild(noneOpt);
+
+  const seen = new Set();
+  const addOption = (questItemId, label) => {
+    if (!questItemId || seen.has(questItemId)) return;
+    seen.add(questItemId);
+    const opt = document.createElement("option");
+    opt.value = questItemId;
+    opt.textContent = `${label} (${questItemId})`;
+    if (questItemId === value) opt.selected = true;
+    select.appendChild(opt);
+  };
+
+  if (state?.adventure) {
+    collectAllAdventureLoot()
+      .filter((loot) => loot.questItem && loot.questItemId)
+      .forEach((loot) => addOption(normalizeString(loot.questItemId), loot.itemName || loot.itemId || loot.questItemId));
+  }
+
+  if (value && !seen.has(value)) {
+    const opt = document.createElement("option");
+    opt.value = value;
+    opt.textContent = `${value} ⚠ quest item non trovato nell'avventura`;
+    opt.selected = true;
+    select.appendChild(opt);
+  }
+}
+
 function normalizeLootDraftToTierCatalog(loot) {
   if (!loot) return loot;
   const preset = lootPresetById(loot.itemId || loot.itemName);
@@ -10355,32 +10434,49 @@ function buildSkillCheckConfig(container, ev, desc, choice) {
 function buildRequirementConfig(container, ev, desc, choice) {
   const modeSelect = document.createElement("select");
   [
-    { value: "itemId", label: "Oggetto specifico" },
-    { value: "itemCategory", label: "Categoria oggetto" },
-    { value: "effectId", label: "Effetto richiesto" }
+    { value: "presetItem", label: "Oggetto dal catalogo" },
+    { value: "key", label: "Chiave" },
+    { value: "questItem", label: "Quest item unico" }
   ].forEach(({ value, label }) => {
     const option = document.createElement("option");
     option.value = value;
     option.textContent = label;
     modeSelect.appendChild(option);
   });
-  modeSelect.value = ev.itemId ? "itemId" : ev.itemCategory ? "itemCategory" : "effectId";
+  modeSelect.value = ev.requirementMode || (ev.lockId ? "key" : ev.questItemId ? "questItem" : "presetItem");
 
-  const valueInput = document.createElement("input");
-  valueInput.type = "text";
-  valueInput.value = ev.itemId || ev.itemCategory || ev.effectId || "";
-  valueInput.placeholder = "ID, categoria o effetto";
+  const valueInput = document.createElement("select");
 
   function syncRequirement() {
     const mode = modeSelect.value;
-    ev.itemId = mode === "itemId" ? (valueInput.value || null) : null;
-    ev.itemCategory = mode === "itemCategory" ? (valueInput.value || null) : null;
-    ev.effectId = mode === "effectId" ? (valueInput.value || null) : null;
+    ev.requirementMode = mode;
+    ev.itemId = mode === "presetItem" ? (valueInput.value || null) : null;
+    ev.lockId = mode === "key" ? (valueInput.value || null) : null;
+    ev.questItemId = mode === "questItem" ? (valueInput.value || null) : null;
     onChoiceChange(desc, choice);
   }
 
-  modeSelect.addEventListener("change", syncRequirement);
-  valueInput.addEventListener("input", syncRequirement);
+  function hydrateRequirementValueControl() {
+    const mode = modeSelect.value;
+    if (mode === "key") {
+      hydrateKeySelect(valueInput, ev.lockId || "");
+    } else if (mode === "questItem") {
+      hydrateQuestItemSelect(valueInput, ev.questItemId || "");
+    } else {
+      hydrateLootSelect(valueInput, ev.itemId || "", {
+        includeCustom: false,
+        compact: true,
+        noneLabel: "— Seleziona oggetto —"
+      });
+    }
+  }
+
+  modeSelect.addEventListener("change", () => {
+    hydrateRequirementValueControl();
+    syncRequirement();
+  });
+  valueInput.addEventListener("change", syncRequirement);
+  hydrateRequirementValueControl();
 
   const grid = document.createElement("div");
   grid.className = "choice-settings-grid";
@@ -10395,23 +10491,11 @@ function buildRequirementConfig(container, ev, desc, choice) {
 
   grid.append(modeLabel, valueLabel);
 
-  const consumeToggle = buildBehaviorToggleCard({
-    title: "Consuma l'oggetto se presente",
-    description: "Se attivo, l'oggetto usato per soddisfare il requisito viene rimosso dallo zaino.",
-    checked: Boolean(ev.consumeOnMet),
-    onToggle: (value) => {
-      ev.consumeOnMet = value;
-      onChoiceChange(desc, choice);
-    },
-    tone: "burn"
-  });
-
   container.append(
     buildEventSection(
       "Controllo di requisito",
-      "Questo nodo verifica inventario o effetti prima di far proseguire il lettore.",
-      grid,
-      consumeToggle
+      "Questo nodo verifica solo item. Se il requisito e soddisfatto, il runtime consuma sempre 1 unita dell'oggetto usato.",
+      grid
     ),
     buildEventSection(
       "Requisito soddisfatto",

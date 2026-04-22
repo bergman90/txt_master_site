@@ -213,3 +213,24 @@ Formato consigliato:
   - `app/src/main/java/com/bergman90/txtmaster/engine/GameEngine.kt`
   - `app/src/main/java/com/bergman90/txtmaster/engine/EquipmentCatalog.kt`
 - In questo pass non e` stato fatto commit/push finale.
+
+## 2026-04-22 - sync note audit requirement legacy
+
+- Allineato il diario con il pass di audit sui requirement nella repo privata:
+  - confermata la separazione tra requirement event-node nell'editor e requirement legacy nel runtime Android
+  - rimossi dai percorsi vivi dell'editor `v2` i campi legacy `required*` e `consumeOnUse`
+  - il frontend pubblico resta allineato alla direzione nuova: requirement come nodo-evento, non come vecchio gating inline sulle choice
+- Nota:
+  - nel codice resta ancora un blocco dead code storico relativo a `renderChoiceCards(...)` con riferimenti legacy requirement; non e` il renderer usato dal flusso corrente
+
+## 2026-04-22 - sync note handoff requirement editor
+
+- Allineato il mirror pubblico al pass requirement della repo privata:
+  - quick menu requirement portato alle tre modalita` `presetItem / key / questItem`
+  - serializzazione requirement aggiornata a `requirementMode + itemId/lockId/questItemId`
+  - loot editor esteso con `questItemId` per i quest item unici referenziabili
+  - validazioni aggiunte per `lockId` mancanti, `questItemId` incoerenti e requirement che puntano a riferimenti inesistenti
+- Stato:
+  - frontend pubblico allineato al nuovo modello editoriale
+  - runtime Android resta ancora nella repo privata come lavoro successivo da completare
+  - non eseguiti test browser automatici in questo pass
