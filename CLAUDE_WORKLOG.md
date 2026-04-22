@@ -10,6 +10,44 @@ Formato consigliato:
 
 ## 2026-04-21
 
+### Adventure Studio / tassonomia equip - armature e scudi
+- Nella repo privata e nel runtime app e stato chiuso il pass `family-first` anche per armature e scudi.
+- Struttura canonica fissata:
+  - armature:
+    - `light_armor`
+    - `medium_armor`
+    - `heavy_armor`
+  - scudi:
+    - `light_shield`
+    - `heavy_shield`
+- Varianti nominali decise:
+  - armature leggere: `Cuoio`, `Giaco di cuoio`, `Cuoio borchiato`
+  - armature medie: `Cotta di maglia`, `Corazza a scaglie`, `Brigantina`
+  - armature pesanti: `Armatura a bande`, `Armatura completa`, `Corazza di piastre`
+  - scudi leggeri: `Buckler`, `Scudo rotondo`, `Targa`
+  - scudi pesanti: `Scudo pesante`, `Scudo a torre`, `Pavese`
+- Nota importante per il proseguimento:
+  - `buckler` e `scudo_rotondo` non vanno piu trattati come curve meccaniche separate
+  - sono solo varianti nominali della stessa famiglia `light_shield`
+- Questa repo pubblica non e ancora stata sincronizzata col codice di questo pass: per ora il diario serve come ponte operativo per il prossimo sync del frontend Adventure Studio.
+
+## 2026-04-22
+
+### Tassonomia armi + shop authoring
+- Nella repo privata e stato aggiornato anche il blocco famiglie arma:
+  - `blade_1h`: `Spada`, `Gladio`, `Scimitarra`
+  - `blade_2h`: `Zweihänder`, `Flamberga`, `Claymore`
+  - nuova famiglia `dagger`: `Daga`, `Stiletto`, `Kryss`
+- La nuova famiglia `dagger` e stata impostata in modo prudente ma gia coerente col runtime:
+  - T1 = precisione alta, danno basso
+  - T2 = extra danno su critico
+  - T3 = extra danno su critico + recupero di assetto (`cleanse_exposed`)
+- Sempre nella repo privata:
+  - `shop` non e piu proponibile dai menu authoring dei nodi evento in Adventure Studio
+  - il supporto legacy resta nel codice per non rompere eventuali vecchi grafi
+  - il negozio globale dell'app non cambia e continua a rigenerarsi ogni 3 scene
+- Questa repo pubblica non e ancora stata sincronizzata con quel codice: il diario viene aggiornato subito per lasciare continuita a Claude e alle altre postazioni.
+
 ### Adventure Studio random monster loot
 - Sincronizzato anche qui il pass sul loot casuale dei mostri:
   - i preset mostro non usano piu solo loot fisso
@@ -158,3 +196,20 @@ Formato consigliato:
   - padding piu stretto
   - titolo ellittico su una riga
   - badge che non spingono il layout fuori asse
+
+## 2026-04-22 — sync note loot mostri + regole negozio
+
+- Allineato il diario con il pass sulla repo privata:
+  - Adventure Studio rigenera il loot casuale dei gruppi mostro se manca.
+  - App: negozio chiuso durante i combattimenti, highlight al refresh ogni 3 scene, stock limitato a `epic`, vendita al 35% del valore di mercato.
+
+### Nota di continuita`
+
+- Questa repo pubblica contiene qui soprattutto il checkpoint editoriale del pass.
+- Il codice effettivamente modificato in questo giro e` nella repo privata `New project`.
+- Se riprendi da un'altra postazione, controlla prima nella repo privata:
+  - `adventure-studio/app.js`
+  - `app/src/main/java/com/bergman90/txtmaster/ui/AdventureScreens.kt`
+  - `app/src/main/java/com/bergman90/txtmaster/engine/GameEngine.kt`
+  - `app/src/main/java/com/bergman90/txtmaster/engine/EquipmentCatalog.kt`
+- In questo pass non e` stato fatto commit/push finale.
