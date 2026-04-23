@@ -511,3 +511,20 @@ Formato consigliato:
 - I generatori loot dei mostri sono stati riallineati per far droppare materiali comuni in base al profilo del nemico.
 - La documentazione completa su crafting, ricetta iniziale e audit dei candidati borderline resta nella repo privata; qui viene sincronizzato il diario per continuita.
 - Verifica: `node --check adventure-studio/app.js` passato sul file sorgente sincronizzato dalla repo privata.
+## 2026-04-23 - Prospetto handoff per Claude
+### Adventure Studio
+- La flow board e' ormai il centro dell'authoring.
+- Il modello nuovo lavora su `description node` ed `event node` separati.
+- Nodi attivi lato UI autore: `transition`, `combat`, `skillcheck`, `requirement`, `loot`, `dialogue`.
+- `condition` e `shop` sono stati disattivati dalla UI e tenuti solo come compatibilita legacy.
+- Esistono anche `chapterGroup` con multi-selezione, raggruppamento, collapse e nodi marcati `inizio capitolo` / `fine capitolo`.
+
+### Migrazione futura verso l'app
+- L'app Android non legge ancora nativamente il nuovo grafo v2 della board.
+- La direzione condivisa resta: chiudere bene Adventure Studio e poi introdurre un compilatore `graph -> runtime` prima di toccare la migrazione completa lato app.
+
+### Crafting
+- E' nato il nuovo strato `material` con materiali canonici v1: Legno, Ferro grezzo, Pelle, Stoffa, Erbe, Cristalli, Squame.
+- `Pelle di lupo` e' stata promossa a materiale della famiglia `Pelle`.
+- I generatori loot mostro nello Studio possono gia far droppare materiali comuni.
+- La base runtime completa del crafting e la documentazione dettagliata restano nella repo privata; qui viene lasciato il quadro sintetico per continuita.
