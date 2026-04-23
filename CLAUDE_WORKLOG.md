@@ -528,3 +528,7 @@ Formato consigliato:
 - `Pelle di lupo` e' stata promossa a materiale della famiglia `Pelle`.
 - I generatori loot mostro nello Studio possono gia far droppare materiali comuni.
 - La base runtime completa del crafting e la documentazione dettagliata restano nella repo privata; qui viene lasciato il quadro sintetico per continuita.
+## 2026-04-23 - Handoff seed ricette crafting
+- Nella repo privata e stato fissato un primo seed di ricette per la futura forgia.
+- Una sola ricetta resta pensata come esplicita all'inizio (`Pozione curativa T1`), le altre vengono mantenute come ricette da scoprire.
+- Il dettaglio operativo delle ricette seed resta nella repo privata, insieme al catalogo runtime del crafting.
