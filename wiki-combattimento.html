@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>.txt-Master | Wiki del Combattimento</title>
+  <meta name="description" content="Sistema di combattimento di .txt-Master: iniziativa, turni, attacco, difesa, danno, effetti e logica del combattimento testuale.">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <nav class="site-nav">
+    <a class="site-nav__brand" href="./index.html">.txt-Master</a>
+    <div class="site-nav__links">
+      <a href="./index.html" class="site-nav__link">Portale</a>
+      <a href="./wiki.html" class="site-nav__link site-nav__link--active">Wiki</a>
+      <a href="./grimorio.html" class="site-nav__link">Grimorio</a>
+      <a href="./adventure-studio/index.html" class="site-nav__link">Adventure Studio</a>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div class="hero__inner">
+      <div class="eyebrow">Combattimento</div>
+      <h1>Sistema di combattimento</h1>
+      <p class="hero__copy">
+        La prima incarnazione del combattimento in <strong>.txt-Master</strong> è pensata come un sistema <strong>testuale a turni</strong>, leggibile, rapido da risolvere e adatto sia alle avventure authored sia a quelle generate proceduralmente.
+      </p>
+      <div class="hero__actions">
+        <a class="button button--primary" href="./wiki.html">Torna alla wiki</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="panel">
+      <div class="eyebrow">Stato del sistema</div>
+      <h2>Che cosa è già deciso</h2>
+      <p>
+        Il combattimento base del progetto prevede: <strong>iniziativa</strong>, <strong>attacco</strong>, <strong>difesa o armatura passiva</strong>, <strong>danno</strong>, <strong>effetti di stato base</strong> e <strong>log completo delle azioni</strong>.
+        L'obiettivo dichiarato è mantenere il sistema semplice nella prima versione e aggiungere in seguito armi con velocità, magie, colpi critici, morale nemici e posizionamento astratto.
+      </p>
+    </section>
+
+    <section class="panel">
+      <div class="eyebrow">Struttura di un incontro</div>
+      <h2>Sequenza di combattimento</h2>
+      <p>
+        Un combattimento si apre quando una scena o una scelta attiva un incontro ostile. A quel punto il motore crea i partecipanti, legge i loro valori rilevanti e determina l'ordine di azione.
+      </p>
+      <p>
+        La sequenza minima prevista è la seguente: <strong>ingresso nel combattimento</strong>, <strong>determinazione dell'iniziativa</strong>, <strong>esecuzione dei turni</strong>, <strong>applicazione dei danni e degli effetti</strong>, <strong>verifica di morte, fuga o fine scontro</strong>, <strong>ritorno alla scena successiva o al nodo di ricompensa</strong>.
+      </p>
+    </section>
+
+    <section class="panel">
+      <div class="eyebrow">Turni</div>
+      <h2>Ordine di iniziativa</h2>
+      <p>
+        L'iniziativa stabilisce chi agisce per primo nel round. Nella forma MVP la wiki la tratta come una risoluzione basata su caratteristiche del personaggio e del nemico, eventualmente modificate da equipaggiamento, stato o sorpresa.
+      </p>
+      <p>
+        Anche se la formula definitiva non è ancora esposta pubblicamente, la funzione di design è chiara: permettere scontri leggibili, premiare certi archetipi più rapidi e gestire in modo coerente l'apertura del round.
+      </p>
+    </section>
+
+    <section class="panel">
+      <div class="eyebrow">Azioni</div>
+      <h2>Che cosa puoi fare nel tuo turno</h2>
+      <p>
+        Nel combattimento base il turno del personaggio dovrebbe ruotare attorno a un piccolo set di azioni leggibili. Il nucleo minimo comprende <strong>attaccare</strong>, <strong>usare un oggetto</strong>, <strong>attivare un effetto o potere consentito dal contesto</strong> e, quando previsto, <strong>tentare una fuga</strong> o una <strong>scelta tattica speciale</strong>.
+      </p>
+      <p>
+        La filosofia di .txt-Master non è quella del tattico da griglia, ma di un RPG testuale in cui ogni opzione deve essere chiara, leggibile nel log e coerente con il tono dell'avventura.
+      </p>
+    </section>
+
+    <section class="panel">
+      <div class="eyebrow">Risoluzione</div>
+      <h2>Attacco, difesa e danno</h2>
+      <p>
+        Quando un attacco viene dichiarato, il motore confronta la capacità offensiva dell'attaccante con la capacità difensiva del bersaglio o con la sua armatura passiva. Se il colpo supera la soglia richiesta, viene calcolato il danno e applicato alle risorse del bersaglio.
+      </p>
+      <p>
+        In questa fase la wiki dovrà poi dettagliare con precisione tre livelli distinti: <strong>probabilità di colpire</strong>, <strong>quantità di danno inflitto</strong> e <strong>mitigazione o resistenza</strong>. Tenerli separati è importante per evitare descrizioni confuse del sistema.
+      </p>
+    </section>
+
+    <section class="panel">
+      <div class="eyebrow">Stati</div>
+      <h2>Effetti di stato</h2>
+      <p>
+        Il sistema base contempla effetti di stato essenziali, destinati a modificare temporaneamente le prestazioni di chi combatte. Nella documentazione ufficiale questa sezione dovrà chiarire per ogni stato almeno quattro elementi: <strong>durata</strong>, <strong>effetto meccanico</strong>, <strong>condizione di rimozione</strong> e <strong>interazione con il turno</strong>.
+      </p>
+      <p>
+        Questa struttura renderà il combattimento molto più leggibile sia per il giocatore sia per gli autori che costruiscono incontri in Adventure Studio.
+      </p>
+    </section>
+
+    <section class="panel">
+      <div class="eyebrow">Esito dello scontro</div>
+      <h2>Fine del combattimento</h2>
+      <p>
+        Uno scontro termina quando tutti i nemici sono sconfitti, il personaggio viene abbattuto, una condizione di scena impone la cessazione del conflitto o una fuga riesce con successo. Alla fine dell'incontro il gioco deve poter restituire un risultato leggibile: vittoria, sconfitta, fuga, esito speciale, accesso a una nuova scena o attivazione del loot.
+      </p>
+    </section>
+
+    <section class="panel">
+      <div class="eyebrow">Esempio</div>
+      <h2>Esempio di round</h2>
+      <p>
+        Il personaggio entra in una cripta e viene assalito da un guardiano scheletrico. Il motore determina l'iniziativa: il personaggio agisce per primo. Sceglie di attaccare con una lama corta. Il colpo va a segno, il danno viene applicato e lo scheletro perde parte dei propri punti vita. Nel turno del nemico, il guardiano contrattacca: l'armatura del personaggio mitiga parte dell'impatto ma non tutto il danno. Il round si chiude, il log registra le azioni e il combattimento prosegue nel round successivo.
+      </p>
+    </section>
+
+    <section class="panel">
+      <div class="eyebrow">Sviluppi futuri</div>
+      <h2>Espansioni previste</h2>
+      <p>
+        Il progetto prevede di poter estendere il combattimento con <strong>armi con velocità</strong>, <strong>magie</strong>, <strong>colpi critici</strong>, <strong>morale dei nemici</strong> e <strong>posizionamento astratto</strong>. Queste estensioni andranno documentate in sottosezioni dedicate, ma senza compromettere la leggibilità del nucleo base.
+      </p>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>.txt-Master | Documento wiki del sistema di combattimento.</p>
+  </footer>
+</body>
+</html>
