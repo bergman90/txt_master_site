@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>.txt-Master | Wiki del Gioco</title>
+  <meta name="description" content="Wiki ufficiale di .txt-Master: sistemi di gioco, personaggio, combattimento, loot, rarità, tier e struttura delle avventure.">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <nav class="site-nav">
+    <a class="site-nav__brand" href="./index.html">.txt-Master</a>
+    <div class="site-nav__links">
+      <a href="./index.html" class="site-nav__link">Portale</a>
+      <a href="./wiki.html" class="site-nav__link site-nav__link--active">Wiki</a>
+      <a href="./grimorio.html" class="site-nav__link">Grimorio</a>
+      <a href="./adventure-studio/index.html" class="site-nav__link">Adventure Studio</a>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div class="hero__inner">
+      <div class="eyebrow">Wiki ufficiale</div>
+      <h1>Le regole di .txt-Master</h1>
+      <p class="hero__copy">
+        Questa wiki raccoglie i sistemi di gioco di <strong>.txt-Master</strong>: struttura del personaggio, prove, combattimento, equipaggiamento, loot e logiche di progressione.
+        Dove una regola è già consolidata viene presentata come <strong>ufficiale</strong>; dove invece il sistema è ancora in definizione viene indicato come <strong>in sviluppo</strong>.
+      </p>
+      <div class="hero__actions">
+        <a class="button button--primary" href="./wiki-combattimento.html">Vai al combattimento</a>
+        <a class="button button--ghost" href="./adventure-studio/index.html">Apri Adventure Studio</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="section">
+      <div class="section__head">
+        <div>
+          <div class="eyebrow">Indice della wiki</div>
+          <h2>Sistemi e manuali</h2>
+        </div>
+      </div>
+      <div class="adventure-grid">
+        <article class="adventure-card">
+          <div>
+            <h3>Come si gioca</h3>
+            <p>Panoramica del ciclo di gioco: scena, scelta, verifica regole, conseguenze e salvataggio.</p>
+          </div>
+          <div class="adventure-meta"><span class="tag">Ufficiale</span></div>
+          <div class="card-actions">
+            <a class="button button--ghost" href="#core-loop">Apri sezione</a>
+          </div>
+        </article>
+
+        <article class="adventure-card">
+          <div>
+            <h3>Combattimento</h3>
+            <p>Sistema di combattimento testuale a turni con iniziativa, attacco, difesa, danno ed effetti.</p>
+          </div>
+          <div class="adventure-meta"><span class="tag">MVP ufficiale</span></div>
+          <div class="card-actions">
+            <a class="button button--primary" href="./wiki-combattimento.html">Leggi</a>
+          </div>
+        </article>
+
+        <article class="adventure-card">
+          <div>
+            <h3>Personaggio</h3>
+            <p>Attributi, abilità, HP, stamina, equipaggiamento e progressione del personaggio.</p>
+          </div>
+          <div class="adventure-meta"><span class="tag">Parzialmente definito</span></div>
+          <div class="card-actions">
+            <a class="button button--ghost" href="#personaggio">Apri sezione</a>
+          </div>
+        </article>
+
+        <article class="adventure-card">
+          <div>
+            <h3>Loot, rarità e tier</h3>
+            <p>Glossario e struttura del sistema di ricompense, drop casuali, qualità degli oggetti e potenza.</p>
+          </div>
+          <div class="adventure-meta"><span class="tag">In sviluppo</span></div>
+          <div class="card-actions">
+            <a class="button button--ghost" href="#loot">Apri sezione</a>
+          </div>
+        </article>
+
+        <article class="adventure-card">
+          <div>
+            <h3>Classi e razze</h3>
+            <p>Archivio delle opzioni di creazione del personaggio e delle loro identità ludiche.</p>
+          </div>
+          <div class="adventure-meta"><span class="tag">In sviluppo</span></div>
+          <div class="card-actions">
+            <a class="button button--ghost" href="#classi-razze">Apri sezione</a>
+          </div>
+        </article>
+
+        <article class="adventure-card">
+          <div>
+            <h3>Formato avventure</h3>
+            <p>Come Adventure Studio e l'app descrivono scene, scelte, nemici, oggetti e check nel formato dati.</p>
+          </div>
+          <div class="adventure-meta"><span class="tag">Ufficiale</span></div>
+          <div class="card-actions">
+            <a class="button button--ghost" href="#formato">Apri sezione</a>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section id="core-loop" class="panel">
+      <div class="eyebrow">Sistema base</div>
+      <h2>Come si gioca</h2>
+      <p>
+        In <strong>.txt-Master</strong> il gioco ruota intorno a un ciclo semplice: si carica un personaggio, si avvia o importa un'avventura, si legge una scena, si compie una scelta e il motore applica regole e conseguenze.
+        Il risultato può essere una nuova scena, un controllo di abilità, un combattimento, un cambio di stato, l'acquisizione di un oggetto o l'avanzamento della storia.
+      </p>
+      <p>
+        Il progetto nasce come motore per campagne e avventure testuali con focus su testo, scelte, regole, combattimento e progressione del personaggio.
+      </p>
+    </section>
+
+    <section id="personaggio" class="panel">
+      <div class="eyebrow">Scheda personaggio</div>
+      <h2>Personaggio, attributi e abilità</h2>
+      <p>
+        La struttura del personaggio prevista comprende almeno <strong>attributi</strong>, <strong>skill</strong>, <strong>HP</strong>, <strong>stamina</strong> ed <strong>equipaggiamento</strong>.
+        La wiki distinguerà tra le risorse vitali del personaggio, le capacità permanenti, le competenze impiegate nelle prove e gli effetti temporanei acquisiti nel corso dell'avventura.
+      </p>
+      <p>
+        Questa sezione sarà ampliata con pagine specifiche su attributi, abilità, inventario, magie, condizioni e progressione non appena tali sistemi saranno stabilizzati nella progettazione del gioco.
+      </p>
+    </section>
+
+    <section id="loot" class="panel">
+      <div class="eyebrow">Ricompense</div>
+      <h2>Loot, rarità, drop e tier</h2>
+      <p>
+        Il sistema di loot verrà documentato distinguendo in modo rigoroso fra <strong>tipo di oggetto</strong>, <strong>rarità</strong>, <strong>tier di potenza</strong> e <strong>probabilità di ottenimento</strong>.
+        Questa distinzione è importante perché un oggetto raro non deve necessariamente appartenere a un tier alto, e un oggetto di tier alto potrebbe comparire solo in determinate aree, su determinati nemici o all'interno di eventi speciali.
+      </p>
+      <p>
+        Fino alla formalizzazione definitiva delle tabelle, questa parte della wiki funge da cornice concettuale e da riferimento terminologico condiviso.
+      </p>
+    </section>
+
+    <section id="classi-razze" class="panel">
+      <div class="eyebrow">Creazione del personaggio</div>
+      <h2>Classi e razze</h2>
+      <p>
+        Le future pagine dedicate a classi e razze avranno una funzione doppia: spiegare l'identità narrativa di ciascuna opzione e chiarire il loro impatto meccanico sul gioco.
+        Ogni voce dovrà indicare risorse iniziali, vocazione principale, punti di forza, vulnerabilità e possibili sinergie con equipaggiamento e stile di gioco.
+      </p>
+    </section>
+
+    <section id="formato" class="panel">
+      <div class="eyebrow">Adventure Studio</div>
+      <h2>Formato delle avventure</h2>
+      <p>
+        Le avventure di <strong>.txt-Master</strong> vengono pensate come strutture dati validate, preferibilmente in <code>JSON</code>, contenenti metadati, scene, scelte, verifiche, nemici, oggetti e regole speciali opzionali.
+      </p>
+      <p>
+        Questa pagina sarà estesa con esempi commentati di scene, check di abilità, transizioni, incontri e possibili estensioni gestite da Adventure Studio.
+      </p>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>.txt-Master | Wiki ufficiale dei sistemi di gioco.</p>
+  </footer>
+</body>
+</html>
