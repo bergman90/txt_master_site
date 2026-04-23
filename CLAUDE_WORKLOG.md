@@ -234,3 +234,280 @@ Formato consigliato:
   - frontend pubblico allineato al nuovo modello editoriale
   - runtime Android resta ancora nella repo privata come lavoro successivo da completare
   - non eseguiti test browser automatici in questo pass
+
+## 2026-04-22 - sync note runtime requirement app
+
+- Aggiornato il diario con il pass fatto nella repo privata:
+  - il runtime app ora supporta `choice.event.type = "requirement"`
+  - aggiunti `ChoiceEvent` / `ChoiceEventBranch`
+  - `Choice` deserializza `event`
+  - `LootDrop` e `InventoryItem` mantengono anche `questItemId`
+  - la UI dell'app mostra il requirement moderno come bivio vero (`met/unmet`), non solo come blocco legacy
+- Nota di continuita`:
+  - questo NON significa ancora che l'app importi gia` tutto il formato grafo `v2`
+  - il supporto requirement runtime e il bridge completo graph->runtime restano due pass distinti
+
+## 2026-04-22 - sync note flow board branch linking
+
+- Nella repo privata e` stato fixato il linking dei rami veri dei nodi evento sulla flow board.
+- Il drag ora conserva il `portId` del ramo (`success/failure`, `victory/defeat/retreat`, `met/unmet`) invece di usare solo il "primo ramo libero".
+- La quick card del nodo evento viene riallineata subito dopo il drop, cosi` il collegamento appare coerente sia sulla mappa sia nel pannello avanzato.
+- Nota:
+  - il codice del fix e` nella repo privata (`adventure-studio/app.js`)
+  - qui e` stato aggiornato solo il diario di continuita`
+
+## 2026-04-22 - sync note requirement card pass
+
+- Nella repo privata e` stato rifinito anche il nodo evento `requirement`.
+- Il quick menu ora mostra:
+  - riepilogo del controllo attivo
+  - label piu` esplicite per il valore richiesto
+  - rami `Soddisfatto` / `Non soddisfatto` direttamente dalla flow board
+- Anche il pannello avanzato e` stato riallineato con una mini-card riassuntiva del requisito.
+- Nota:
+  - il codice del fix resta nella repo privata (`adventure-studio/app.js`, `adventure-studio/styles.css`)
+  - qui e` aggiornato solo il diario di continuita`
+
+## 2026-04-22 - sync note requirement key picker
+
+- Nella repo privata e` stato allineato anche il picker `Chiave` del nodo `requirement`.
+- Ora mostra solo chiavi realmente presenti nell'avventura.
+- Se non esistono chiavi authored nel progetto, il menu mostra:
+  - `Non ci sono chiavi nella tua avventura`
+- Restano comunque leggibili eventuali riferimenti orphan a lockId non piu` trovati, per non perdere dati vecchi.
+
+## 2026-04-22 - sync note picker loot compatto
+
+- Nella repo privata e` stato rifinito anche il picker loot compatto della flow board.
+- Ora mostra label piu` chiare:
+  - `Tier`
+  - `Famiglia`
+  - `Ricerca live`
+- In modalita` compatta non mostra piu` il dropdown finale degli item:
+  - la scelta passa dai suggerimenti live sotto la ricerca
+- Nota:
+  - il codice del fix resta nella repo privata (`adventure-studio/app.js`)
+  - qui e` aggiornato solo il diario di continuita`
+
+## 2026-04-22 - sync note fix suggerimenti loot live
+
+- Nella repo privata e stato corretto anche il picker loot compatto della flow board.
+- I suggerimenti live sotto la ricerca adesso compaiono davvero quando ci sono corrispondenze.
+- Nota:
+  - il codice del fix resta nella repo privata (dventure-studio/app.js)
+  - qui e aggiornato solo il diario di continuita`r
+
+
+## 2026-04-22 - sync note fix suggerimenti loot live
+
+- Nella repo privata e` stato corretto anche il picker loot compatto della flow board.
+- I suggerimenti live sotto la ricerca adesso compaiono davvero quando ci sono corrispondenze.
+- Nota:
+  - il codice del fix resta nella repo privata (`adventure-studio/app.js`)
+  - qui e` aggiornato solo il diario di continuita`
+
+## 2026-04-22 - sync note ricerca loot live piu` fedele
+
+- Nella repo privata e` stata corretta anche la ricerca live del picker loot.
+- Il match non passa piu` dagli effetti del loot, quindi i risultati sono piu` aderenti al nome dell'item cercato.
+- Esempio risolto:
+  - scrivendo `pozione` non compare piu` `Polvere di guardia` solo perche` aveva un effetto chiamato `Pozione difensiva`
+
+## 2026-04-22 - sync note condition e shop disabilitati
+
+- Nella repo privata `Condizione` e `Negozio` sono stati tolti dai nodi evento selezionabili della flow board.
+- Restano supportati in background solo per compatibilita` e rivalutazione futura.
+- Nota:
+  - la modifica UI sta in `adventure-studio/index.html` e `adventure-studio/app.js`
+  - qui e` aggiornato solo il diario di continuita`
+
+## 2026-04-22 - sync note specifica dialogue v1
+
+- Nella repo privata e` stata aggiunta la specifica del nodo `dialogue`:
+  - `docs/dialogue-node-v1-spec.md`
+- La direzione fissata e` questa:
+  - dialogo-snodo old school
+  - poche risposte forti
+  - gating semplice
+  - quick card della flow board come interfaccia principale
+- Nota:
+  - qui e` aggiornato solo il diario di continuita`
+  - l'implementazione UI del nuovo `dialogue` non e` ancora stata fatta in questo pass
+
+## 2026-04-22 - sync note quick card dialogue completata
+
+- Nella repo privata e stata completata la quick card del nodo dialogue su Adventure Studio.
+- Ora il dialogo e authorabile davvero dalla flow board:
+  - NPC
+  - battuta
+  - risposte multiple
+  - intento
+  - gate
+  - destinazioni
+- Il nodo dialogue espone anche porte dinamiche sulla board in base alle risposte presenti.
+- Nota:
+  - qui e aggiornato solo il diario di continuita`n  - la sincronizzazione del codice sulla repo pubblica non e ancora stata fatta in questo pass.
+
+## 2026-04-22 - sync note pulizia testi mojibake flow board
+
+- Nella repo privata e stato fatto un pass di pulizia sulle stringhe visibili corrotte da encoding in Adventure Studio.
+- Sistemate icone, label e placeholder della flow board e dei quick menu.
+- Nota:
+  - qui e aggiornato solo il diario di continuita`n  - la sincronizzazione del codice sulla repo pubblica non e ancora stata fatta in questo pass.
+
+## 2026-04-23 - sync note specifica chapter groups v1
+
+- Nella repo privata e stata aggiunta la specifica dei chapterGroup:
+  - docs/chapter-groups-v1-spec.md`r
+- La direzione fissata e questa:
+  - contenitore editoriale puro
+  - nessun impatto runtime nella v1
+  - porte aggregate calcolate dagli edge del grafo
+  - flow board piu leggibile su avventure lunghe
+- Nota:
+  - qui e aggiornato solo il diario di continuita`r
+  - l'implementazione tecnica non e ancora stata fatta in questo pass.
+
+## 2026-04-23 - sync note marquee selection flow board
+
+- Nella repo privata e stato implementato il primo pass tecnico dei chapter groups:
+  - marquee selection sulla flow board
+  - stato multi-select separato per scene e nodi evento
+- Supportati:
+  - selezione a rettangolo
+  - Shift+click additivo sui nodi
+  - highlight visivo dei nodi inclusi nella selezione multipla
+- Nota:
+  - qui e aggiornato solo il diario di continuita
+  - il sync del codice sulla repo pubblica non e ancora stato fatto in questo pass.
+
+## 2026-04-23 - sync note chapterGroup model e comando raggruppa
+
+- Nella repo privata e stato implementato il secondo pass dei chapter groups:
+  - modello dati `chapterGroups`
+  - comando toolbar `Raggruppa in capitolo`
+  - prima resa visiva del capitolo come cornice editoriale espansa sulla flow board
+- I chapter groups sono ora persistiti anche su import/export JSON v2 e salvataggi locali.
+- Nota:
+  - qui e aggiornato solo il diario di continuita
+  - il sync del codice sulla repo pubblica non e ancora stato fatto in questo pass.
+
+## 2026-04-23 - sync note chapterGroup collapse e porte aggregate
+
+- Nella repo privata e stato implementato il collasso dei chapter groups sulla flow board.
+- Aggiunti:
+  - macro-blocco capitolo collassato
+  - porte aggregate entry / exit derivate dagli edge reali
+  - reroute dei link esterni verso il blocco capitolo
+- Nota:
+  - qui e aggiornato solo il diario di continuita
+  - il sync del codice sulla repo pubblica non e ancora stato fatto in questo pass.
+
+## 2026-04-23 - sync note chapter roles inizio/fine capitolo
+
+- Nella repo privata e stata aggiornata la logica dei chapter groups collassati.
+- Le porte aggregate ora dipendono dai ruoli assegnati ai nodi interni:
+  - inizio capitolo
+  - fine capitolo
+- Aggiunti warning sintetici quando il capitolo collassato nasconde collegamenti esterni non marcati.
+- Nota:
+  - qui e aggiornato solo il diario di continuita
+  - il sync del codice sulla repo pubblica non e ancora stato fatto in questo pass.
+## 2026-04-23 - sync note chapter groups compact + links fix
+
+- Nella repo privata e stato fatto un pass sulla flow board dei chapter groups.
+- Correzioni principali:
+  - blocco capitolo collassato ridotto a una scala molto piu compatta
+  - nodi scena ridotti alla stessa impronta dei nodi evento
+  - fix del wiring dei link in entrata/uscita del capitolo collassato sui nodi marcati `inizio` / `fine`
+- Nota:
+  - qui e aggiornato solo il diario di continuita
+  - il sync del codice sulla repo pubblica non e ancora stato fatto in questo pass.
+## 2026-04-23 - sync note chapter card readability polish
+
+- Nella repo privata e stato rifinito il blocco capitolo collassato.
+- Miglioramenti principali:
+  - testo piu leggibile
+  - contrasto piu alto
+  - toggle reso piu evidente con CTA testuali `Apri` / `Riduci`
+- Nota:
+  - qui e aggiornato solo il diario di continuita
+  - il sync del codice sulla repo pubblica non e ancora stato fatto in questo pass.
+## 2026-04-23 - sync note chapter groups floating drag
+
+- Nella repo privata i chapter groups sono stati resi flottanti sulla flow board.
+- Ora:
+  - il blocco collassato si trascina come macro-card
+  - il frame espanso trascina insieme i nodi del capitolo tramite header
+- Nota:
+  - qui e aggiornato solo il diario di continuita
+  - il sync del codice sulla repo pubblica non e ancora stato fatto in questo pass.
+## 2026-04-23 - sync note random loot buttons
+
+- Nella repo privata sono stati aggiunti i bottoni `Genera loot casuale`.
+- Copertura:
+  - card avanzata del gruppo combattimento
+  - nodo evento `loot`
+- Nota:
+  - gruppo combattimento = rigenera il loot del mostro secondo preset/archetipo
+  - nodo loot = aggiunge un bundle casuale coerente dal catalogo tiered
+- Qui e aggiornato solo il diario di continuita.
+## 2026-04-23 - sync note delete chapter group
+
+- Nella repo privata e stata aggiunta l'azione `Elimina capitolo` sui chapter groups.
+- Il comportamento rimuove solo il gruppo editoriale e lascia intatti i nodi contenuti.
+- Qui e aggiornato solo il diario di continuita.
+## 2026-04-23 - Coerenza razza/classe/attributi/abilita
+- Aggiunte tre abilita narrative vere al runtime personaggio: `athletics`, `perception`, `deception` (`Atletica`, `Percezione`, `Arte dell''inganno`).
+- `CharacterSheet` ora include i tre nuovi valori, con default a 0 per retrocompatibilita dei salvataggi/JSON esistenti.
+- `CharacterFactory` e stato reso piu coerente:
+  - la classe ora fornisce bonus chiari alle abilita narrative (`Warrior -> Atletica/Sopravvivenza`, `Ranger -> Sopravvivenza/Percezione`, `Cultist -> Sapienza/Arte dell''inganno`);
+  - l''ascendenza ora pesa in modo esplicito tramite profili dedicati, invece che solo in modo indiretto attraverso l''hash dei testi;
+  - rimossa la doppia influenza nascosta dell''ascendenza su Saggezza/Costituzione dalle formule base;
+  - i preset iniziali degli edge sono stati riallineati alle nuove abilita.
+- `GameEngine` ora supporta i nuovi check `athletics`, `perception`, `deception` e li include in crescita passiva, etichette avanzamento e riepiloghi crescita.
+- Le UI app (`AdventureScreens`, `HeroScreens`, `UiShared`, `CreationScreens`) mostrano le nuove abilita e i testi di build sono stati riallineati.
+- Adventure Studio: aggiunte le nuove abilita all''elenco `SKILLS` per gli skillcheck authoring-side.
+- Verifiche:
+  - `java` / `JAVA_HOME` ancora assenti su questa macchina, quindi nessuna build Kotlin end-to-end.
+  - `node --check adventure-studio/app.js` al momento fallisce per un bug JS preesistente/non legato a questo pass (`Invalid regular expression /?/g` attorno alla riga ~11173).
+- Nota di design corrente:
+  - Attributi = fondazione primaria
+  - Classe = identita di combattimento + una direttrice narrativa
+  - Ascendenza = bias esplicito su attributi e una predisposizione secondaria
+  - Edge iniziale = specializzazione di partenza
+  - Abilita narrative vere = Atletica, Percezione, Sapienza, Sopravvivenza, Arte dell''inganno
+  - Discipline di combattimento = Mischia, Guardia, Precisione, Alchimia
+- Sync note: il codice vivo di questo pass e nella repo privata; la repo pubblica riceve il diario per continuita operativa.
+
+## 2026-04-23 - Handoff abilita avventurose coerenti
+- Nella repo privata e nell'app e stato riallineato il sistema personaggio per includere Atletica, Percezione e Arte dell'inganno accanto a Sapienza e Sopravvivenza.
+- Modello ora coerente: attributi come base, ascendenza come inclinazione, classe come specializzazione, edge iniziale come rifinitura.
+- Adventure Studio mostra le nuove abilita nei menu delle prove.
+- Nota: la build Android non e stata verificata su questa macchina per assenza di Java; `node --check adventure-studio/app.js` fallisce ancora per un bug regex preesistente non legato a questo pass.
+## 2026-04-23 - Handoff fix bootstrap Adventure Studio
+- Sistemato un errore di parse in `adventure-studio/app.js` che bloccava il caricamento dello script.
+- Effetto visibile: `Nuovo progetto` e `Nuovo evento` risultavano non funzionanti.
+- Correzione fatta normalizzando le stelline tier con `\u2605` nelle regex e nelle label.
+- Check sintattico JS ora passato (`node --check`).
+## 2026-04-23 - Handoff toolbar flow board
+- Sistemata la toolbar della flow board lato testo e leggibilita: placeholder ricerca corretto, font piu grandi e controlli zoom piu chiari.
+- Fix solo frontend Adventure Studio, senza modifiche di comportamento.
+## 2026-04-23 - Handoff bonifica testi editor Adventure Studio
+- Puliti molti testi corrotti nelle card/editor di Adventure Studio.
+- Rimosse icone/prefissi a punti interrogativi non leggibili e riallineati placeholder/branch label.
+- I tier oggetto nei picker ora tornano ad apparire con stelle vere.
+- Check sintattico JS passato.
+## 2026-04-23 - Secondo pass su mojibake e separatori UI
+- Eseguito un secondo pass mirato sulle stringhe ancora fragili negli editor di Adventure Studio, concentrato solo sulle etichette realmente visibili.
+- Normalizzati in formato robusto i meta della flow board e dei chapter group (`nodi | in | fin`) evitando separatori che rischiavano di rompersi con l'encoding del file.
+- Ripuliti placeholder e select attivi: `Nessuna destinazione`, `Scegli effetto`, `Seleziona chiave`, `Seleziona quest item`, `Seleziona loot`, `Nessun preset`, `Nessun archetipo`.
+- Uniformate diverse label dei quick menu e del loot editor con separatori `|` e con `×` per la quantita.
+- Nota: il codice operativo e il fix stanno nella repo privata; qui il diario viene solo sincronizzato per continuita.
+## 2026-04-23 - Handoff crafting groundwork e materiali
+- Sincronizzato lato Adventure Studio il nuovo strato `material` per preparare il futuro crafting system.
+- Aggiunti nel picker loot materiali canonici v1: Legno, Ferro grezzo, Pelle, Stoffa, Erbe, Cristalli, Squame.
+- `Pelle di lupo` ora e trattata come materiale della famiglia `Pelle` anche nello Studio pubblico.
+- I generatori loot dei mostri sono stati riallineati per far droppare materiali comuni in base al profilo del nemico.
+- La documentazione completa su crafting, ricetta iniziale e audit dei candidati borderline resta nella repo privata; qui viene sincronizzato il diario per continuita.
+- Verifica: `node --check adventure-studio/app.js` passato sul file sorgente sincronizzato dalla repo privata.

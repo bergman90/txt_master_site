@@ -2,6 +2,9 @@ const SKILLS = [
   { value: "", label: "Nessuna" },
   { value: "lore", label: "Sapienza / Lore" },
   { value: "survival", label: "Sopravvivenza" },
+  { value: "athletics", label: "Atletica" },
+  { value: "perception", label: "Percezione" },
+  { value: "deception", label: "Arte dell'inganno" },
   { value: "melee", label: "Mischia" },
   { value: "strength", label: "Forza" },
   { value: "dexterity", label: "Destrezza" },
@@ -20,6 +23,7 @@ const ITEM_CATEGORIES = [
   { value: "helm", label: "Elmo" },
   { value: "boots", label: "Stivali" },
   { value: "consumable", label: "Consumabile" },
+  { value: "material", label: "Materiale" },
   { value: "key", label: "Chiave" },
   { value: "quest", label: "Quest" },
   { value: "treasure", label: "Tesoro" },
@@ -90,7 +94,7 @@ const EFFECT_PRESETS = [
 const DEATH_SENTINEL = "__death__";
 
 // Valore sentinel usato per indicare "nessuna via di fuga" nella ritirata:
-// il tentativo di ritirata è bloccato e il combattimento continua.
+// il tentativo di ritirata � bloccato e il combattimento continua.
 const NO_ESCAPE_SENTINEL = "__no_escape__";
 
 // Valore sentinel per l'esito fallimento di una prova:
@@ -114,7 +118,7 @@ const MONSTER_PRESETS = [
     damageMax: 6,
     goldReward: 11,
     loot: [
-      { itemId: "spada_1", itemName: "Spada ★", quantity: 1, category: "weapon", rarity: "common", effectIds: [] },
+      { itemId: "spada_1", itemName: "Spada \u2605", quantity: 1, category: "weapon", rarity: "common", effectIds: [] },
       { itemId: "coins", itemName: "Monete", quantity: 11, category: "treasure", rarity: "common", effectIds: ["trade_value"] }
     ]
   },
@@ -129,7 +133,7 @@ const MONSTER_PRESETS = [
     damageMax: 4,
     goldReward: 6,
     loot: [
-      { itemId: "pugnale_1", itemName: "Pugnale ★", quantity: 1, category: "weapon", rarity: "common", effectIds: [] },
+      { itemId: "pugnale_1", itemName: "Pugnale \u2605", quantity: 1, category: "weapon", rarity: "common", effectIds: [] },
       { itemId: "coins", itemName: "Monete", quantity: 6, category: "treasure", rarity: "common", effectIds: ["trade_value"] }
     ]
   },
@@ -158,7 +162,7 @@ const MONSTER_PRESETS = [
     damageMin: 2,
     damageMax: 5,
     goldReward: 3,
-    loot: [{ itemId: "wolf_pelt", itemName: "Pelle di lupo", quantity: 1, category: "treasure", rarity: "common", effectIds: ["trade_value"] }]
+    loot: [{ itemId: "wolf_pelt", itemName: "Pelle di lupo", quantity: 1, category: "material", familyId: "leather", variantId: "wolf_pelt", rarity: "common", effectIds: ["trade_value"] }]
   },
   {
     id: "swamp_leech",
@@ -267,7 +271,7 @@ const MONSTER_PRESETS = [
     damageMax: 7,
     goldReward: 25,
     loot: [
-      { itemId: "spada_2", itemName: "Spada ★★", quantity: 1, category: "weapon", rarity: "uncommon", effectIds: [] },
+      { itemId: "spada_2", itemName: "Spada \u2605\u2605", quantity: 1, category: "weapon", rarity: "uncommon", effectIds: [] },
       { itemId: "chain_mail", itemName: "Cotta di maglia rinforzata", quantity: 1, category: "armor", rarity: "uncommon", effectIds: ["defense_surge"] }
     ]
   },
@@ -329,7 +333,7 @@ const MONSTER_PRESETS = [
     damageMin: 2,
     damageMax: 5,
     goldReward: 8,
-    loot: [{ itemId: "wolf_pelt", itemName: "Pelle di lupo", quantity: 1, category: "treasure", rarity: "common", effectIds: ["trade_value"] }]
+    loot: [{ itemId: "wolf_pelt", itemName: "Pelle di lupo", quantity: 1, category: "material", familyId: "leather", variantId: "wolf_pelt", rarity: "common", effectIds: ["trade_value"] }]
   }
 ];
 
@@ -389,7 +393,7 @@ const LOOT_PRESETS = [
   { id: "ancient_key",    name: "Chiave antica",         category: "key",        rarity: "uncommon", effectIds: ["key_access"], lockId: "magister_archive" },
   { id: "arcane_scroll",  name: "Pergamena arcana",      category: "treasure",   rarity: "rare",     effectIds: ["check_bonus", "trade_value"] },
   { id: "ritual_gem",     name: "Gemma rituale",         category: "relic",      rarity: "rare",     effectIds: ["trade_value"] },
-  { id: "wolf_pelt",      name: "Pelle di lupo",         category: "treasure",   rarity: "common",   effectIds: ["trade_value"] },
+  { id: "wolf_pelt",      name: "Pelle di lupo",         category: "material",   rarity: "common",   familyId: "leather", variantId: "wolf_pelt", effectIds: ["trade_value"] },
   { id: "eclipse_blade",  name: "Lama dell'Eclisse",     category: "relic",      rarity: "unique",   effectIds: ["bonus_damage", "guaranteed_crit", "apply_staggered"] },
   { id: "crown_of_embers",name: "Corona delle Braci",    category: "relic",      rarity: "mythic",   effectIds: ["ember_retaliation", "crit_guard", "guarded_surge"] },
   { id: "custom",         name: "Personalizzato",        category: "",           rarity: "common",   effectIds: [] }
@@ -413,18 +417,18 @@ const EXAMPLE_ADVENTURES = [
 ];
 
 const MONSTER_STAT_ARCHETYPES = [
-  { id: "gregario",        label: "Gregario",          icon: "👥", hint: "carne da macello",                    hitPoints:  7, attackBonus: 1, defense: 10, damageMin: 1, damageMax: 3, goldReward:  4, abilityIds: [],                                        hasBerserkerPhase: false },
-  { id: "predatore",       label: "Predatore",         icon: "🐾", hint: "veloce, colpisce e scappa",           hitPoints: 10, attackBonus: 3, defense: 12, damageMin: 2, damageMax: 5, goldReward:  7, abilityIds: ["enemy_brutal_charge"],                   hasBerserkerPhase: false },
-  { id: "soldato",         label: "Soldato",           icon: "⚔",  hint: "combattente equilibrato",            hitPoints: 14, attackBonus: 3, defense: 12, damageMin: 2, damageMax: 6, goldReward: 11, abilityIds: [],                                        hasBerserkerPhase: false },
-  { id: "bruto",           label: "Bruto",             icon: "🪨", hint: "lento, corazzato, letale",            hitPoints: 20, attackBonus: 2, defense: 13, damageMin: 4, damageMax: 8, goldReward: 12, abilityIds: ["enemy_armor_break"],                     hasBerserkerPhase: false },
-  { id: "assassino",       label: "Assassino",         icon: "🗡",  hint: "fragile ma letale",                  hitPoints:  9, attackBonus: 5, defense: 10, damageMin: 3, damageMax: 7, goldReward: 14, abilityIds: ["enemy_draining_claws"],                  hasBerserkerPhase: false },
-  { id: "ritualista",      label: "Ritualista",        icon: "📜", hint: "caster oscuro, minaccia psicologica", hitPoints: 12, attackBonus: 4, defense: 11, damageMin: 2, damageMax: 6, goldReward: 16, abilityIds: ["enemy_howl_of_dread"],                   hasBerserkerPhase: false },
-  { id: "guardiano_elite", label: "Guardiano d'Elite", icon: "🛡",  hint: "sub-boss tenace",                    hitPoints: 22, attackBonus: 4, defense: 13, damageMin: 3, damageMax: 7, goldReward: 18, abilityIds: ["enemy_enrage"],                          hasBerserkerPhase: false },
-  { id: "boss",            label: "Boss",              icon: "💀", hint: "scontro finale, fase berserk",        hitPoints: 28, attackBonus: 5, defense: 14, damageMin: 4, damageMax: 9, goldReward: 25, abilityIds: ["enemy_howl_of_dread", "enemy_enrage"],    hasBerserkerPhase: true  }
+  { id: "gregario",        label: "Gregario",          icon: "", hint: "carne da macello",                    hitPoints:  7, attackBonus: 1, defense: 10, damageMin: 1, damageMax: 3, goldReward:  4, abilityIds: [],                                        hasBerserkerPhase: false },
+  { id: "predatore",       label: "Predatore",         icon: "", hint: "veloce, colpisce e scappa",           hitPoints: 10, attackBonus: 3, defense: 12, damageMin: 2, damageMax: 5, goldReward:  7, abilityIds: ["enemy_brutal_charge"],                   hasBerserkerPhase: false },
+  { id: "soldato",         label: "Soldato",           icon: "",  hint: "combattente equilibrato",            hitPoints: 14, attackBonus: 3, defense: 12, damageMin: 2, damageMax: 6, goldReward: 11, abilityIds: [],                                        hasBerserkerPhase: false },
+  { id: "bruto",           label: "Bruto",             icon: "", hint: "lento, corazzato, letale",            hitPoints: 20, attackBonus: 2, defense: 13, damageMin: 4, damageMax: 8, goldReward: 12, abilityIds: ["enemy_armor_break"],                     hasBerserkerPhase: false },
+  { id: "assassino",       label: "Assassino",         icon: "",  hint: "fragile ma letale",                  hitPoints:  9, attackBonus: 5, defense: 10, damageMin: 3, damageMax: 7, goldReward: 14, abilityIds: ["enemy_draining_claws"],                  hasBerserkerPhase: false },
+  { id: "ritualista",      label: "Ritualista",        icon: "", hint: "caster oscuro, minaccia psicologica", hitPoints: 12, attackBonus: 4, defense: 11, damageMin: 2, damageMax: 6, goldReward: 16, abilityIds: ["enemy_howl_of_dread"],                   hasBerserkerPhase: false },
+  { id: "guardiano_elite", label: "Guardiano d'Elite", icon: "",  hint: "sub-boss tenace",                    hitPoints: 22, attackBonus: 4, defense: 13, damageMin: 3, damageMax: 7, goldReward: 18, abilityIds: ["enemy_enrage"],                          hasBerserkerPhase: false },
+  { id: "boss",            label: "Boss",              icon: "", hint: "scontro finale, fase berserk",        hitPoints: 28, attackBonus: 5, defense: 14, damageMin: 4, damageMax: 9, goldReward: 25, abilityIds: ["enemy_howl_of_dread", "enemy_enrage"],    hasBerserkerPhase: true  }
 ];
 
-const NODE_WIDTH = 168;
-const NODE_HEIGHT = 56;
+const NODE_WIDTH = 138;
+const NODE_HEIGHT = 34;
 const CHOICE_BUS_GAP = 72;    // board px from scene right edge to event node center
 const CHOICE_SPACING = 44;    // board px vertical spacing between event nodes
 const CHOICE_NODE_R = 13;     // compact mode radius
@@ -432,6 +436,8 @@ const FLOW_EVENT_NODE_WIDTH = 138;
 const FLOW_EVENT_NODE_HEIGHT = 34;
 const FLOW_EVENT_ADD_NODE_WIDTH = 82;
 const FLOW_EVENT_ADD_NODE_HEIGHT = 28;
+const CHAPTER_GROUP_CARD_WIDTH = 168;
+const CHAPTER_GROUP_CARD_HEIGHT = 56;
 const CREATE_MONSTER_OPTION = "__create_new__";
 const SCENE_IMAGE_ASPECT_RATIO = 2.48;
 const SCENE_IMAGE_TARGET_WIDTH = 1200;
@@ -484,7 +490,8 @@ const state = {
     restoreLoadoutOnEnd: false,
     starterKitItems: [],
     descriptions: [],
-    eventNodes: []
+    eventNodes: [],
+    chapterGroups: []
   },
   selectedDescriptionId: null,
   drag: null,
@@ -508,6 +515,8 @@ const state = {
     projectPickerOpen: false,
     flowBoardBounds: null,
     selectedEventRef: null,
+    selectedGraphNodeIds: [],
+    selectionBox: null,
     copiedDescriptionPayload: null,
     lastCreatedDescriptionId: null
   }
@@ -528,7 +537,8 @@ function createEmptyAdventure() {
     restoreLoadoutOnEnd: false,
     starterKitItems: [],
     descriptions: [],
-    eventNodes: []
+    eventNodes: [],
+    chapterGroups: []
   };
 }
 
@@ -607,6 +617,8 @@ function initializeEmptyWorkspace() {
   state.ui.flowZoom = 1;
   state.ui.currentProjectId = null;
   state.ui.selectedEventRef = null;
+  state.ui.selectedGraphNodeIds = [];
+  state.ui.selectionBox = null;
   state.ui.lastCreatedDescriptionId = null;
 }
 
@@ -620,6 +632,7 @@ function openAdventureProject(payload, {
 } = {}) {
   state.adventure = normalizeAdventureImport(payload);
   promoteInlineEventsToDetachedGraph(state.adventure);
+  cleanupChapterGroups();
   state.selectedDescriptionId = selectedDescriptionId || state.adventure.startingDescriptionId || state.adventure.descriptions[0]?.id || null;
   state.drag = null;
   state.dragCandidate = null;
@@ -629,6 +642,8 @@ function openAdventureProject(payload, {
   state.ui.sceneSavedAt = null;
   state.ui.strictAlpha = strictAlpha;
   state.ui.flowZoom = Math.min(FLOW_ZOOM_MAX, Math.max(FLOW_ZOOM_MIN, Number(flowZoom || 1)));
+  state.ui.selectedGraphNodeIds = [];
+  state.ui.selectionBox = null;
   state.ui.currentProjectId = projectId;
   state.ui.selectedEventRef = null;
   state.ui.lastCreatedDescriptionId = state.adventure.descriptions[state.adventure.descriptions.length - 1]?.id || null;
@@ -644,8 +659,8 @@ function openAdventureProject(payload, {
 function updateDocumentTitle() {
   const title = state.adventure?.title?.trim();
   document.title = title
-    ? `${title} — Adventure Studio`
-    : "Adventure Studio — .txt-Master";
+    ? `${title} � Adventure Studio`
+    : "Adventure Studio � .txt-Master";
 }
 
 function restoreProjectById(projectId) {
@@ -846,6 +861,7 @@ const els = {
   flowZoomOutBtn: document.getElementById("flow-zoom-out-btn"),
   flowZoomInBtn: document.getElementById("flow-zoom-in-btn"),
   flowZoomLabel: document.getElementById("flow-zoom-label"),
+  groupChapterBtn: document.getElementById("group-chapter-btn"),
   sceneEmpty: document.getElementById("scene-empty"),
   sceneEditor: document.getElementById("scene-editor"),
   scenePanelTitle: document.getElementById("scene-panel-title"),
@@ -1075,7 +1091,7 @@ function bindActions() {
   els.deleteSceneBtn.addEventListener("click", deleteSelectedFlowNode);
   els.deleteMonsterBtn.addEventListener("click", deleteMonster);
   els.addChoiceBtn.addEventListener("click", addChoice);
-  if (els.addSceneLootBtn) els.addSceneLootBtn.addEventListener("click", () => {}); // v2: il loot è sugli eventi delle scelte
+  if (els.addSceneLootBtn) els.addSceneLootBtn.addEventListener("click", () => {}); // v2: il loot � sugli eventi delle scelte
   els.addMonsterLootBtn.addEventListener("click", addMonsterLoot);
   document.querySelectorAll("[data-quick-loot]").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -1095,6 +1111,7 @@ function bindActions() {
   els.saveFab?.addEventListener("click", saveAdventureProject);
   els.exportJsonBtn.addEventListener("click", exportJson);
   els.refreshJsonBtn.addEventListener("click", renderJson);
+  els.groupChapterBtn?.addEventListener("click", createChapterGroupFromSelection);
   els.flowZoomOutBtn?.addEventListener("click", () => changeFlowZoom(-FLOW_ZOOM_STEP));
   els.flowZoomInBtn?.addEventListener("click", () => changeFlowZoom(FLOW_ZOOM_STEP));
   document.getElementById("tutorial-open-btn")?.addEventListener("click", showTutorial);
@@ -1187,6 +1204,11 @@ function handleGlobalHotkeys(event) {
       hideNodePicker();
       return;
     }
+    if (state.ui.selectedGraphNodeIds.length) {
+      event.preventDefault();
+      clearGraphNodeMultiSelection();
+      return;
+    }
     if (state.linkDraft) {
       event.preventDefault();
       state.linkDraft = null;
@@ -1204,8 +1226,8 @@ function shouldIgnoreGlobalHotkeys(event) {
 }
 
 function bindSceneEditor() {
-  // scene-kind selector è nascosto in v2: le Description non hanno un tipo esplicito.
-  // Il listener è mantenuto come no-op per sicurezza (l'elemento esiste ancora nell'HTML).
+  // scene-kind selector � nascosto in v2: le Description non hanno un tipo esplicito.
+  // Il listener � mantenuto come no-op per sicurezza (l'elemento esiste ancora nell'HTML).
   if (els.sceneKind) els.sceneKind.addEventListener("change", () => {});
 
   els.sceneTitle.addEventListener("input", (e) => {
@@ -1500,6 +1522,7 @@ function bindMonsterEditor() {
 }
 
 function bindBoardPointerSystem() {
+  els.flowBoard.addEventListener("pointerdown", onBoardPointerDown);
   window.addEventListener("pointermove", onBoardPointerMove);
   els.flowBoard.addEventListener("scroll", () => scheduleFlowLinksRender("scroll"), { passive: true });
   window.addEventListener("resize", onFlowBoardResize, { passive: true });
@@ -1521,7 +1544,149 @@ function flowBoardPointFromClient(event, bounds = getCurrentFlowBoardBounds()) {
   }, bounds);
 }
 
+function isGraphNodeMultiSelected(nodeId) {
+  return !!nodeId && state.ui.selectedGraphNodeIds.includes(nodeId);
+}
+
+function setGraphNodeMultiSelection(nodeIds, { additive = false } = {}) {
+  const normalized = Array.from(new Set((nodeIds || []).filter(Boolean)));
+  state.ui.selectedGraphNodeIds = additive
+    ? Array.from(new Set([...state.ui.selectedGraphNodeIds, ...normalized]))
+    : normalized;
+  updateGraphNodeMultiSelection();
+}
+
+function toggleGraphNodeMultiSelection(nodeId) {
+  if (!nodeId) return;
+  if (isGraphNodeMultiSelected(nodeId)) {
+    state.ui.selectedGraphNodeIds = state.ui.selectedGraphNodeIds.filter((id) => id !== nodeId);
+  } else {
+    state.ui.selectedGraphNodeIds = [...state.ui.selectedGraphNodeIds, nodeId];
+  }
+  updateGraphNodeMultiSelection();
+}
+
+function clearGraphNodeMultiSelection() {
+  if (!state.ui.selectedGraphNodeIds.length) return;
+  state.ui.selectedGraphNodeIds = [];
+  updateGraphNodeMultiSelection();
+}
+
+function updateGraphNodeMultiSelection() {
+  els.flowCanvas?.querySelectorAll(".node-card[data-scene-id]").forEach((node) => {
+    const sceneId = node.dataset.sceneId || "";
+    node.classList.toggle("is-multi-selected", isGraphNodeMultiSelected(sceneId));
+  });
+  els.choiceNodesLayer?.querySelectorAll(".choice-node[data-choice-id]").forEach((node) => {
+    const choiceId = node.dataset.choiceId || "";
+    node.classList.toggle("is-multi-selected", isGraphNodeMultiSelected(choiceId));
+  });
+  renderChapterGroupingUi();
+}
+
+function selectionBoxRectClient(selectionBox) {
+  if (!selectionBox || !els.flowBoard) return null;
+  const boardRect = els.flowBoard.getBoundingClientRect();
+  const left = Math.max(Math.min(selectionBox.startClientX, selectionBox.currentClientX), boardRect.left);
+  const right = Math.min(Math.max(selectionBox.startClientX, selectionBox.currentClientX), boardRect.right);
+  const top = Math.max(Math.min(selectionBox.startClientY, selectionBox.currentClientY), boardRect.top);
+  const bottom = Math.min(Math.max(selectionBox.startClientY, selectionBox.currentClientY), boardRect.bottom);
+  return {
+    left,
+    right,
+    top,
+    bottom,
+    width: Math.max(0, right - left),
+    height: Math.max(0, bottom - top)
+  };
+}
+
+function renderFlowMarquee() {
+  const existing = document.getElementById("flow-selection-marquee");
+  if (!state.ui.selectionBox || !els.flowBoard) {
+    existing?.remove();
+    return;
+  }
+  const rect = selectionBoxRectClient(state.ui.selectionBox);
+  if (!rect) {
+    existing?.remove();
+    return;
+  }
+  const boardRect = els.flowBoard.getBoundingClientRect();
+  const marquee = existing || document.createElement("div");
+  marquee.id = "flow-selection-marquee";
+  marquee.className = "flow-board__marquee";
+  marquee.style.left = `${rect.left - boardRect.left + els.flowBoard.scrollLeft}px`;
+  marquee.style.top = `${rect.top - boardRect.top + els.flowBoard.scrollTop}px`;
+  marquee.style.width = `${rect.width}px`;
+  marquee.style.height = `${rect.height}px`;
+  if (!existing) els.flowBoard.appendChild(marquee);
+}
+
+function finalizeFlowMarqueeSelection() {
+  const rect = selectionBoxRectClient(state.ui.selectionBox);
+  const additive = !!state.ui.selectionBox?.additive;
+  state.ui.selectionBox = null;
+  renderFlowMarquee();
+  if (!rect) return;
+  if (rect.width < 6 && rect.height < 6) {
+    if (!additive) clearGraphNodeMultiSelection();
+    return;
+  }
+  const selectedIds = [];
+  els.flowCanvas?.querySelectorAll(".node-card[data-scene-id]").forEach((node) => {
+    const nodeRect = node.getBoundingClientRect();
+    const intersects = rect.left <= nodeRect.right
+      && rect.right >= nodeRect.left
+      && rect.top <= nodeRect.bottom
+      && rect.bottom >= nodeRect.top;
+    if (intersects) selectedIds.push(node.dataset.sceneId);
+  });
+  els.choiceNodesLayer?.querySelectorAll(".choice-node[data-choice-id]").forEach((node) => {
+    const nodeRect = node.getBoundingClientRect();
+    const intersects = rect.left <= nodeRect.right
+      && rect.right >= nodeRect.left
+      && rect.top <= nodeRect.bottom
+      && rect.bottom >= nodeRect.top;
+    if (intersects) selectedIds.push(node.dataset.choiceId);
+  });
+  if (!selectedIds.length) {
+    if (!additive) clearGraphNodeMultiSelection();
+    return;
+  }
+  setGraphNodeMultiSelection(selectedIds, { additive });
+}
+
+function shouldStartFlowMarquee(event) {
+  if (!els.flowBoard || event.button !== 0) return false;
+  if (state.drag || state.dragCandidate || state.linkDraft) return false;
+  if (!event.target.closest("#flow-board")) return false;
+  if (event.target.closest(".node-card, .choice-node, .node-picker, .choice-targets-popover")) return false;
+  if (event.target.closest("button, input, select, textarea, [contenteditable]")) return false;
+  return true;
+}
+
+function onBoardPointerDown(event) {
+  if (!shouldStartFlowMarquee(event)) return;
+  state.ui.selectionBox = {
+    startClientX: event.clientX,
+    startClientY: event.clientY,
+    currentClientX: event.clientX,
+    currentClientY: event.clientY,
+    additive: event.shiftKey,
+    pointerId: event.pointerId
+  };
+  renderFlowMarquee();
+}
+
 function onBoardPointerMove(event) {
+  if (state.ui.selectionBox) {
+    state.ui.selectionBox.currentClientX = event.clientX;
+    state.ui.selectionBox.currentClientY = event.clientY;
+    renderFlowMarquee();
+    return;
+  }
+
   if (!state.drag && state.dragCandidate) {
     const dx = event.clientX - state.dragCandidate.startClientX;
     const dy = event.clientY - state.dragCandidate.startClientY;
@@ -1547,6 +1712,11 @@ function onBoardPointerMove(event) {
 }
 
 function onBoardPointerUp(event) {
+  if (state.ui.selectionBox) {
+    finalizeFlowMarqueeSelection();
+    return;
+  }
+
   state.dragCandidate = null;
 
   if (state.drag) {
@@ -1568,6 +1738,7 @@ function onBoardPointerUp(event) {
   const targetEventId = targetEventNode?.dataset.choiceId || null;
   const sourceSceneId = state.linkDraft.sceneId;
   const sourceChoiceId = state.linkDraft.choiceId || null;
+  const sourcePortId = state.linkDraft.portId || null;
   state.linkDraft = null;
 
   const resolvedTargetId = targetEventId || targetSceneId || null;
@@ -1578,28 +1749,38 @@ function onBoardPointerUp(event) {
     const sourceContext = sourceChoiceId ? getGraphChoiceContext(sourceSceneId || sourceChoiceId, sourceChoiceId) : null;
     if (sourceScene) {
       if (sourceChoiceId && sourceContext) {
-        setFirstUnsetBranch(sourceContext.choice, resolvedTargetId);
+        setBranchTargetByPort(sourceContext.choice, sourcePortId, resolvedTargetId);
         markSceneDirty();
         if (!sourceContext.detached) refreshFlowCard(sourceSceneId);
         renderChoiceNodes();
         scheduleFlowLinksRender();
         scheduleJsonRender();
+        refreshFlowLinkMutationUi(sourceSceneId, sourceChoiceId);
       } else {
         addLinkedTargetToScene(sourceScene, resolvedTargetId);
         state.selectedDescriptionId = sourceSceneId;
         render();
       }
     } else if (sourceContext) {
-      setFirstUnsetBranch(sourceContext.choice, resolvedTargetId);
+      setBranchTargetByPort(sourceContext.choice, sourcePortId, resolvedTargetId);
       markSceneDirty();
       renderChoiceNodes();
       scheduleFlowLinksRender();
       scheduleJsonRender();
+      refreshFlowLinkMutationUi(sourceSceneId, sourceChoiceId);
     }
   } else if (!targetSceneId && !targetEventId) {
-    // Drag-to-create: il link è finito nel vuoto — mostra il picker alla posizione del puntatore
+    // Drag-to-create: il link � finito nel vuoto � mostra il picker alla posizione del puntatore
     const dropPoint = flowBoardPointFromClient({ clientX: event.clientX, clientY: event.clientY });
-    showNodePicker({ mode: "drag", sourceSceneId, sourceChoiceId, dropPoint, clientX: event.clientX, clientY: event.clientY });
+    showNodePicker({
+      mode: "drag",
+      sourceSceneId,
+      sourceChoiceId,
+      sourcePortId,
+      dropPoint,
+      clientX: event.clientX,
+      clientY: event.clientY
+    });
   } else {
     renderFlowLinks();
   }
@@ -1610,6 +1791,36 @@ function startPendingFlowDrag(event) {
   if (!pending) return;
   state.dragCandidate = null;
   const pointerPoint = flowBoardPointFromClient(event, pending.bounds || getCurrentFlowBoardBounds());
+
+  if (pending.kind === "chapter") {
+    const group = getAdventureChapterGroups().find((entry) => entry.id === pending.chapterGroupId);
+    if (!group) return;
+    const initialNodePositions = Object.fromEntries(
+      (group.nodeIds || []).map((nodeId) => {
+        const scene = state.adventure.descriptions.find((desc) => desc.id === nodeId);
+        if (scene) return [nodeId, { x: scene.position?.x || 0, y: scene.position?.y || 0, kind: "scene" }];
+        const eventNode = getStandaloneEventNodeById(nodeId);
+        if (eventNode) return [nodeId, { x: eventNode.position?.x || 0, y: eventNode.position?.y || 0, kind: "event" }];
+        return null;
+      }).filter(Boolean)
+    );
+    state.drag = {
+      kind: "chapter",
+      chapterGroupId: group.id,
+      collapsed: Boolean(group.collapsed),
+      offsetX: pointerPoint.x - (Number(group.position?.x) || 0),
+      offsetY: pointerPoint.y - (Number(group.position?.y) || 0),
+      initialGroupPosition: {
+        x: Number(group.position?.x) || 0,
+        y: Number(group.position?.y) || 0
+      },
+      initialNodePositions,
+      bounds: pending.bounds || getCurrentFlowBoardBounds(),
+      pointerId: event.pointerId
+    };
+    pending.element?.setPointerCapture?.(event.pointerId);
+    return;
+  }
 
   if (pending.kind === "event") {
     const eventNode = getStandaloneEventNodeById(pending.choiceId);
@@ -1632,6 +1843,44 @@ function updateDraggedFlowNodePosition(clientX, clientY) {
   if (!drag) return;
   const dragBounds = drag.bounds || getCurrentFlowBoardBounds();
   const point = flowBoardPointFromClient({ clientX, clientY }, dragBounds);
+  if (drag.kind === "chapter") {
+    const group = getAdventureChapterGroups().find((entry) => entry.id === drag.chapterGroupId);
+    if (!group) return;
+    const nextX = clamp(point.x - drag.offsetX, -FLOW_COORD_LIMIT, FLOW_COORD_LIMIT);
+    const nextY = clamp(point.y - drag.offsetY, -FLOW_COORD_LIMIT, FLOW_COORD_LIMIT);
+    if (drag.collapsed) {
+      group.position = { x: nextX, y: nextY };
+      renderChapterGroupFrames(dragBounds);
+      scheduleFlowLinksRender("drag");
+      return;
+    }
+    const deltaX = nextX - drag.initialGroupPosition.x;
+    const deltaY = nextY - drag.initialGroupPosition.y;
+    (group.nodeIds || []).forEach((nodeId) => {
+      const snapshot = drag.initialNodePositions?.[nodeId];
+      if (!snapshot) return;
+      if (snapshot.kind === "scene") {
+        const scene = state.adventure.descriptions.find((desc) => desc.id === nodeId);
+        if (!scene) return;
+        scene.position.x = clamp(snapshot.x + deltaX, -FLOW_COORD_LIMIT, FLOW_COORD_LIMIT);
+        scene.position.y = clamp(snapshot.y + deltaY, -FLOW_COORD_LIMIT, FLOW_COORD_LIMIT);
+        updateFlowCardPosition(scene.id, dragBounds);
+        updateChoiceNodePositions(scene.id, dragBounds);
+        return;
+      }
+      const eventNode = getStandaloneEventNodeById(nodeId);
+      if (!eventNode) return;
+      eventNode.position = {
+        x: clamp(snapshot.x + deltaX, -FLOW_COORD_LIMIT, FLOW_COORD_LIMIT),
+        y: clamp(snapshot.y + deltaY, -FLOW_COORD_LIMIT, FLOW_COORD_LIMIT)
+      };
+      updateChoiceNodePositions(eventNode.id, dragBounds);
+    });
+    group.position = { x: nextX, y: nextY };
+    renderChapterGroupFrames(dragBounds);
+    scheduleFlowLinksRender("drag");
+    return;
+  }
   if (drag.kind === "event") {
     const eventNode = getStandaloneEventNodeById(drag.choiceId || drag.sceneId);
     if (!eventNode) return;
@@ -1674,6 +1923,7 @@ function finalizeFlowDrag() {
   ) {
     updateAllFlowCardPositions(nextBounds);
   }
+  renderChapterGroupFrames(nextBounds);
   renderFlowLinks(nextBounds);
   renderChoiceNodes(nextBounds);
 }
@@ -1859,6 +2109,515 @@ function getStandaloneEventNodeById(nodeId) {
   return getAdventureEventNodes().find((node) => node.id === nodeId) || null;
 }
 
+function getAdventureChapterGroups() {
+  state.adventure.chapterGroups = Array.isArray(state.adventure.chapterGroups) ? state.adventure.chapterGroups : [];
+  return state.adventure.chapterGroups;
+}
+
+function createUniqueChapterGroupId(adventure = state.adventure) {
+  const groups = Array.isArray(adventure?.chapterGroups) ? adventure.chapterGroups : [];
+  const existingIds = new Set(groups.map((group) => group.id));
+  let index = groups.length + 1;
+  let candidate = `chapter_${index}`;
+  while (existingIds.has(candidate)) {
+    index += 1;
+    candidate = `chapter_${index}`;
+  }
+  return candidate;
+}
+
+function getChapterGroupByNodeId(nodeId) {
+  if (!nodeId) return null;
+  return getAdventureChapterGroups().find((group) => (group.nodeIds || []).includes(nodeId)) || null;
+}
+
+function getCollapsedChapterGroupByNodeId(nodeId) {
+  const group = getChapterGroupByNodeId(nodeId);
+  return group?.collapsed ? group : null;
+}
+
+function isNodeHiddenByCollapsedChapter(nodeId) {
+  return Boolean(getCollapsedChapterGroupByNodeId(nodeId));
+}
+
+function normalizeChapterRole(value) {
+  return value === "entry" || value === "exit" ? value : "none";
+}
+
+function chapterRoleForNode(group, nodeId) {
+  return normalizeChapterRole(group?.nodeRoles?.[nodeId]);
+}
+
+function setChapterRoleForNode(nodeId, role) {
+  const group = getChapterGroupByNodeId(nodeId);
+  if (!group) return;
+  group.nodeRoles = group.nodeRoles && typeof group.nodeRoles === "object" ? { ...group.nodeRoles } : {};
+  const normalized = normalizeChapterRole(role);
+  if (normalized === "none") delete group.nodeRoles[nodeId];
+  else group.nodeRoles[nodeId] = normalized;
+  markSceneDirty();
+  renderFlowBoard({ preserveCenter: true });
+  renderSceneEditor();
+  scheduleJsonRender(140, { syncScene: false });
+}
+
+function nodeLabelForChapter(nodeId) {
+  const scene = state.adventure.descriptions.find((desc) => desc.id === nodeId);
+  if (scene) return scene.title || "Scena";
+  const eventNode = getStandaloneEventNodeById(nodeId);
+  if (eventNode) return eventNode.text || nodePickerKindLabel(eventNode.event?.type);
+  return nodeId || "Nodo";
+}
+
+function toggleChapterGroupCollapsed(groupId) {
+  const group = getAdventureChapterGroups().find((entry) => entry.id === groupId);
+  if (!group) return;
+  group.collapsed = !group.collapsed;
+  markSceneDirty();
+  renderFlowBoard({ preserveCenter: true });
+  scheduleJsonRender(160, { syncScene: false });
+}
+
+function deleteChapterGroup(groupId) {
+  const groups = getAdventureChapterGroups();
+  const nextGroups = groups.filter((group) => group.id !== groupId);
+  if (nextGroups.length === groups.length) return;
+  state.adventure.chapterGroups = nextGroups;
+  markSceneDirty();
+  renderFlowBoard({ preserveCenter: true });
+  renderSceneEditor();
+  scheduleJsonRender(160, { syncScene: false });
+}
+
+function cleanupChapterGroups() {
+  const validNodeIds = new Set([
+    ...(state.adventure.descriptions || []).map((desc) => desc.id),
+    ...getAdventureEventNodes().map((node) => node.id)
+  ]);
+  const claimedNodeIds = new Set();
+  state.adventure.chapterGroups = getAdventureChapterGroups()
+    .map((group) => {
+      const nodeIds = (group.nodeIds || []).filter((nodeId) => {
+        if (!validNodeIds.has(nodeId) || claimedNodeIds.has(nodeId)) return false;
+        claimedNodeIds.add(nodeId);
+        return true;
+      });
+      return nodeIds.length
+        ? {
+            id: normalizeString(group.id) || createUniqueChapterGroupId(),
+            type: "chapterGroup",
+            title: group.title || "Nuovo capitolo",
+            collapsed: Boolean(group.collapsed),
+            nodeIds,
+            position: clampFlowPoint(group.position || { x: 0, y: 0 }),
+            size: {
+              w: Math.max(220, Number(group.size?.w) || 280),
+              h: Math.max(120, Number(group.size?.h) || 150)
+            },
+            color: group.color || "amber",
+            portLabels: group.portLabels && typeof group.portLabels === "object" ? { ...group.portLabels } : {},
+            nodeRoles: Object.fromEntries(
+              Object.entries(group.nodeRoles && typeof group.nodeRoles === "object" ? group.nodeRoles : {})
+                .filter(([nodeId]) => nodeIds.includes(nodeId))
+                .map(([nodeId, role]) => [nodeId, normalizeChapterRole(role)])
+                .filter(([, role]) => role !== "none")
+            )
+          }
+        : null;
+    })
+    .filter(Boolean);
+}
+
+function removeNodesFromChapterGroups(nodeIds) {
+  const targetIds = new Set((nodeIds || []).filter(Boolean));
+  if (!targetIds.size) return;
+  getAdventureChapterGroups().forEach((group) => {
+    group.nodeIds = (group.nodeIds || []).filter((nodeId) => !targetIds.has(nodeId));
+  });
+  cleanupChapterGroups();
+}
+
+function chapterGroupBounds(group, bounds = getCurrentFlowBoardBounds()) {
+  const nodeIds = group?.nodeIds || [];
+  const metrics = getFlowCardMetrics();
+  const eventFrame = choiceNodeFrame(false);
+  const rects = nodeIds.map((nodeId) => {
+    const scene = state.adventure.descriptions.find((desc) => desc.id === nodeId);
+    if (scene) {
+      const point = logicalToBoardPoint(scene.position, bounds);
+      return {
+        left: point.x,
+        top: point.y,
+        right: point.x + metrics.width,
+        bottom: point.y + metrics.height
+      };
+    }
+    const eventNode = getStandaloneEventNodeById(nodeId);
+    if (eventNode) {
+      const point = logicalToBoardPoint(eventNode.position || { x: 0, y: 0 }, bounds);
+      return {
+        left: point.x - eventFrame.width / 2,
+        top: point.y - eventFrame.height / 2,
+        right: point.x + eventFrame.width / 2,
+        bottom: point.y + eventFrame.height / 2
+      };
+    }
+    return null;
+  }).filter(Boolean);
+  if (!rects.length) return null;
+  const paddingX = 26;
+  const paddingTop = 36;
+  const paddingBottom = 22;
+  const left = Math.min(...rects.map((rect) => rect.left)) - paddingX;
+  const top = Math.min(...rects.map((rect) => rect.top)) - paddingTop;
+  const right = Math.max(...rects.map((rect) => rect.right)) + paddingX;
+  const bottom = Math.max(...rects.map((rect) => rect.bottom)) + paddingBottom;
+  return {
+    left,
+    top,
+    width: Math.max(220, right - left),
+    height: Math.max(120, bottom - top)
+  };
+}
+
+function chapterGroupCollapsedFrame(group, bounds = getCurrentFlowBoardBounds()) {
+  const point = logicalToBoardPoint(group.position || { x: 0, y: 0 }, bounds);
+  return {
+    left: point.x,
+    top: point.y,
+    width: CHAPTER_GROUP_CARD_WIDTH,
+    height: CHAPTER_GROUP_CARD_HEIGHT
+  };
+}
+
+function collectGraphEdges(bounds = getCurrentFlowBoardBounds()) {
+  const edges = [];
+  const addEdge = ({ sourceNodeId, sourcePoint, targetId, color, dashed = false, label = "", portId = null }) => {
+    if (!targetId || targetId === DEATH_SENTINEL || targetId === STAY_SENTINEL || targetId === NO_ESCAPE_SENTINEL || targetId === RETRY_SENTINEL) return;
+    edges.push({ sourceNodeId, sourcePoint, targetId, color, dashed, label, portId });
+  };
+  const collectChoiceEdges = (choice, sourceNodeId, sourcePoint, color) => {
+    if (choice.event) {
+      const ev = choice.event;
+      const icon = ev.type === "combat" ? "\u2694" : ev.type === "skillcheck" ? "\u25C7"
+        : ev.type === "requirement" ? "R" : ev.type === "shop" ? "$"
+        : ev.type === "loot" ? "L" : ev.type === "dialogue" ? "D" : "";
+      if (ev.type === "skillcheck") {
+        addEdge({ sourceNodeId, sourcePoint, targetId: ev.successBranch?.targetId, color: "#6f8a57", portId: "success", label: icon });
+        addEdge({ sourceNodeId, sourcePoint, targetId: ev.failureBranch?.targetId, color: "#b94a48", portId: "failure" });
+      } else if (ev.type === "combat") {
+        addEdge({ sourceNodeId, sourcePoint, targetId: ev.victoryBranch?.targetId, color: "#6f8a57", portId: "victory", label: icon });
+        addEdge({ sourceNodeId, sourcePoint, targetId: ev.defeatBranch?.targetId, color: "#b94a48", portId: "defeat" });
+        if (ev.retreatBranch) addEdge({ sourceNodeId, sourcePoint, targetId: ev.retreatBranch?.targetId, color: "#6d84b5", portId: "retreat", dashed: true });
+      } else if (ev.type === "requirement") {
+        addEdge({ sourceNodeId, sourcePoint, targetId: ev.metBranch?.targetId, color: "#6f8a57", portId: "met", label: icon });
+        addEdge({ sourceNodeId, sourcePoint, targetId: ev.unmetBranch?.targetId, color: "#b94a48", portId: "unmet" });
+      } else if (ev.type === "dialogue") {
+        const responses = Array.isArray(ev.root?.responses) ? ev.root.responses : [];
+        if (responses.length) {
+          responses.forEach((response, index) => {
+            addEdge({
+              sourceNodeId,
+              sourcePoint,
+              targetId: response?.targetId,
+              color: "#8b78b8",
+              portId: dialogueResponsePortId(response.id),
+              label: index === 0 ? icon : ""
+            });
+          });
+        } else {
+          const branch = ev.branch || ev.root?.branch;
+          addEdge({ sourceNodeId, sourcePoint, targetId: branch?.targetId, color, portId: "branch", label: icon });
+        }
+      } else {
+        const branch = ev.branch;
+        addEdge({ sourceNodeId, sourcePoint, targetId: branch?.targetId, color, portId: "branch", label: icon });
+      }
+      return;
+    }
+    addEdge({ sourceNodeId, sourcePoint, targetId: choice.targetId, color, portId: null });
+  };
+
+  state.adventure.descriptions.forEach((desc) => {
+    const choicePositions = choiceNodesBoardPositions(desc, bounds);
+    choicePositions.forEach(({ choice, x, y }) => {
+      collectChoiceEdges(choice, desc.id, { x, y }, choiceLinkColor(choice));
+    });
+  });
+
+  getAdventureEventNodes().forEach((eventNode) => {
+    collectChoiceEdges(eventNode, eventNode.id, eventNodeAnchor(eventNode, bounds), choiceLinkColor(eventNode));
+  });
+
+  return edges;
+}
+
+function buildCollapsedChapterPortMaps(bounds = getCurrentFlowBoardBounds()) {
+  const collapsedGroups = getAdventureChapterGroups().filter((group) => group.collapsed);
+  const portsByGroup = new Map();
+  const ensure = (groupId) => {
+    if (!portsByGroup.has(groupId)) portsByGroup.set(groupId, { entries: [], exits: [], hiddenIncomingCount: 0, hiddenOutgoingCount: 0 });
+    return portsByGroup.get(groupId);
+  };
+  const edges = collectGraphEdges(bounds);
+  collapsedGroups.forEach((group) => {
+    const bucket = ensure(group.id);
+    const entryNodeIds = (group.nodeIds || []).filter((nodeId) => chapterRoleForNode(group, nodeId) === "entry");
+    const exitNodeIds = (group.nodeIds || []).filter((nodeId) => chapterRoleForNode(group, nodeId) === "exit");
+    bucket.entries = entryNodeIds.map((nodeId, index) => ({
+      key: `entry:${nodeId}`,
+      nodeId,
+      label: `IN ${index + 1}`,
+      title: nodeLabelForChapter(nodeId),
+      color: "#5f86c9"
+    }));
+    bucket.exits = exitNodeIds.map((nodeId, index) => ({
+      key: `exit:${nodeId}`,
+      nodeId,
+      label: `OUT ${index + 1}`,
+      title: nodeLabelForChapter(nodeId),
+      color: "#c8823a"
+    }));
+  });
+  edges.forEach((edge) => {
+    const sourceGroup = getCollapsedChapterGroupByNodeId(edge.sourceNodeId);
+    const targetGroup = getCollapsedChapterGroupByNodeId(edge.targetId);
+    if (sourceGroup && targetGroup && sourceGroup.id === targetGroup.id) return;
+    if (targetGroup && (!sourceGroup || sourceGroup.id !== targetGroup.id)) {
+      const bucket = ensure(targetGroup.id);
+      if (!bucket.entries.some((port) => port.nodeId === edge.targetId)) {
+        bucket.hiddenIncomingCount += 1;
+      }
+    }
+    if (sourceGroup && (!targetGroup || targetGroup.id !== sourceGroup.id)) {
+      const bucket = ensure(sourceGroup.id);
+      if (!bucket.exits.some((port) => port.nodeId === edge.sourceNodeId)) {
+        bucket.hiddenOutgoingCount += 1;
+      }
+    }
+  });
+  const pointForPort = (frame, side, index, total) => {
+    const usableHeight = Math.max(36, frame.height - 28);
+    const spacing = total <= 1 ? usableHeight / 2 : usableHeight / Math.max(1, total - 1);
+    const y = frame.top + 14 + (total <= 1 ? usableHeight / 2 : spacing * index);
+    const x = side === "entry" ? frame.left : frame.left + frame.width;
+    return { x, y };
+  };
+  collapsedGroups.forEach((group) => {
+    const bucket = ensure(group.id);
+    const frame = chapterGroupCollapsedFrame(group, bounds);
+    bucket.frame = frame;
+    bucket.entries = bucket.entries.map((port, index) => ({
+      ...port,
+      label: group.portLabels?.[port.key] || port.label,
+      point: pointForPort(frame, "entry", index, bucket.entries.length || 1)
+    }));
+    bucket.exits = bucket.exits.map((port, index) => ({
+      ...port,
+      label: group.portLabels?.[port.key] || port.label,
+      point: pointForPort(frame, "exit", index, bucket.exits.length || 1)
+    }));
+  });
+  return { portsByGroup };
+}
+
+function renderChapterGroupFrames(bounds = getCurrentFlowBoardBounds()) {
+  els.flowCanvas?.querySelectorAll(".chapter-group-frame").forEach((frame) => frame.remove());
+  els.flowCanvas?.querySelectorAll(".chapter-group-card").forEach((card) => card.remove());
+  const fragment = document.createDocumentFragment();
+  const { portsByGroup } = buildCollapsedChapterPortMaps(bounds);
+  getAdventureChapterGroups().forEach((group) => {
+    const ports = portsByGroup.get(group.id) || { entries: [], exits: [] };
+    if (group.collapsed) {
+      const frame = chapterGroupCollapsedFrame(group, bounds);
+      const card = document.createElement("div");
+      card.className = `chapter-group-card chapter-group-card--${group.color || "amber"}`;
+      card.dataset.chapterGroupId = group.id;
+      card.style.left = `${frame.left}px`;
+      card.style.top = `${frame.top}px`;
+      card.style.width = `${frame.width}px`;
+      card.style.height = `${frame.height}px`;
+      card.innerHTML = `
+        <div class="chapter-group-card__header">
+          <div class="chapter-group-card__titles">
+            <strong>${esc(group.title || "Nuovo capitolo")}</strong>
+            <span>${(group.nodeIds || []).length} nodi | ${ports.entries.length} in | ${ports.exits.length} fin${(ports.hiddenIncomingCount || ports.hiddenOutgoingCount) ? ` | !${ports.hiddenIncomingCount + ports.hiddenOutgoingCount}` : ""}</span>
+          </div>
+          <div class="chapter-group-card__actions">
+            <button type="button" class="chapter-group-card__delete" data-action="delete-chapter" title="Elimina solo il capitolo">Elimina</button>
+            <button type="button" class="chapter-group-card__toggle" data-action="toggle-collapse" title="Espandi capitolo">Apri</button>
+          </div>
+        </div>
+      `;
+      if (ports.hiddenIncomingCount || ports.hiddenOutgoingCount) {
+        const chunks = [];
+        if (ports.hiddenIncomingCount) chunks.push(`${ports.hiddenIncomingCount} ingressi non marcati`);
+        if (ports.hiddenOutgoingCount) chunks.push(`${ports.hiddenOutgoingCount} uscite non marcate`);
+        card.title = chunks.join(" | ");
+      }
+      ports.entries.forEach((port) => {
+        const wrap = document.createElement("div");
+        wrap.className = "chapter-group-port-wrap chapter-group-port-wrap--entry";
+        wrap.style.left = "-10px";
+        wrap.style.top = `${port.point.y - frame.top - 11}px`;
+        wrap.title = `${port.title} | inizio capitolo`;
+        const handle = document.createElement("span");
+        handle.className = "chapter-group-port chapter-group-port--entry";
+        handle.style.background = port.color || "#6d84b5";
+        wrap.append(handle);
+        card.appendChild(wrap);
+      });
+      ports.exits.forEach((port) => {
+        const wrap = document.createElement("div");
+        wrap.className = "chapter-group-port-wrap chapter-group-port-wrap--exit";
+        wrap.style.right = "-10px";
+        wrap.style.top = `${port.point.y - frame.top - 11}px`;
+        wrap.title = `${port.title} | fine capitolo`;
+        const handle = document.createElement("span");
+        handle.className = "chapter-group-port chapter-group-port--exit";
+        handle.style.background = port.color || "#b56d39";
+        wrap.append(handle);
+        card.appendChild(wrap);
+      });
+      card.querySelector('[data-action="delete-chapter"]')?.addEventListener("click", (event) => {
+        event.stopPropagation();
+        deleteChapterGroup(group.id);
+      });
+      bindChapterGroupDrag(group.id, card.querySelector(".chapter-group-card__header"), card);
+      card.querySelector('[data-action="toggle-collapse"]')?.addEventListener("click", (event) => {
+        event.stopPropagation();
+        toggleChapterGroupCollapsed(group.id);
+      });
+      fragment.appendChild(card);
+      return;
+    }
+    const frameBounds = chapterGroupBounds(group, bounds);
+    if (!frameBounds) return;
+    const frame = document.createElement("div");
+    frame.className = `chapter-group-frame chapter-group-frame--${group.color || "amber"}`;
+    frame.dataset.chapterGroupId = group.id;
+    frame.style.left = `${frameBounds.left}px`;
+    frame.style.top = `${frameBounds.top}px`;
+    frame.style.width = `${frameBounds.width}px`;
+    frame.style.height = `${frameBounds.height}px`;
+    const roleCounts = {
+      entry: (group.nodeIds || []).filter((nodeId) => chapterRoleForNode(group, nodeId) === "entry").length,
+      exit: (group.nodeIds || []).filter((nodeId) => chapterRoleForNode(group, nodeId) === "exit").length
+    };
+    frame.innerHTML = `
+      <div class="chapter-group-frame__header">
+        <span class="chapter-group-frame__title">${esc(group.title || "Nuovo capitolo")}</span>
+        <span class="chapter-group-frame__meta">${(group.nodeIds || []).length} nodi | ${roleCounts.entry} in | ${roleCounts.exit} fin</span>
+        <div class="chapter-group-card__actions">
+          <button type="button" class="chapter-group-card__delete" data-action="delete-chapter" title="Elimina solo il capitolo">Elimina</button>
+          <button type="button" class="chapter-group-frame__toggle" data-action="toggle-collapse" title="Collassa capitolo">Riduci</button>
+        </div>
+      </div>
+    `;
+    frame.querySelector('[data-action="delete-chapter"]')?.addEventListener("click", (event) => {
+      event.stopPropagation();
+      deleteChapterGroup(group.id);
+    });
+    frame.querySelector('[data-action="toggle-collapse"]')?.addEventListener("click", (event) => {
+      event.stopPropagation();
+      toggleChapterGroupCollapsed(group.id);
+    });
+    bindChapterGroupDrag(group.id, frame.querySelector(".chapter-group-frame__header"), frame);
+    fragment.appendChild(frame);
+  });
+  els.flowCanvas.appendChild(fragment);
+}
+
+function createChapterRoleControl(nodeId) {
+  const group = getChapterGroupByNodeId(nodeId);
+  if (!group) return null;
+  const wrap = document.createElement("div");
+  wrap.className = "flow-event-quick-summary";
+  const title = document.createElement("strong");
+  title.textContent = `Capitolo: ${group.title || "Nuovo capitolo"}`;
+  const hint = document.createElement("span");
+  hint.textContent = "Segna questo nodo come inizio o fine canonica del capitolo collassato.";
+  const row = document.createElement("div");
+  row.className = "flow-event-quick-row";
+  const rowLabel = document.createElement("span");
+  rowLabel.textContent = "Ruolo nel capitolo";
+  const select = document.createElement("select");
+  select.className = "ctp-scene-select";
+  [
+    { value: "none", label: "Nessun ruolo" },
+    { value: "entry", label: "Inizio capitolo" },
+    { value: "exit", label: "Fine capitolo" }
+  ].forEach((optionConfig) => {
+    const option = document.createElement("option");
+    option.value = optionConfig.value;
+    option.textContent = optionConfig.label;
+    if (chapterRoleForNode(group, nodeId) === optionConfig.value) option.selected = true;
+    select.appendChild(option);
+  });
+  select.addEventListener("change", (event) => setChapterRoleForNode(nodeId, event.target.value));
+  row.append(rowLabel, select);
+  wrap.append(title, hint, row);
+  return wrap;
+}
+
+function renderChapterGroupingUi() {
+  if (!els.groupChapterBtn) return;
+  const count = state.ui.selectedGraphNodeIds.length;
+  els.groupChapterBtn.classList.toggle("hidden", count < 2);
+  els.groupChapterBtn.textContent = count >= 2
+    ? `Raggruppa in capitolo (${count})`
+    : "Raggruppa in capitolo";
+}
+
+function createChapterGroupFromSelection() {
+  const nodeIds = Array.from(new Set((state.ui.selectedGraphNodeIds || []).filter(Boolean)));
+  if (nodeIds.length < 2) return;
+  removeNodesFromChapterGroups(nodeIds);
+      const group = {
+        id: createUniqueChapterGroupId(),
+        type: "chapterGroup",
+        title: window.prompt("Nome del capitolo", "Nuovo capitolo")?.trim() || "Nuovo capitolo",
+        collapsed: false,
+        nodeIds,
+        position: clampFlowPoint({ x: 0, y: 0 }),
+        size: { w: 280, h: 150 },
+        color: "amber",
+        portLabels: {},
+        nodeRoles: {}
+      };
+  getAdventureChapterGroups().push(group);
+  const frameBounds = chapterGroupBounds(group);
+  if (frameBounds) {
+    group.position = clampFlowPoint(boardToLogicalPoint({ x: frameBounds.left, y: frameBounds.top }));
+    group.size = {
+      w: Math.max(220, Math.round(frameBounds.width)),
+      h: Math.max(120, Math.round(frameBounds.height))
+    };
+  }
+  markSceneDirty();
+  renderFlowBoard({ preserveCenter: true });
+  scheduleJsonRender(160, { syncScene: false });
+}
+
+function bindChapterGroupDrag(groupId, handle, element) {
+  if (!groupId || !handle || !element) return;
+  handle.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0) return;
+    if (event.target.closest("button, input, select, textarea")) return;
+    event.preventDefault();
+    event.stopPropagation();
+    state.dragCandidate = {
+      kind: "chapter",
+      chapterGroupId: groupId,
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+      bounds: getCurrentFlowBoardBounds(),
+      element,
+      pointerId: event.pointerId
+    };
+  });
+}
+
 function normalizeImportedEventNode(node, index = 0) {
   const snapshot = node && typeof node === "object" ? node : {};
   return {
@@ -1882,6 +2641,95 @@ function setGraphTargetId(targetOwner, nodeId) {
 
 function getGraphTargetId(targetOwner) {
   return normalizeString(targetOwner?.targetId) || null;
+}
+
+function flowPortColor(portId) {
+  switch (portId) {
+    case "victory":
+    case "success":
+    case "met":
+      return "#6f8a57";
+    case "defeat":
+    case "failure":
+    case "unmet":
+      return "#b94a48";
+    case "retreat":
+      return "#6d84b5";
+    default:
+      return "#b56d39";
+  }
+}
+
+function setBranchTargetByPort(choice, portId, targetId) {
+  if (!choice) return;
+  if (!choice.event || !portId) {
+    setFirstUnsetBranch(choice, targetId);
+    return;
+  }
+  const branch = eventBranchByPortId(choice.event, portId);
+  if (!branch) {
+    setFirstUnsetBranch(choice, targetId);
+    return;
+  }
+  branch.targetId = targetId || null;
+}
+
+function refreshFlowLinkMutationUi(descId, choiceId) {
+  renderSceneEditor();
+  const quickMenu = document.getElementById("flow-event-quick-menu");
+  if (quickMenu?.dataset.descId !== String(descId) || quickMenu?.dataset.choiceId !== String(choiceId)) return;
+  const nodeEl = els.choiceNodesLayer?.querySelector(
+    `.choice-node[data-desc-id="${descId}"][data-choice-id="${choiceId}"]`
+  );
+  if (nodeEl) {
+    showFlowEventQuickMenu(descId, choiceId, nodeEl.getBoundingClientRect());
+  }
+}
+
+function getRequirementMode(ev) {
+  return ev?.requirementMode || (ev?.lockId ? "key" : ev?.questItemId ? "questItem" : "presetItem");
+}
+
+function requirementModeMeta(mode) {
+  if (mode === "key") {
+    return {
+      label: "Chiave",
+      valueLabel: "Chiave richiesta",
+      hint: "Controlla una chiave narrativa tramite lockId. Se il ramo soddisfatto parte, ne consuma una unita."
+    };
+  }
+  if (mode === "questItem") {
+    return {
+      label: "Quest item",
+      valueLabel: "Quest item richiesto",
+      hint: "Controlla un oggetto unico referenziabile via questItemId. Sul ramo soddisfatto ne consuma una unita."
+    };
+  }
+  return {
+    label: "Oggetto",
+    valueLabel: "Oggetto richiesto",
+    hint: "Controlla un oggetto del catalogo o del loot runtime. Sul ramo soddisfatto ne consuma una unita."
+  };
+}
+
+function requirementValueSummary(ev) {
+  const mode = getRequirementMode(ev);
+  if (mode === "key") {
+    const lockId = normalizeString(ev?.lockId);
+    if (!lockId) return "Nessuna chiave selezionata";
+    const lootMatch = collectAllAdventureLoot().find((loot) => normalizeString(loot?.lockId) === lockId);
+    const presetMatch = LOOT_PRESETS.find((preset) => normalizeString(preset?.lockId) === lockId);
+    return lootMatch?.itemName || presetMatch?.name || lockId;
+  }
+  if (mode === "questItem") {
+    const questItemId = normalizeString(ev?.questItemId);
+    if (!questItemId) return "Nessun quest item selezionato";
+    const lootMatch = collectAllAdventureLoot().find((loot) => normalizeString(loot?.questItemId) === questItemId);
+    return lootMatch?.itemName || questItemId;
+  }
+  const itemId = normalizeString(ev?.itemId);
+  if (!itemId) return "Nessun oggetto selezionato";
+  return lootPresetById(itemId)?.name || itemId;
 }
 
 function promoteBranchInlineEventsToDetached(ownerChoice, basePosition = null) {
@@ -1978,6 +2826,7 @@ function createEventNodeFromPicker({
   type,
   sourceSceneId = null,
   sourceChoiceId = null,
+  sourcePortId = null,
   dropPoint = null
 } = {}) {
   if (!isBoardEventKind(type)) return null;
@@ -1990,9 +2839,9 @@ function createEventNodeFromPicker({
   if (!createdNode) return null;
 
   if (sourceDesc && sourceChoice) {
-    setFirstUnsetBranch(sourceChoice, createdNode.id);
+    setBranchTargetByPort(sourceChoice, sourcePortId, createdNode.id);
   } else if (sourceContext) {
-    setFirstUnsetBranch(sourceContext.choice, createdNode.id);
+    setBranchTargetByPort(sourceContext.choice, sourcePortId, createdNode.id);
   } else if (sourceDesc) {
     addLinkedTargetToScene(sourceDesc, createdNode.id);
   }
@@ -2015,12 +2864,13 @@ function showNodePicker({
   mode = "toolbar",
   sourceSceneId = null,
   sourceChoiceId = null,
+  sourcePortId = null,
   dropPoint = null,
   clientX = null,
   clientY = null,
   kindFilter = "all"
 } = {}) {
-  _nodePicker = { mode, sourceSceneId, sourceChoiceId, dropPoint, kindFilter };
+  _nodePicker = { mode, sourceSceneId, sourceChoiceId, sourcePortId, dropPoint, kindFilter };
   const picker = document.getElementById("node-picker");
   if (!picker) return;
 
@@ -2075,10 +2925,10 @@ function hideNodePicker() {
 }
 
 function onNodePickerChoose(kind) {
-  const { sourceSceneId = null, sourceChoiceId = null, dropPoint = null } = _nodePicker || {};
+  const { sourceSceneId = null, sourceChoiceId = null, sourcePortId = null, dropPoint = null } = _nodePicker || {};
   hideNodePicker();
   if (isBoardEventKind(kind)) {
-    createEventNodeFromPicker({ type: kind, sourceSceneId, sourceChoiceId, dropPoint });
+    createEventNodeFromPicker({ type: kind, sourceSceneId, sourceChoiceId, sourcePortId, dropPoint });
     return;
   }
   if (sourceChoiceId && sourceSceneId) {
@@ -2086,12 +2936,13 @@ function onNodePickerChoose(kind) {
     const newDesc = createDescription({ position: dropPoint, isEnding: kind === "final" });
     const sourceContext = getGraphChoiceContext(sourceSceneId, sourceChoiceId);
     if (sourceContext && newDesc) {
-      setFirstUnsetBranch(sourceContext.choice, newDesc.id);
+      setBranchTargetByPort(sourceContext.choice, sourcePortId, newDesc.id);
       markSceneDirty();
       scheduleFlowLinksRender();
       scheduleJsonRender(100);
       if (!sourceContext.detached) refreshFlowCard(sourceSceneId);
       renderChoiceNodes();
+      refreshFlowLinkMutationUi(sourceSceneId, sourceChoiceId);
     }
   } else {
     createDescription({ position: dropPoint, sourceDescriptionId: sourceSceneId, isEnding: kind === "final" });
@@ -2272,13 +3123,14 @@ function preparePastedDescription(desc) {
   return duplicated;
 }
 
-// Stub retrocompatibile — la logica dei mostri è ora inline nei CombatGroup
+// Stub retrocompatibile � la logica dei mostri � ora inline nei CombatGroup
 function duplicateCombatMonstersForScene(_scene) {}
 
 function deleteScene() {
   if (!state.selectedDescriptionId) return;
   const deletedId = state.selectedDescriptionId;
   state.adventure.descriptions = state.adventure.descriptions.filter((d) => d.id !== deletedId);
+  removeNodesFromChapterGroups([deletedId]);
   clearGraphTargetReferences(deletedId);
 
   if (state.adventure.startingDescriptionId === deletedId) {
@@ -2329,6 +3181,7 @@ function deleteSelectedEventNode() {
   if (!eventContext?.detached) return;
   const deletedId = eventContext.choice.id;
   state.adventure.eventNodes = getAdventureEventNodes().filter((node) => node.id !== deletedId);
+  removeNodesFromChapterGroups([deletedId]);
   clearGraphTargetReferences(deletedId);
   state.ui.selectedEventRef = null;
   renderFlowBoard({ preserveCenter: true });
@@ -2346,7 +3199,7 @@ function deleteSelectedFlowNode() {
   deleteScene();
 }
 
-// ─── Monster CRUD — dead code: i mostri sono ora inline nei CombatGroup ──────
+// ─── Monster CRUD � dead code: i mostri sono ora inline nei CombatGroup ──────
 // Le funzioni seguenti sono stub per evitare crash da event listener legacy.
 
 function createMonster({ renderAfter = true } = {}) { return null; }
@@ -2425,7 +3278,7 @@ function rollSignatureLootDrops(lootList) {
 
 function monsterLootProfileKind(monsterLike) {
   const profile = `${monsterLike?.id || ""} ${monsterLike?.name || monsterLike?.label || ""} ${monsterLike?.description || monsterLike?.hint || ""}`.toLowerCase();
-  if (/(lupo|segugio|ragno|sanguisuga|beast|hound|wolf|spider|leech|predatore)/.test(profile)) return "beast";
+  if (/(lupo|segugio|ragno|sanguisuga|beast|hound|wolf|spider|leech|predatore|serpente|serpent|rettile|reptile|drake|lucertola|squame)/.test(profile)) return "beast";
   if (/(scheletro|revenant|devoto|catacomba|crypt|grave|undead|custode del bronzo)/.test(profile)) return "undead";
   if (/(guardiano_elite|elite|boss|capobanda|magister|knight|ritualista)/.test(profile)) return "elite";
   if (/(cult|cultista|goblin|guard|guardia|band|soldato|assassino|gregario|bruto|cavaliere|humanoid)/.test(profile)) return "humanoid";
@@ -2436,6 +3289,9 @@ function buildFallbackRandomLootForMonster(monsterLike) {
   const drops = [];
   const profileKind = monsterLootProfileKind(monsterLike);
   const goldMax = Math.max(4, Number(monsterLike?.goldReward) || 4);
+  const profile = `${monsterLike?.id || ""} ${monsterLike?.name || monsterLike?.label || ""} ${monsterLike?.description || monsterLike?.hint || ""}`.toLowerCase();
+  const isScaled = /(serpente|serpent|rettile|reptile|drake|lucertola|squame)/.test(profile);
+  const isPredator = /(lupo|segugio|hound|wolf|predatore|ragno|spider|sanguisuga|leech)/.test(profile);
 
   function addPresetLoot(presetId, quantityMin = 1, quantityMax = quantityMin) {
     const loot = createLootFromPreset(presetId);
@@ -2444,25 +3300,33 @@ function buildFallbackRandomLootForMonster(monsterLike) {
     drops.push(loot);
   }
 
+  function addOneMaterial(presetIds) {
+    if (!presetIds.length) return;
+    const selectedId = presetIds[randomInt(0, presetIds.length - 1)];
+    addPresetLoot(selectedId);
+  }
+
   if (profileKind === "beast") {
-    if (Math.random() < 0.65) addPresetLoot("wolf_pelt");
-    else if (Math.random() < 0.5) addPresetLoot("travel_rations");
-    else addPresetLoot("coins", 2, goldMax);
+    if (isScaled) addOneMaterial(["scale_fragment", "crystal_shard"]);
+    else if (isPredator) addOneMaterial(["wolf_pelt", "leather_strip", "herb_bundle"]);
+    else addOneMaterial(["leather_strip", "herb_bundle", "wood_bundle"]);
+    if (Math.random() < 0.2) addPresetLoot("coins", 2, goldMax);
   } else if (profileKind === "undead") {
-    if (Math.random() < 0.7) addPresetLoot("coins", 3, goldMax + 2);
-    else addPresetLoot("rusted_blade");
+    addOneMaterial(["cloth_scrap", "raw_iron"]);
+    if (Math.random() < 0.35) addPresetLoot("coins", 3, goldMax + 2);
   } else if (profileKind === "elite") {
-    if (Math.random() < 0.55) addPresetLoot("coins", 6, goldMax + 6);
-    else if (Math.random() < 0.6) addPresetLoot("arcane_scroll");
+    addOneMaterial(["raw_iron", "crystal_shard", "cloth_scrap"]);
+    if (Math.random() < 0.35) addPresetLoot("coins", 6, goldMax + 6);
+    else if (Math.random() < 0.4) addPresetLoot("arcane_scroll");
     else addPresetLoot("warding_dust");
   } else if (profileKind === "humanoid") {
-    if (Math.random() < 0.55) addPresetLoot("coins", 4, goldMax + 3);
-    else if (Math.random() < 0.5) addPresetLoot("healing_potion");
+    addOneMaterial(["raw_iron", "wood_bundle", "cloth_scrap"]);
+    if (Math.random() < 0.35) addPresetLoot("coins", 4, goldMax + 3);
+    else if (Math.random() < 0.4) addPresetLoot("healing_potion");
     else addPresetLoot("camp_buckler");
   } else {
-    if (Math.random() < 0.6) addPresetLoot("coins", 2, goldMax);
-    else if (Math.random() < 0.5) addPresetLoot("torch");
-    else addPresetLoot("healing_potion");
+    addOneMaterial(["wood_bundle", "herb_bundle", "cloth_scrap"]);
+    if (Math.random() < 0.3) addPresetLoot("coins", 2, goldMax);
   }
 
   return drops.map(cloneLootEntry);
@@ -2487,6 +3351,34 @@ function buildMonsterLootFromArchetype(archetype) {
   return merged.length ? merged : mergeLootEntries(buildFallbackRandomLootForMonster(monsterLike));
 }
 
+function regenerateLootForCombatGroup(group) {
+  if (!group) return [];
+  if (group.monsterId) {
+    const preset = MONSTER_PRESETS.find((entry) => entry.id === group.monsterId) || null;
+    if (preset) return cloneLootDraft(buildMonsterLootFromPreset(preset));
+  }
+  if (group.archetypeId) {
+    const archetype = MONSTER_STAT_ARCHETYPES.find((entry) => entry.id === group.archetypeId) || null;
+    if (archetype) return cloneLootDraft(buildMonsterLootFromArchetype(archetype));
+  }
+  return cloneLootDraft(mergeLootEntries(buildFallbackRandomLootForMonster({
+    id: group.monsterId || group.archetypeId || "",
+    name: group.name || "",
+    label: group.name || "",
+    description: group.description || "",
+    hint: group.description || "",
+    goldReward: group.goldReward || 0
+  })));
+}
+
+function ensureGeneratedLootForCombatGroup(group) {
+  if (!group || !Array.isArray(group.loot)) {
+    if (group) group.loot = [];
+  }
+  if (!group || group.loot.length) return;
+  group.loot = regenerateLootForCombatGroup(group);
+}
+
 function generateVariableLootForMonster(preset) {
   const profile = `${preset.id} ${preset.name} ${preset.description}`.toLowerCase();
   const drops = [];
@@ -2505,34 +3397,129 @@ function generateVariableLootForMonster(preset) {
     addLootChance(1, selectedId);
   }
 
-  const isBeast = /(lupo|segugio|ragno|sanguisuga|beast|hound|wolf|spider|leech)/.test(profile);
+  const isBeast = /(lupo|segugio|ragno|sanguisuga|beast|hound|wolf|spider|leech|serpente|serpent|rettile|reptile|drake|lucertola)/.test(profile);
+  const isScaled = /(serpente|serpent|rettile|reptile|drake|lucertola|squame)/.test(profile);
   const isUndead = /(scheletro|revenant|devoto|catacomba|crypt|grave|undead|custode del bronzo)/.test(profile);
   const isHumanoid = /(cult|cultista|goblin|guard|guardia|band|capobanda|magister|knight|cavaliere)/.test(profile);
 
   if (isBeast) {
-    addLootChance(0.30, "travel_rations");
-    addLootChance(0.18, "healing_potion");
+    addOneOfChance(0.62, isScaled ? ["scale_fragment", "crystal_shard"] : ["wolf_pelt", "leather_strip", "herb_bundle"]);
+    addLootChance(0.24, "travel_rations");
     addLootChance(0.12, "coins", 2, 6);
     return drops;
   }
 
   if (isUndead) {
+    addOneOfChance(0.55, ["cloth_scrap", "raw_iron"]);
     addLootChance(0.30, "coins", 4, 12);
-    addOneOfChance(0.30, ["rusted_blade", "miner_helm"]);
+    addOneOfChance(0.22, ["rusted_blade", "miner_helm"]);
     addLootChance(0.14, "healing_potion");
     return drops;
   }
 
   if (isHumanoid) {
+    addOneOfChance(0.58, ["raw_iron", "wood_bundle", "cloth_scrap"]);
     addLootChance(0.30, "coins", 5, 14);
-    addOneOfChance(0.30, ["dagger", "rusted_blade", "camp_buckler", "healing_potion"]);
-    addOneOfChance(0.16, ["chain_mail", "warding_dust", "arcane_scroll"]);
+    addOneOfChance(0.26, ["dagger", "rusted_blade", "camp_buckler", "healing_potion"]);
+    addOneOfChance(0.14, ["chain_mail", "warding_dust", "arcane_scroll"]);
     return drops;
   }
 
+  addOneOfChance(0.45, ["wood_bundle", "herb_bundle", "cloth_scrap"]);
   addLootChance(0.20, "coins", 3, 8);
-  addOneOfChance(0.30, ["healing_potion", "torch"]);
+  addOneOfChance(0.20, ["healing_potion", "torch"]);
   return drops;
+}
+
+const RANDOM_EVENT_LOOT_RARITY_WEIGHTS = [
+  { value: "common", weight: 54 },
+  { value: "uncommon", weight: 24 },
+  { value: "rare", weight: 13 },
+  { value: "epic", weight: 6 },
+  { value: "mythic", weight: 3 }
+];
+
+const RANDOM_EVENT_LOOT_CATEGORY_WEIGHTS = [
+  { value: "coins", weight: 30 },
+  { value: "consumable", weight: 24 },
+  { value: "equipment", weight: 22 },
+  { value: "defense", weight: 11 },
+  { value: "accessory", weight: 7 },
+  { value: "treasure", weight: 6 }
+];
+
+function weightedRandomValue(weightedEntries) {
+  const total = weightedEntries.reduce((sum, entry) => sum + Math.max(0, Number(entry.weight) || 0), 0);
+  if (total <= 0) return weightedEntries[0]?.value ?? null;
+  let roll = Math.random() * total;
+  for (const entry of weightedEntries) {
+    roll -= Math.max(0, Number(entry.weight) || 0);
+    if (roll <= 0) return entry.value;
+  }
+  return weightedEntries[weightedEntries.length - 1]?.value ?? null;
+}
+
+function createRandomEventLootEntry(preferredCategory = null, preferredRarity = null) {
+  const pool = allLootPresetsForLookup().filter((preset) => {
+    if (!preset || preset.id === "custom" || preset.accessoryPicker) return false;
+    if (preset.category === "key" || preset.category === "quest") return false;
+    if (preset.rarity === "unique" || preset.rarity === "legendary") return false;
+    return true;
+  });
+  const rarity = preferredRarity || weightedRandomValue(RANDOM_EVENT_LOOT_RARITY_WEIGHTS) || "common";
+  const categoryKey = preferredCategory || weightedRandomValue(RANDOM_EVENT_LOOT_CATEGORY_WEIGHTS) || "coins";
+
+  if (categoryKey === "coins") {
+    const coins = createLootFromPreset("coins");
+    const rangeByRarity = {
+      common: [4, 12],
+      uncommon: [8, 18],
+      rare: [12, 26],
+      epic: [18, 34],
+      mythic: [24, 42]
+    };
+    const [minQty, maxQty] = rangeByRarity[rarity] || rangeByRarity.common;
+    coins.quantity = randomInt(minQty, maxQty);
+    return coins;
+  }
+
+  const categoryFilter = (preset) => {
+    if (categoryKey === "consumable") return ["consumable", "utility"].includes(preset.category);
+    if (categoryKey === "equipment") return preset.category === "weapon";
+    if (categoryKey === "defense") return ["armor", "shield"].includes(preset.category);
+    if (categoryKey === "accessory") return ACCESSORY_CATEGORY_VALUES.includes(preset.category);
+    if (categoryKey === "treasure") return ["treasure", "relic"].includes(preset.category);
+    return true;
+  };
+
+  let filtered = pool.filter((preset) => categoryFilter(preset) && normalizeString(preset.rarity) === rarity);
+  if (!filtered.length) filtered = pool.filter(categoryFilter);
+  if (!filtered.length) filtered = pool;
+  const preset = filtered[randomInt(0, filtered.length - 1)];
+  const loot = createLootFromPreset(preset.id);
+  if (loot.category === "consumable" || loot.category === "utility") {
+    loot.quantity = randomInt(1, rarity === "common" ? 2 : 1);
+  } else {
+    loot.quantity = 1;
+  }
+  return loot;
+}
+
+function generateRandomEventLootBundle() {
+  const drops = [];
+  const includeCoins = Math.random() < 0.45;
+  if (includeCoins) drops.push(createRandomEventLootEntry("coins"));
+  drops.push(createRandomEventLootEntry());
+  if (Math.random() < 0.18) {
+    const bonusCategory = weightedRandomValue([
+      { value: "consumable", weight: 40 },
+      { value: "treasure", weight: 28 },
+      { value: "equipment", weight: 20 },
+      { value: "accessory", weight: 12 }
+    ]);
+    drops.push(createRandomEventLootEntry(bonusCategory));
+  }
+  return cloneLootDraft(mergeLootEntries(drops));
 }
 
 function mergeLootEntries(lootList) {
@@ -2606,19 +3593,19 @@ function syncForceLoadoutUI() {
 
   let icon, label, body, mod;
   if (!forced) {
-    icon = "🎒";
+    icon = "+";
     label = "Kit aggiuntivo";
     body = "Gli oggetti del kit vengono dati al giocatore in aggiunta al suo equipaggiamento pregresso (se consentito dalle impostazioni dell'avventura).";
     mod = "";
   } else if (restore) {
-    icon = "🔒";
+    icon = "+";
     label = "Loadout forzato + ripristino";
     body = "All'avvio zaino ed equip vengono azzerati: il giocatore parte solo con il kit. Al termine dell'avventura l'equipaggiamento originale viene restituito automaticamente.";
     mod = "loadout-mode-summary--restore";
   } else {
-    icon = "⚠️";
+    icon = "?️";
     label = "Loadout forzato";
-    body = "All'avvio zaino ed equip vengono azzerati: il giocatore parte solo con il kit. L'equipaggiamento originale non viene salvato — assicurati che sia intenzionale.";
+    body = "All'avvio zaino ed equip vengono azzerati: il giocatore parte solo con il kit. L'equipaggiamento originale non viene salvato: assicurati che sia intenzionale.";
     mod = "loadout-mode-summary--warn";
   }
 
@@ -2771,7 +3758,7 @@ function syncCurrentSceneEditorStateFromDom() {
   desc.title = els.sceneTitle?.value ?? desc.title;
   desc.text = els.sceneOpeningText?.value ?? desc.text;
   desc.isEnding = els.sceneIsEnding?.checked ?? desc.isEnding;
-  // Le scelte sono già sincronizzate live tramite i listener nei choice card
+  // Le scelte sono gi� sincronizzate live tramite i listener nei choice card
 }
 
 function saveCurrentDescription({ announce = false, renderFlow = true } = {}) {
@@ -2834,7 +3821,7 @@ function updateSceneSaveStatus() {
     ? "Le modifiche del nodo vengono confermate quando salvi l'avventura o cambi evento."
     : state.ui.sceneDirty
       ? `Hai modifiche non salvate. Usa Salva avventura per confermare.`
-      : `${subject} è salvato${state.ui.sceneSavedAt ? ` alle ${formatSceneSaveTime(state.ui.sceneSavedAt)}` : ""}.`;
+      : `${subject} � salvato${state.ui.sceneSavedAt ? ` alle ${formatSceneSaveTime(state.ui.sceneSavedAt)}` : ""}.`;
 }
 
 function switchSelectedScene(nextSceneId) {
@@ -2862,15 +3849,18 @@ function renderFlowCards(bounds = computeBoardBounds()) {
   state.ui.flowBoardBounds = bounds;
   els.flowCanvas.style.width = `${bounds.width}px`;
   els.flowCanvas.style.height = `${bounds.height}px`;
+  renderChapterGroupFrames(bounds);
   const fragment = document.createDocumentFragment();
 
   state.adventure.descriptions.forEach((desc, index) => {
+    if (isNodeHiddenByCollapsedChapter(desc.id)) return;
     fragment.appendChild(createFlowCard(desc, index, bounds));
   });
 
   els.flowCanvas.appendChild(fragment);
   renderChoiceNodes(bounds);
   updateChoiceNodeSelection();
+  updateGraphNodeMultiSelection();
   renderFlowStats();
   renderMinimap();
 }
@@ -2881,6 +3871,12 @@ function createFlowCard(desc, index, bounds = getCurrentFlowBoardBounds()) {
 
   card.addEventListener("click", (event) => {
     if (event.target.closest(".node-connector")) return;
+    if (event.shiftKey) {
+      event.stopPropagation();
+      toggleGraphNodeMultiSelection(card.dataset.sceneId);
+      return;
+    }
+    setGraphNodeMultiSelection([card.dataset.sceneId]);
     closeFlowQuickMenus();
 
     // Pulsante "+ scelta" (nel footer o nell'empty state delle scelte)
@@ -2890,7 +3886,7 @@ function createFlowCard(desc, index, bounds = getCurrentFlowBoardBounds()) {
       return;
     }
 
-    // Click su una riga scelta → picker tipo evento
+    // Click su una riga scelta ? picker tipo evento
     const choiceRow = event.target.closest('[data-choice-id]');
     if (choiceRow) {
       switchSelectedScene(card.dataset.sceneId);
@@ -2906,7 +3902,7 @@ function createFlowCard(desc, index, bounds = getCurrentFlowBoardBounds()) {
     if (event.target.closest(".node-connector")) return;
     if (event.target.closest('[data-action="add-choice"]')) return;
 
-    // Doppio clic sul titolo → modifica inline
+    // Doppio clic sul titolo ? modifica inline
     if (event.target.closest(".flow-card-title")) {
       event.stopPropagation();
       startInlineTitleEdit(card, desc);
@@ -2971,6 +3967,7 @@ function syncFlowCard(card, desc, index, bounds = getCurrentFlowBoardBounds()) {
   card.className = [
     "flow-card node-card",
     desc.id === state.selectedDescriptionId ? "active" : "",
+    isGraphNodeMultiSelected(desc.id) ? "is-multi-selected" : "",
     metrics.compact ? "flow-card--compact" : "",
     isOrphanCard ? "flow-card--orphan" : "",
     desc.isEnding ? "flow-card--ending" : "",
@@ -2998,7 +3995,7 @@ function buildFlowCardMarkup(desc, index) {
       <div class="flow-card-mini-index">${index + 1}</div>
       <div class="flow-card-mini-meta">
         <span>${desc.isEnding ? "FIN" : "SC"}</span>
-        <span>${isStart ? "▶" : ""}${isOrphan ? "!" : ""}</span>
+        <span>${isStart ? "?" : ""}${isOrphan ? "!" : ""}</span>
       </div>
     `;
   }
@@ -3009,8 +4006,8 @@ function buildFlowCardMarkup(desc, index) {
     <div class="flow-card-head">
       <strong class="flow-card-title" title="Doppio clic per modificare il titolo">${index + 1}. ${esc(desc.title || "Senza titolo")}</strong>
       <span class="flow-card-badges">
-        ${isStart ? '<span class="flow-badge flow-badge--start">▶</span>' : ""}
-        ${desc.isEnding ? '<span class="flow-badge flow-badge--ending">■</span>' : ""}
+        ${isStart ? '<span class="flow-badge flow-badge--start">IN</span>' : ""}
+        ${desc.isEnding ? '<span class="flow-badge flow-badge--ending">FIN</span>' : ""}
         ${isOrphan ? '<span class="flow-badge flow-badge--orphan" title="Nessun nodo collega qui">!</span>' : ""}
         ${choiceCount > 0 ? `<span class="flow-badge flow-badge--choices" title="${choiceCount} scelta/e">${choiceCount}</span>` : ""}
       </span>
@@ -3021,14 +4018,14 @@ function buildFlowCardMarkup(desc, index) {
 function buildExitChip(choice, index) {
   const ev = choice.event;
   const type = ev?.type;
-  const icon = type === "combat"      ? "⚔"
-    : type === "skillcheck"           ? "🎲"
-    : type === "requirement"          ? "🔑"
-    : type === "dialogue"             ? "💬"
-    : type === "shop"                 ? "🏪"
-    : type === "loot"                 ? "🗡"
-    : type === "transition"           ? "↗"
-    : "→";
+  const icon = type === "combat"      ? "\u2694"
+    : type === "skillcheck"           ? "\u25C7"
+    : type === "requirement"          ? "R"
+    : type === "dialogue"             ? "D"
+    : type === "shop"                 ? "$"
+    : type === "loot"                 ? "L"
+    : type === "transition"           ? ">"
+    : "+";
   const label = choice.text || `Scelta ${index + 1}`;
   const isLinked = Boolean(choice.targetId || ev);
   const colorClass = type === "combat" ? "chip--combat"
@@ -3098,26 +4095,35 @@ function resolveGraphNodeEntry(targetId, bounds = getCurrentFlowBoardBounds()) {
 function buildGraphLinkMarkup(bounds = getCurrentFlowBoardBounds()) {
   const lines = [];
   const visibleBounds = shouldVirtualizeFlowLinks() ? getVisibleFlowBounds(bounds) : null;
+  const { portsByGroup } = buildCollapsedChapterPortMaps(bounds);
 
   state.adventure.descriptions.forEach((desc) => {
+    if (isNodeHiddenByCollapsedChapter(desc.id)) return;
     const choices = desc.choices || [];
     if (choices.length === 0) return;
 
-    // Draw trunk (scene → bus) + bus (vertical connecting choice nodes)
+    // Draw trunk (scene ? bus) + bus (vertical connecting choice nodes)
     lines.push(buildTrunkBusPath(desc, bounds));
-
-    // Draw arrows from each choice node position to its target
-    const choicePositions = choiceNodesBoardPositions(desc, bounds);
-    choicePositions.forEach(({ choice, x, y }) => {
-      const color = choiceLinkColor(choice);
-      appendDescriptionChoiceLinks(lines, { x, y }, choice, color, visibleBounds, bounds);
-    });
   });
 
-  getAdventureEventNodes().forEach((eventNode) => {
-    const source = eventNodeAnchor(eventNode, bounds);
-    const color = choiceLinkColor(eventNode);
-    appendDescriptionChoiceLinks(lines, source, eventNode, color, visibleBounds, bounds);
+  collectGraphEdges(bounds).forEach((edge) => {
+    const sourceGroup = getCollapsedChapterGroupByNodeId(edge.sourceNodeId);
+    const targetGroup = getCollapsedChapterGroupByNodeId(edge.targetId);
+    if (sourceGroup && targetGroup && sourceGroup.id === targetGroup.id) return;
+    const source = sourceGroup
+      ? (portsByGroup.get(sourceGroup.id)?.exits || []).find((port) =>
+          port.nodeId === edge.sourceNodeId
+        )?.point
+      : edge.sourcePoint;
+    const target = targetGroup
+      ? (portsByGroup.get(targetGroup.id)?.entries || []).find((port) =>
+          port.nodeId === edge.targetId
+        )?.point
+      : resolveGraphNodeEntry(edge.targetId, bounds);
+    if (!source || !target) return;
+    if (shouldRenderFlowLink(source, target, visibleBounds)) {
+      lines.push(linkPath(source, target, edge.color, edge.dashed, edge.label));
+    }
   });
 
   if (state.linkDraft) {
@@ -3184,6 +4190,11 @@ function resolveChoiceTargetIds(choice) {
   if (ev.type === "skillcheck")  { addBranch(ev.successBranch); addBranch(ev.failureBranch); }
   else if (ev.type === "combat") { addBranch(ev.victoryBranch); addBranch(ev.defeatBranch); if (ev.retreatBranch) addBranch(ev.retreatBranch); }
   else if (ev.type === "requirement") { addBranch(ev.metBranch); addBranch(ev.unmetBranch); }
+  else if (ev.type === "dialogue") {
+    const responses = Array.isArray(ev.root?.responses) ? ev.root.responses : [];
+    if (responses.length) responses.forEach((response) => addBranch(response));
+    else addBranch(ev.branch || ev.root?.branch);
+  }
   else                            { addBranch(ev.branch); }
   return ids;
 }
@@ -3191,9 +4202,9 @@ function resolveChoiceTargetIds(choice) {
 function appendDescriptionChoiceLinks(lines, source, choice, color, visibleBounds = null, bounds = getCurrentFlowBoardBounds()) {
   if (choice.event) {
     const ev = choice.event;
-    const icon = ev.type === "combat" ? "⚔" : ev.type === "skillcheck" ? "🎲"
-      : ev.type === "requirement" ? "🔑" : ev.type === "shop" ? "🏪"
-      : ev.type === "loot" ? "🗡" : ev.type === "dialogue" ? "💬" : "";
+    const icon = ev.type === "combat" ? "\u2694" : ev.type === "skillcheck" ? "\u25C7"
+      : ev.type === "requirement" ? "R" : ev.type === "shop" ? "$"
+      : ev.type === "loot" ? "L" : ev.type === "dialogue" ? "D" : "";
     if (ev.type === "skillcheck") {
       appendBranchLink(lines, source, ev.successBranch, "#6f8a57", visibleBounds, bounds, false, icon);
       appendBranchLink(lines, source, ev.failureBranch, "#b94a48", visibleBounds, bounds, false, "");
@@ -3204,6 +4215,16 @@ function appendDescriptionChoiceLinks(lines, source, choice, color, visibleBound
     } else if (ev.type === "requirement") {
       appendBranchLink(lines, source, ev.metBranch, "#6f8a57", visibleBounds, bounds, false, icon);
       appendBranchLink(lines, source, ev.unmetBranch, "#b94a48", visibleBounds, bounds, false, "");
+    } else if (ev.type === "dialogue") {
+      const responses = Array.isArray(ev.root?.responses) ? ev.root.responses : [];
+      if (responses.length) {
+        responses.forEach((response, index) => {
+          appendBranchLink(lines, source, response, "#8b78b8", visibleBounds, bounds, false, index === 0 ? icon : "");
+        });
+      } else {
+        const branch = ev.branch || ev.root?.branch;
+        if (branch) appendBranchLink(lines, source, branch, color, visibleBounds, bounds, false, icon);
+      }
     } else {
       const branch = ev.branch;
       if (branch) appendBranchLink(lines, source, branch, color, visibleBounds, bounds, false, icon);
@@ -3258,8 +4279,23 @@ function linkPath(source, target, color, dashed = false, label = "") {
 
 function computeBoardBounds() {
   const metrics = getFlowCardMetrics();
-  const scenePositions = state.adventure.descriptions.map((d) => d.position || { x: 0, y: 0 });
-  const eventPositions = getAdventureEventNodes().map((node) => node.position || { x: 0, y: 0 });
+  const scenePositions = state.adventure.descriptions
+    .filter((desc) => !isNodeHiddenByCollapsedChapter(desc.id))
+    .map((d) => d.position || { x: 0, y: 0 });
+  const eventPositions = getAdventureEventNodes()
+    .filter((node) => !isNodeHiddenByCollapsedChapter(node.id))
+    .map((node) => node.position || { x: 0, y: 0 });
+  const chapterFrames = getAdventureChapterGroups()
+    .filter((group) => group.collapsed)
+    .map((group) => {
+      const frame = chapterGroupCollapsedFrame(group, { offsetX: 0, offsetY: 0 });
+      return {
+        x: frame.left,
+        y: frame.top,
+        width: frame.width,
+        height: frame.height
+      };
+    });
   const allPositions = scenePositions.concat(eventPositions);
   const minX = allPositions.length ? Math.min(...allPositions.map((point) => point.x), 0) : 0;
   const minY = allPositions.length ? Math.min(...allPositions.map((point) => point.y), 0) : 0;
@@ -3271,10 +4307,16 @@ function computeBoardBounds() {
   const maxSceneY = scenePositions.length ? Math.max(...scenePositions.map((point) => point.y + metrics.height), metrics.height) : metrics.height;
   const maxEventX = eventPositions.length ? Math.max(...eventPositions.map((point) => point.x + FLOW_EVENT_NODE_WIDTH / 2 + 32), 0) : 0;
   const maxEventY = eventPositions.length ? Math.max(...eventPositions.map((point) => point.y + FLOW_EVENT_NODE_HEIGHT / 2 + 32), 0) : 0;
-  const maxX = Math.max(maxSceneX, maxEventX, metrics.width);
-  const maxY = Math.max(maxSceneY, maxEventY, metrics.height);
-  const contentWidth = Math.max(metrics.width, maxX - minX);
-  const contentHeight = Math.max(metrics.height, maxY - minY);
+  const maxChapterX = chapterFrames.length ? Math.max(...chapterFrames.map((frame) => frame.x + frame.width), 0) : 0;
+  const maxChapterY = chapterFrames.length ? Math.max(...chapterFrames.map((frame) => frame.y + frame.height), 0) : 0;
+  const minChapterX = chapterFrames.length ? Math.min(...chapterFrames.map((frame) => frame.x), 0) : 0;
+  const minChapterY = chapterFrames.length ? Math.min(...chapterFrames.map((frame) => frame.y), 0) : 0;
+  const finalMinX = Math.min(minX, minChapterX);
+  const finalMinY = Math.min(minY, minChapterY);
+  const maxX = Math.max(maxSceneX, maxEventX, maxChapterX, metrics.width);
+  const maxY = Math.max(maxSceneY, maxEventY, maxChapterY, metrics.height);
+  const contentWidth = Math.max(metrics.width, maxX - finalMinX);
+  const contentHeight = Math.max(metrics.height, maxY - finalMinY);
   const zoom = state.ui.flowZoom || 1;
   const viewportLogicalWidth = Math.ceil((els.flowBoard?.clientWidth || FLOW_WORKSPACE_MIN_WIDTH) / zoom);
   const viewportLogicalHeight = Math.ceil((els.flowBoard?.clientHeight || FLOW_WORKSPACE_MIN_HEIGHT) / zoom);
@@ -3286,9 +4328,9 @@ function computeBoardBounds() {
     Math.max(FLOW_WORKSPACE_MIN_HEIGHT, viewportLogicalHeight),
     Math.ceil(contentHeight + FLOW_WORKSPACE_PADDING * 2)
   );
-  const offsetX = FLOW_WORKSPACE_PADDING - minX;
-  const offsetY = FLOW_WORKSPACE_PADDING - minY;
-  return { width, height, minX, minY, maxX, maxY, offsetX, offsetY };
+  const offsetX = FLOW_WORKSPACE_PADDING - finalMinX;
+  const offsetY = FLOW_WORKSPACE_PADDING - finalMinY;
+  return { width, height, minX: finalMinX, minY: finalMinY, maxX, maxY, offsetX, offsetY };
 }
 
 function getCurrentFlowBoardBounds() {
@@ -3371,20 +4413,26 @@ function choiceEventType(choice) {
 function choiceEventVisual(choice) {
   const type = choiceEventType(choice);
   const map = {
-    combat: { icon: "⚔", label: "Combattimento", className: "choice-node--combat", cardClass: "choice-card--combat" },
-    skillcheck: { icon: "🎲", label: "Prova", className: "choice-node--check", cardClass: "choice-card--skillcheck" },
-    requirement: { icon: "🔑", label: "Requisito", className: "choice-node--req", cardClass: "choice-card--requirement" },
-    shop: { icon: "🏪", label: "Negozio", className: "choice-node--shop", cardClass: "choice-card--shop" },
-    loot: { icon: "🗡", label: "Loot", className: "choice-node--loot", cardClass: "choice-card--loot" },
-    condition: { icon: "✦", label: "Condizione", className: "choice-node--condition", cardClass: "choice-card--condition" },
-    dialogue: { icon: "💬", label: "Dialogo", className: "choice-node--dialogue", cardClass: "choice-card--dialogue" },
-    transition: { icon: "→", label: "Transizione", className: "choice-node--nav", cardClass: "choice-card--transition" },
-    empty: { icon: "·", label: "Evento", className: "choice-node--empty", cardClass: "choice-card--empty" }
+    combat: { icon: "", label: "Combattimento", className: "choice-node--combat", cardClass: "choice-card--combat" },
+    skillcheck: { icon: "", label: "Prova", className: "choice-node--check", cardClass: "choice-card--skillcheck" },
+    requirement: { icon: "", label: "Requisito", className: "choice-node--req", cardClass: "choice-card--requirement" },
+    shop: { icon: "", label: "Negozio", className: "choice-node--shop", cardClass: "choice-card--shop" },
+    loot: { icon: "", label: "Loot", className: "choice-node--loot", cardClass: "choice-card--loot" },
+    condition: { icon: "", label: "Condizione", className: "choice-node--condition", cardClass: "choice-card--condition" },
+    dialogue: { icon: "", label: "Dialogo", className: "choice-node--dialogue", cardClass: "choice-card--dialogue" },
+    transition: { icon: "", label: "Transizione", className: "choice-node--nav", cardClass: "choice-card--transition" },
+    empty: { icon: "�", label: "Evento", className: "choice-node--empty", cardClass: "choice-card--empty" }
   };
   return map[type] || map.empty;
 }
 
-function eventPortsForType(eventType) {
+function dialogueResponsePortId(responseId) {
+  return `response:${responseId}`;
+}
+
+function eventPortsForType(eventOrType) {
+  const event = typeof eventOrType === "string" ? null : eventOrType;
+  const eventType = typeof eventOrType === "string" ? eventOrType : eventOrType?.type;
   if (eventType === "combat") return [
     { id: "victory", label: "Vittoria" },
     { id: "defeat", label: "Sconfitta" },
@@ -3398,6 +4446,16 @@ function eventPortsForType(eventType) {
     { id: "met", label: "Soddisfatto" },
     { id: "unmet", label: "Non soddisfatto" }
   ];
+  if (eventType === "dialogue") {
+    ensureDialogueEventDefaults(event);
+    const responses = Array.isArray(event?.root?.responses) ? event.root.responses : [];
+    if (responses.length) {
+      return responses.map((response, index) => ({
+        id: dialogueResponsePortId(response.id),
+        label: `R${index + 1}`
+      }));
+    }
+  }
   return [{ id: "next", label: "Continua" }];
 }
 
@@ -3410,22 +4468,30 @@ function eventBranchByPortId(event, portId) {
       : event.retreatBranch;
   if (event.type === "skillcheck") return portId === "success" ? event.successBranch : event.failureBranch;
   if (event.type === "requirement") return portId === "met" ? event.metBranch : event.unmetBranch;
+  if (event.type === "dialogue") {
+    ensureDialogueEventDefaults(event);
+    if (portId?.startsWith("response:")) {
+      const responseId = portId.slice("response:".length);
+      return (event.root?.responses || []).find((response) => response.id === responseId) || null;
+    }
+    return event.branch || event.root?.branch || null;
+  }
   return event.branch || null;
 }
 
 function summarizeChoiceFlow(choice) {
   const visual = choiceEventVisual(choice);
   if (choice?.event) {
-    const ports = eventPortsForType(choice.event.type);
+    const ports = eventPortsForType(choice.event);
     const linked = ports.filter((port) => {
       const branch = eventBranchByPortId(choice.event, port.id);
       return Boolean(branch?.targetId || branch?.event);
     });
-    if (!linked.length) return `${visual.label} · da collegare nella mappa`;
-    return `${visual.label} · ${linked.map((port) => port.label).join(" / ")}`;
+    if (!linked.length) return `${visual.label} | da collegare nella mappa`;
+    return `${visual.label} | ${linked.map((port) => port.label).join(" / ")}`;
   }
   if (choice?.targetId) {
-    return `${visual.label} · ${sceneTitleById(choice.targetId, "destinazione")}`;
+    return `${visual.label} | ${sceneTitleById(choice.targetId, "destinazione")}`;
   }
   return "Evento ancora da definire";
 }
@@ -3461,7 +4527,7 @@ function buildAdventureGraphProjection(adventure = state.adventure) {
       nodeType: "event",
       eventType: event.type || "transition",
       label: options.label || choice?.text || visual.label,
-      ports: eventPortsForType(event.type || "transition"),
+      ports: eventPortsForType(event),
       ref: {
         descriptionId: options.descriptionId || null,
         choiceId: choice?.id || null,
@@ -3476,12 +4542,12 @@ function buildAdventureGraphProjection(adventure = state.adventure) {
       toNodeId: eventNodeId
     });
 
-    eventPortsForType(event.type || "transition").forEach((port) => {
+    eventPortsForType(event).forEach((port) => {
       const branch = eventBranchByPortId(event, port.id);
       if (!branch) return;
       if (branch.event) {
         ensureEventNode(choice, branch.event, eventNodeId, port.id, `${port.id}__event`, {
-          label: `${visual.label} · ${port.label}`,
+          label: `${visual.label} � ${port.label}`,
           descriptionId: options.descriptionId || null
         });
         return;
@@ -3617,7 +4683,7 @@ function scrollFlowBoardToScene(sceneId) {
   });
 }
 
-// Helper: aggiungi pulsante → accanto a un select di destinazione scena
+// Helper: aggiungi pulsante ? accanto a un select di destinazione scena
 function attachNavigateBtn(container, selector) {
   const select = container.querySelector(selector);
   if (!select) return;
@@ -3625,7 +4691,7 @@ function attachNavigateBtn(container, selector) {
   btn.type = "button";
   btn.className = "btn-navigate-node";
   btn.title = "Vai al nodo nel flusso";
-  btn.textContent = "→";
+  btn.textContent = "?";
   btn.addEventListener("click", () => {
     const sceneId = select.value;
     if (!sceneId) return;
@@ -3642,11 +4708,13 @@ function renderFlowStats() {
   if (!els.flowStats) return;
   const descriptionCount = state.adventure.descriptions.length;
   const eventCount = getAdventureEventNodes().length;
+  const chapterCount = getAdventureChapterGroups().length;
   const endings = state.adventure.descriptions.filter((d) => d.isEnding).length;
-  const baseLabel = `${descriptionCount} descr. · ${eventCount} eventi`;
+  const baseLabel = `${descriptionCount} descr. | ${eventCount} eventi${chapterCount ? ` | ${chapterCount} capitol${chapterCount === 1 ? "o" : "i"}` : ""}`;
   els.flowStats.textContent = endings > 0
-    ? `${baseLabel} · ${endings} fin${endings === 1 ? "e" : "i"}`
+    ? `${baseLabel} | ${endings} fin${endings === 1 ? "e" : "i"}`
     : baseLabel;
+  renderChapterGroupingUi();
 }
 
 // ─── Flow search / filter ─────────────────────────────────────────────────────
@@ -3847,14 +4915,13 @@ function startInlineTitleEdit(card, desc) {
 // ── Choice event-type quick-picker ───────────────────────────────────────────
 
 const CHOICE_EVENT_PICKER_TYPES = [
-  { type: null,         icon: "→",  label: "Solo navigazione" },
-  { type: "combat",     icon: "⚔",  label: "Combattimento" },
-  { type: "skillcheck", icon: "🎲", label: "Prova abilità" },
-  { type: "requirement",icon: "🔑", label: "Requisito" },
-  { type: "loot",       icon: "🗡", label: "Loot" },
-  { type: "shop",       icon: "🏪", label: "Negozio" },
-  { type: "dialogue",   icon: "💬", label: "Dialogo" },
-  { type: "transition", icon: "🔗", label: "Transizione" },
+  { type: null,         icon: "",  label: "Solo navigazione" },
+  { type: "combat",     icon: "",  label: "Combattimento" },
+  { type: "skillcheck", icon: "", label: "Prova abilit�" },
+  { type: "requirement",icon: "", label: "Requisito" },
+  { type: "loot",       icon: "", label: "Loot" },
+  { type: "dialogue",   icon: "", label: "Dialogo" },
+  { type: "transition", icon: "", label: "Transizione" },
 ];
 
 function showChoiceEventPicker(descId, choiceId, anchorRect) {
@@ -4053,7 +5120,7 @@ function appendQuickMenuCloseButton(header, onClose) {
   closeBtn.type = "button";
   closeBtn.className = "ctp-close-btn";
   closeBtn.setAttribute("aria-label", "Chiudi card");
-  closeBtn.textContent = "×";
+  closeBtn.textContent = "�";
   closeBtn.addEventListener("click", (event) => {
     event.stopPropagation();
     onClose?.();
@@ -4085,7 +5152,7 @@ function showFlowSceneQuickMenu(sceneId, anchorRect) {
 
     const header = document.createElement("div");
     header.className = "ctp-header";
-    header.innerHTML = `<span class="ctp-type-badge">📖 Scena</span>`;
+    header.innerHTML = `<span class="ctp-type-badge">Scena</span>`;
 
     const advancedBtn = document.createElement("button");
     advancedBtn.type = "button";
@@ -4154,7 +5221,12 @@ function showFlowSceneQuickMenu(sceneId, anchorRect) {
     });
     actions.appendChild(addChoiceBtn);
 
-    menu.append(titleWrap, textWrap, actions);
+    const chapterRoleControl = createChapterRoleControl(sceneId);
+    if (chapterRoleControl) {
+      menu.append(titleWrap, textWrap, chapterRoleControl, actions);
+    } else {
+      menu.append(titleWrap, textWrap, actions);
+    }
   };
 
   rebuild();
@@ -4207,6 +5279,61 @@ function createQuickMenuSelect(hydrator, value = "") {
   return select;
 }
 
+const DIALOGUE_RESPONSE_INTENTS = [
+  { value: "ask", label: "Chiedi" },
+  { value: "insist", label: "Insisti" },
+  { value: "threaten", label: "Minaccia" },
+  { value: "lie", label: "Menti" },
+  { value: "show", label: "Mostra" },
+  { value: "leave", label: "Congedati" }
+];
+
+const DIALOGUE_GATE_OPTIONS = [
+  { value: "none", label: "Nessun gate" },
+  { value: "requirement", label: "Requisito" },
+  { value: "skillcheck", label: "Prova" },
+  { value: "unlock", label: "Sbloccata" }
+];
+
+function createDialogueResponse() {
+  return {
+    id: `dlg_resp_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+    text: "",
+    intent: "ask",
+    targetId: null,
+    gateType: "none",
+    gateRefId: "",
+    once: false,
+    hiddenUntilUnlocked: false
+  };
+}
+
+function ensureDialogueEventDefaults(ev) {
+  if (!ev) return;
+  ev.root = ev.root || { npcText: "", responses: [], branch: createEmptyEventBranch() };
+  ev.root.responses = Array.isArray(ev.root.responses) ? ev.root.responses : [];
+  ev.branch = ev.branch || ev.root.branch || createEmptyEventBranch();
+  ev.root.branch = ev.branch;
+  ev.root.responses = ev.root.responses.map((response) => ({
+    id: response?.id || createDialogueResponse().id,
+    text: response?.text || "",
+    intent: response?.intent || "ask",
+    targetId: normalizeString(response?.targetId) || null,
+    gateType: response?.gateType || "none",
+    gateRefId: response?.gateRefId || "",
+    once: Boolean(response?.once),
+    hiddenUntilUnlocked: Boolean(response?.hiddenUntilUnlocked)
+  }));
+}
+
+function dialogueIntentLabel(value = "") {
+  return DIALOGUE_RESPONSE_INTENTS.find((entry) => entry.value === value)?.label || "Risposta";
+}
+
+function dialogueGateLabel(value = "") {
+  return DIALOGUE_GATE_OPTIONS.find((entry) => entry.value === value)?.label || "Gate";
+}
+
 function showFlowEventQuickMenu(descId, choiceId, anchorRect) {
   const context = getGraphChoiceContext(descId, choiceId);
   const desc = context?.description;
@@ -4217,6 +5344,8 @@ function showFlowEventQuickMenu(descId, choiceId, anchorRect) {
   const menu = document.createElement("div");
   menu.id = "flow-event-quick-menu";
   menu.className = "choice-targets-popover flow-event-quick-menu";
+  menu.dataset.descId = descId;
+  menu.dataset.choiceId = choiceId;
   const left = Math.min(anchorRect.right + 10, window.innerWidth - 320);
   const top = Math.min(Math.max(8, anchorRect.top - 6), window.innerHeight - 420);
   menu.style.left = `${left}px`;
@@ -4275,6 +5404,9 @@ function showFlowEventQuickMenu(descId, choiceId, anchorRect) {
     sceneTextLabel.appendChild(sceneTextInput);
     sceneTextWrap.appendChild(sceneTextLabel);
     menu.appendChild(sceneTextWrap);
+
+    const chapterRoleControl = createChapterRoleControl(choiceId);
+    if (chapterRoleControl) menu.appendChild(chapterRoleControl);
 
     const eventPayload = liveChoice.event;
     if (!eventPayload) {
@@ -4338,7 +5470,7 @@ function showFlowEventQuickMenu(descId, choiceId, anchorRect) {
         const item = document.createElement("div");
         item.className = "flow-event-quick-list__item flow-event-quick-list__item--sub";
         const label = document.createElement("span");
-        label.textContent = `${loot.itemName || lootLabelFromPreset(loot.itemId) || loot.itemId || `Loot ${index + 1}`} ×${loot.quantity || 1}`;
+        label.textContent = `${loot.itemName || lootLabelFromPreset(loot.itemId) || loot.itemId || `Loot ${index + 1}`} �${loot.quantity || 1}`;
         const removeBtn = document.createElement("button");
         removeBtn.type = "button";
         removeBtn.className = "danger small";
@@ -4363,7 +5495,7 @@ function showFlowEventQuickMenu(descId, choiceId, anchorRect) {
         const minusBtn = document.createElement("button");
         minusBtn.type = "button";
         minusBtn.className = "flow-event-quick-stepper__btn";
-        minusBtn.textContent = "−";
+        minusBtn.textContent = "-";
 
         const input = createQuickMenuNumberInput(value, min, max);
         input.classList.add("flow-event-quick-stepper__input");
@@ -4437,7 +5569,7 @@ function showFlowEventQuickMenu(descId, choiceId, anchorRect) {
         label.textContent = group.name || `Gruppo ${index + 1}`;
         const meta = document.createElement("span");
         meta.className = "hint";
-        meta.textContent = `Quantità ${group.count || 1} | HP ${group.hitPoints || 0} | Loot ${(group.loot || []).length}`;
+        meta.textContent = `Quantit� ${group.count || 1} | HP ${group.hitPoints || 0} | Loot ${(group.loot || []).length}`;
         left.append(label, meta);
 
         const actions = document.createElement("div");
@@ -4492,7 +5624,7 @@ function showFlowEventQuickMenu(descId, choiceId, anchorRect) {
         eventPayload.difficulty = Math.max(1, parseInt(event.target.value, 10) || 12);
         persistQuickMenu();
       });
-      appendQuickMenuRow(menu, "Difficoltà", diffInput);
+      appendQuickMenuRow(menu, "Difficolt�", diffInput);
 
       eventPayload.successBranch = eventPayload.successBranch || {};
       eventPayload.failureBranch = eventPayload.failureBranch || { targetId: STAY_SENTINEL };
@@ -4565,7 +5697,7 @@ function showFlowEventQuickMenu(descId, choiceId, anchorRect) {
         const item = document.createElement("div");
         item.className = "flow-event-quick-list__item";
         const label = document.createElement("span");
-        label.textContent = `${group.name || `Gruppo ${index + 1}`} ×${group.count || 1}`;
+        label.textContent = `${group.name || `Gruppo ${index + 1}`} �${group.count || 1}`;
         const removeBtn = document.createElement("button");
         removeBtn.type = "button";
         removeBtn.className = "danger small";
@@ -4605,7 +5737,7 @@ function showFlowEventQuickMenu(descId, choiceId, anchorRect) {
         onChoiceChange(desc, liveChoice);
         renderSceneEditor();
       });
-      appendQuickMenuRow(menu, "Difficoltà", diffInput);
+      appendQuickMenuRow(menu, "Difficolt�", diffInput);
 
       const burnLabel = document.createElement("label");
       burnLabel.className = "flow-event-quick-menu__check";
@@ -4632,12 +5764,21 @@ function showFlowEventQuickMenu(descId, choiceId, anchorRect) {
         option.textContent = label;
         modeSelect.appendChild(option);
       });
-      modeSelect.value = eventPayload.requirementMode
-        || (eventPayload.lockId ? "key" : eventPayload.questItemId ? "questItem" : "presetItem");
-      appendQuickMenuRow(menu, "Requisito", modeSelect);
+      const currentMode = getRequirementMode(eventPayload);
+      modeSelect.value = currentMode;
+      const summary = document.createElement("div");
+      summary.className = "flow-event-quick-summary";
+      const summaryTitle = document.createElement("strong");
+      summaryTitle.textContent = `${requirementModeMeta(currentMode).label}: ${requirementValueSummary(eventPayload)}`;
+      const summaryMeta = document.createElement("span");
+      summaryMeta.textContent = requirementModeMeta(currentMode).hint;
+      summary.append(summaryTitle, summaryMeta);
+      menu.appendChild(summary);
+      appendQuickMenuRow(menu, "Controlla", modeSelect);
 
       const syncRequirementValue = () => {
         const mode = modeSelect.value;
+        const meta = requirementModeMeta(mode);
         let control = null;
         const onValueChange = (nextValue) => {
           eventPayload.requirementMode = mode;
@@ -4658,12 +5799,12 @@ function showFlowEventQuickMenu(descId, choiceId, anchorRect) {
           control = createQuickMenuSelect((select, value) => hydrateLootSelect(select, value, {
             includeCustom: false,
             compact: true,
-            noneLabel: "— Seleziona oggetto —"
+            noneLabel: "Seleziona oggetto"
           }), eventPayload.itemId || "");
           control.addEventListener("change", (event) => onValueChange(event.target.value));
         }
 
-        appendQuickMenuRow(menu, "Valore", control);
+        appendQuickMenuRow(menu, meta.valueLabel, control);
       };
 
       modeSelect.addEventListener("change", () => {
@@ -4678,25 +5819,72 @@ function showFlowEventQuickMenu(descId, choiceId, anchorRect) {
       });
 
       syncRequirementValue();
+      eventPayload.metBranch = eventPayload.metBranch || {};
+      eventPayload.unmetBranch = eventPayload.unmetBranch || {};
+      appendQuickMenuRow(
+        menu,
+        "Soddisfatto",
+        buildQuickTargetControl(hydrateSceneTargetSelect, eventPayload.metBranch.targetId || "", (nextValue) => {
+          eventPayload.metBranch = eventPayload.metBranch || {};
+          eventPayload.metBranch.targetId = nextValue || null;
+        })
+      );
+      appendQuickMenuRow(
+        menu,
+        "Non soddisfatto",
+        buildQuickTargetControl(hydrateSceneTargetSelect, eventPayload.unmetBranch.targetId || "", (nextValue) => {
+          eventPayload.unmetBranch = eventPayload.unmetBranch || {};
+          eventPayload.unmetBranch.targetId = nextValue || null;
+        })
+      );
+      const responseInfo = document.createElement("div");
+      responsesWrap.className = "flow-dialogue-quick";
+      responseInfo.textContent = "Se il requisito e presente, il ramo soddisfatto consuma sempre 1 unita dell'oggetto richiesto.";
+      menu.appendChild(responseInfo);
       const consumeLabel = document.createElement("div");
       consumeLabel.style.display = "none";
       const consumeInput = document.createComment("requirement consumption is implicit");
-
-      consumeLabel.append(consumeInput, " Consuma oggetto se il requisito è soddisfatto");
+      consumeLabel.append(consumeInput, " Consuma oggetto se il requisito � soddisfatto");
       menu.appendChild(consumeLabel);
     } else if (eventPayload.type === "loot") {
+      const intro = document.createElement("div");
+      intro.className = "flow-event-quick-summary";
+      const introTitle = document.createElement("strong");
+      introTitle.textContent = "Ricompense del nodo";
+      const introMeta = document.createElement("span");
+      introMeta.textContent = "Filtra per tier o famiglia, oppure scrivi il nome dell'oggetto. Poi aggiungilo al nodo.";
+      intro.append(introTitle, introMeta);
+      menu.appendChild(intro);
+
+      const addWrap = document.createElement("div");
+      addWrap.className = "flow-event-quick-loot-builder";
       const presetSelect = document.createElement("select");
       presetSelect.className = "ctp-scene-select";
-      hydrateLootSelect(presetSelect, "", { includeCustom: false, compact: true });
-      presetSelect.addEventListener("change", (event) => {
-        const presetId = event.target.value || "coins";
+      const pickerShell = document.createElement("div");
+      pickerShell.className = "flow-event-quick-loot-picker";
+      pickerShell.appendChild(presetSelect);
+      hydrateLootSelect(presetSelect, "", {
+        includeCustom: false,
+        compact: true,
+        noneLabel: "Seleziona loot",
+        searchPlaceholder: "Scrivi per cercare loot..."
+      });
+      const addBtn = document.createElement("button");
+      addBtn.type = "button";
+      addBtn.className = "small";
+      addBtn.textContent = "Aggiungi loot";
+      addBtn.addEventListener("click", (event) => {
+        event.stopPropagation();
+        const presetId = presetSelect.value || "";
+        if (!presetId) return;
         eventPayload.loot = eventPayload.loot || [];
         eventPayload.loot.push(createLootFromPreset(presetId));
         onChoiceChange(desc, liveChoice);
         renderSceneEditor();
         rebuild();
       });
-      appendQuickMenuRow(menu, "Aggiungi loot", presetSelect);
+      addWrap.append(pickerShell, addBtn);
+      menu.appendChild(addWrap);
 
       const summary = document.createElement("div");
       summary.className = "flow-event-quick-list";
@@ -4705,7 +5893,7 @@ function showFlowEventQuickMenu(descId, choiceId, anchorRect) {
         item.className = "flow-event-quick-list__item";
         const label = document.createElement("span");
         const lootName = loot.itemName || lootLabelFromPreset(loot.itemId) || loot.itemId || `Loot ${index + 1}`;
-        label.textContent = `${lootName} ×${loot.quantity || 1}`;
+        label.textContent = `${lootName} �${loot.quantity || 1}`;
         const removeBtn = document.createElement("button");
         removeBtn.type = "button";
         removeBtn.className = "danger small";
@@ -4791,30 +5979,190 @@ function showFlowEventQuickMenu(descId, choiceId, anchorRect) {
       });
       menu.appendChild(summary);
     } else if (eventPayload.type === "dialogue") {
+      ensureDialogueEventDefaults(eventPayload);
       const npcInput = createQuickMenuTextInput(eventPayload.npcName || "", "Nome PNG");
       npcInput.addEventListener("input", (event) => {
         eventPayload.npcName = event.target.value;
-        onChoiceChange(desc, liveChoice);
-        renderSceneEditor();
+        persistQuickMenu();
       });
       appendQuickMenuRow(menu, "NPC", npcInput);
 
-      eventPayload.root = eventPayload.root || { npcText: "", responses: [], branch: { targetId: null } };
       const npcText = createQuickMenuTextarea(eventPayload.root.npcText || "", 4, "Battuta o apertura del dialogo");
       npcText.addEventListener("input", (event) => {
         eventPayload.root.npcText = event.target.value;
-        onChoiceChange(desc, liveChoice);
-        renderSceneEditor();
+        persistQuickMenu();
       });
       appendQuickMenuRow(menu, "Battuta", npcText);
 
-      const responseInfo = document.createElement("p");
-      responseInfo.className = "hint flow-event-quick-menu__hint";
-      const responseCount = Array.isArray(eventPayload.root.responses) ? eventPayload.root.responses.length : 0;
-      responseInfo.textContent = responseCount
-        ? `Risposte già create: ${responseCount}. Per ora la rifinitura delle risposte resta nel pannello avanzato.`
-        : "Per questo nodo puoi impostare subito PNG e battuta. Le risposte multiple si rifiniscono nel pannello avanzato.";
-      menu.appendChild(responseInfo);
+      const responsesWrap = document.createElement("div");
+      responsesWrap.className = "flow-dialogue-quick";
+
+      const responsesHead = document.createElement("div");
+      responsesHead.className = "flow-dialogue-quick__header";
+      const responsesTitle = document.createElement("strong");
+      responsesTitle.textContent = "Risposte del giocatore";
+      const responsesMeta = document.createElement("span");
+      responsesMeta.textContent = eventPayload.root.responses.length
+        ? `${eventPayload.root.responses.length}/4 risposte attive`
+        : "Aggiungi fino a 4 risposte";
+      responsesHead.append(responsesTitle, responsesMeta);
+      responsesWrap.appendChild(responsesHead);
+
+      const responsesList = document.createElement("div");
+      responsesList.className = "flow-dialogue-quick__list";
+      (eventPayload.root.responses || []).forEach((response, index) => {
+        const item = document.createElement("div");
+        item.className = "flow-dialogue-response";
+
+        const top = document.createElement("div");
+        top.className = "flow-dialogue-response__top";
+        const badgeRow = document.createElement("div");
+        badgeRow.className = "flow-dialogue-response__badges";
+
+        const intentBadge = document.createElement("span");
+        intentBadge.className = "flow-dialogue-response__badge";
+        intentBadge.textContent = dialogueIntentLabel(response.intent);
+        badgeRow.appendChild(intentBadge);
+
+        if (response.gateType && response.gateType !== "none") {
+          const gateBadge = document.createElement("span");
+          gateBadge.className = "flow-dialogue-response__badge flow-dialogue-response__badge--gate";
+          gateBadge.textContent = dialogueGateLabel(response.gateType);
+          badgeRow.appendChild(gateBadge);
+        }
+        if (response.once) {
+          const onceBadge = document.createElement("span");
+          onceBadge.className = "flow-dialogue-response__badge flow-dialogue-response__badge--muted";
+          onceBadge.textContent = "Una volta";
+          badgeRow.appendChild(onceBadge);
+        }
+        if (response.hiddenUntilUnlocked) {
+          const hiddenBadge = document.createElement("span");
+          hiddenBadge.className = "flow-dialogue-response__badge flow-dialogue-response__badge--muted";
+          hiddenBadge.textContent = "Nascosta";
+          badgeRow.appendChild(hiddenBadge);
+        }
+
+        const removeBtn = document.createElement("button");
+        removeBtn.type = "button";
+        removeBtn.className = "danger small";
+        removeBtn.textContent = "Rimuovi";
+        removeBtn.addEventListener("click", (event) => {
+          event.stopPropagation();
+          eventPayload.root.responses.splice(index, 1);
+          persistQuickMenu({ rebuildMenu: true });
+        });
+        top.append(badgeRow, removeBtn);
+        item.appendChild(top);
+
+        const textInput = createQuickMenuTextInput(response.text || "", "Testo risposta");
+        textInput.addEventListener("input", (event) => {
+          response.text = event.target.value;
+          persistQuickMenu();
+        });
+        item.appendChild(textInput);
+
+        const controls = document.createElement("div");
+        controls.className = "flow-dialogue-response__controls";
+
+        const intentSelect = document.createElement("select");
+        intentSelect.className = "ctp-scene-select";
+        DIALOGUE_RESPONSE_INTENTS.forEach(({ value, label }) => {
+          const option = document.createElement("option");
+          option.value = value;
+          option.textContent = label;
+          if (response.intent === value) option.selected = true;
+          intentSelect.appendChild(option);
+        });
+        intentSelect.addEventListener("change", (event) => {
+          response.intent = event.target.value || "ask";
+          persistQuickMenu({ rebuildMenu: true });
+        });
+        controls.appendChild(intentSelect);
+
+        const gateSelect = document.createElement("select");
+        gateSelect.className = "ctp-scene-select";
+        DIALOGUE_GATE_OPTIONS.forEach(({ value, label }) => {
+          const option = document.createElement("option");
+          option.value = value;
+          option.textContent = label;
+          if ((response.gateType || "none") === value) option.selected = true;
+          gateSelect.appendChild(option);
+        });
+        gateSelect.addEventListener("change", (event) => {
+          response.gateType = event.target.value || "none";
+          if (response.gateType === "none") response.gateRefId = "";
+          persistQuickMenu({ rebuildMenu: true });
+        });
+        controls.appendChild(gateSelect);
+        item.appendChild(controls);
+
+        if (response.gateType && response.gateType !== "none") {
+          const gateRef = createQuickMenuTextInput(response.gateRefId || "", "ID gate o nodo di supporto");
+          gateRef.addEventListener("input", (event) => {
+            response.gateRefId = event.target.value;
+            persistQuickMenu();
+          });
+          item.appendChild(gateRef);
+        }
+
+        appendQuickMenuRow(
+          item,
+          "Destinazione",
+          buildQuickTargetControl(hydrateSceneTargetSelect, response.targetId || "", (nextValue) => {
+            response.targetId = nextValue || null;
+          })
+        );
+
+        const targetHint = document.createElement("div");
+        targetHint.className = "hint flow-event-quick-menu__hint";
+        targetHint.textContent = response.targetId
+          ? `Collegata a: ${sceneTitleById(response.targetId, "destinazione mancante")}`
+          : "Collega questa risposta a una scena o a un altro nodo evento.";
+        item.appendChild(targetHint);
+
+        responsesList.appendChild(item);
+      });
+
+      if (!eventPayload.root.responses.length) {
+        const empty = document.createElement("p");
+        empty.className = "hint flow-event-quick-menu__hint";
+        empty.textContent = "Nessuna risposta ancora definita. Usa il bottone sotto per creare il primo scambio del giocatore.";
+        responsesList.appendChild(empty);
+      }
+      responsesWrap.appendChild(responsesList);
+
+      const actions = document.createElement("div");
+      actions.className = "flow-dialogue-quick__actions";
+      const addResponseBtn = document.createElement("button");
+      addResponseBtn.type = "button";
+      addResponseBtn.className = "small";
+      addResponseBtn.textContent = "+ Aggiungi risposta";
+      addResponseBtn.disabled = eventPayload.root.responses.length >= 4;
+      addResponseBtn.addEventListener("click", (event) => {
+        event.stopPropagation();
+        if ((eventPayload.root.responses || []).length >= 4) return;
+        eventPayload.root.responses.push(createDialogueResponse());
+        persistQuickMenu({ rebuildMenu: true });
+      });
+      actions.appendChild(addResponseBtn);
+      responsesWrap.appendChild(actions);
+
+      if (!eventPayload.root.responses.length) {
+        eventPayload.branch = eventPayload.branch || eventPayload.root.branch || createEmptyEventBranch();
+        eventPayload.root.branch = eventPayload.branch;
+        appendQuickMenuRow(
+          responsesWrap,
+          "Uscita lineare",
+          buildQuickTargetControl(hydrateSceneTargetSelect, eventPayload.branch.targetId || "", (nextValue) => {
+            eventPayload.branch = eventPayload.branch || createEmptyEventBranch();
+            eventPayload.root.branch = eventPayload.branch;
+            eventPayload.branch.targetId = nextValue || null;
+          })
+        );
+      }
+
+      menu.appendChild(responsesWrap);
     }
 
     const footer = document.createElement("div");
@@ -5002,7 +6350,7 @@ function getChoiceBranchConfigs(choice) {
   const ev = choice.event;
   if (!ev) {
     return [{
-      label: "→ Destinazione",
+      label: "Destinazione",
       color: "#b56d39",
       getTarget: () => choice.targetId,
       setTarget: (id) => { choice.targetId = id || null; },
@@ -5012,15 +6360,15 @@ function getChoiceBranchConfigs(choice) {
   switch (ev.type) {
     case "combat":
       return [
-        { label: "✓ Vittoria", color: "#6f8a57",
+        { label: "Vittoria", color: "#6f8a57",
           getTarget: () => ev.victoryBranch?.targetId,
           setTarget: (id) => { ev.victoryBranch = ev.victoryBranch || {}; ev.victoryBranch.targetId = id || null; },
           getBranch: () => ev.victoryBranch },
-        { label: "✗ Sconfitta", color: "#b94a48",
+        { label: "Sconfitta", color: "#b94a48",
           getTarget: () => ev.defeatBranch?.targetId,
           setTarget: (id) => { ev.defeatBranch = ev.defeatBranch || {}; ev.defeatBranch.targetId = id || null; },
           getBranch: () => ev.defeatBranch },
-        { label: "↩ Ritirata", color: "#6d84b5",
+        { label: "Ritirata", color: "#6d84b5",
           getTarget: () => ev.retreatBranch?.targetId,
           setTarget: (id) => {
             ev.retreatBranch = ev.retreatBranch || { text: null, loot: [], condition: null, unlockChoiceId: null, burnAfterUse: false, targetId: null, event: null };
@@ -5030,30 +6378,50 @@ function getChoiceBranchConfigs(choice) {
       ];
     case "skillcheck":
       return [
-        { label: "✓ Successo", color: "#6f8a57",
+        { label: "Successo", color: "#6f8a57",
           getTarget: () => ev.successBranch?.targetId,
           setTarget: (id) => { ev.successBranch = ev.successBranch || {}; ev.successBranch.targetId = id || null; },
           getBranch: () => ev.successBranch },
-        { label: "✗ Fallimento", color: "#b94a48",
+        { label: "Fallimento", color: "#b94a48",
           getTarget: () => ev.failureBranch?.targetId,
           setTarget: (id) => { ev.failureBranch = ev.failureBranch || {}; ev.failureBranch.targetId = id || null; },
           getBranch: () => ev.failureBranch },
       ];
     case "requirement":
       return [
-        { label: "✓ Soddisfatto", color: "#6f8a57",
+        { label: "Soddisfatto", color: "#6f8a57",
           getTarget: () => ev.metBranch?.targetId,
           setTarget: (id) => { ev.metBranch = ev.metBranch || {}; ev.metBranch.targetId = id || null; },
           getBranch: () => ev.metBranch },
-        { label: "✗ Non soddisfatto", color: "#b94a48",
+        { label: "Non soddisfatto", color: "#b94a48",
           getTarget: () => ev.unmetBranch?.targetId,
           setTarget: (id) => { ev.unmetBranch = ev.unmetBranch || {}; ev.unmetBranch.targetId = id || null; },
           getBranch: () => ev.unmetBranch },
       ];
-    default:
-      // loot, shop, dialogue, transition — single branch
+    case "dialogue": {
+      ensureDialogueEventDefaults(ev);
+      const responses = Array.isArray(ev.root?.responses) ? ev.root.responses : [];
+      if (responses.length) {
+        return responses.map((response, index) => ({
+          label: `Risposta ${index + 1}`,
+          color: "#8b78b8",
+          getTarget: () => response.targetId,
+          setTarget: (id) => { response.targetId = id || null; },
+          getBranch: () => response
+        }));
+      }
       return [{
-        label: "→ Destinazione",
+        label: "Uscita lineare",
+        color: "#8b78b8",
+        getTarget: () => ev.branch?.targetId,
+        setTarget: (id) => { ev.branch = ev.branch || {}; ev.branch.targetId = id || null; },
+        getBranch: () => ev.branch
+      }];
+    }
+    default:
+      // loot, shop, dialogue, transition � single branch
+      return [{
+        label: "Destinazione",
         color: "#b56d39",
         getTarget: () => ev.branch?.targetId,
         setTarget: (id) => { ev.branch = ev.branch || {}; ev.branch.targetId = id || null; },
@@ -5067,9 +6435,9 @@ function buildChoiceTargetSelect(currentDescId, currentValue) {
   const sel = document.createElement("select");
   sel.className = "ctp-scene-select";
   const opts = [
-    { value: "",              label: "— non impostata —" },
-    { value: DEATH_SENTINEL,  label: "☠ Morte" },
-    { value: STAY_SENTINEL,   label: "↺ Rimani" },
+    { value: "",              label: "� non impostata �" },
+    { value: DEATH_SENTINEL,  label: "Morte immediata" },
+    { value: STAY_SENTINEL,   label: "Resta qui" },
   ];
   opts.forEach(({ value, label }) => {
     const o = document.createElement("option"); o.value = value; o.textContent = label;
@@ -5132,6 +6500,7 @@ function updateChoiceNodeSelection() {
     const descId = node.dataset.descId || "";
     const choiceId = node.dataset.choiceId || "";
     node.classList.toggle("is-selected", isEventNodeSelected(descId, choiceId));
+    node.classList.toggle("is-multi-selected", isGraphNodeMultiSelected(choiceId));
   });
 }
 
@@ -5232,6 +6601,7 @@ function renderChoiceNodes(bounds = getCurrentFlowBoardBounds()) {
   layer.style.width = `${bounds.width}px`;
   layer.style.height = `${bounds.height}px`;
   getAdventureEventNodes().forEach((eventNode) => {
+    if (isNodeHiddenByCollapsedChapter(eventNode.id)) return;
     const point = logicalToBoardPoint(eventNode.position || { x: 0, y: 0 }, bounds);
     layer.appendChild(createChoiceNodeEl({
       id: eventNode.id,
@@ -5302,6 +6672,7 @@ function createChoiceNodeEl(desc, choice, x, y) {
   const label = choice.text || visual.label;
   el.className = `choice-node ${visual.className}`;
   el.classList.toggle("is-selected", isEventNodeSelected(desc.id, choice.id));
+  el.classList.toggle("is-multi-selected", isGraphNodeMultiSelected(choice.id));
   el.innerHTML = `
     <span class="choice-node__icon">${visual.icon}</span>
     <span class="choice-node__label">${esc(truncate(label, 18))}</span>
@@ -5323,6 +6694,11 @@ function createChoiceNodeEl(desc, choice, x, y) {
   });
   el.addEventListener("click", (e) => {
     e.stopPropagation();
+    if (e.shiftKey) {
+      toggleGraphNodeMultiSelection(choice.id);
+      return;
+    }
+    setGraphNodeMultiSelection([choice.id]);
     closeChoiceTargetsPopover();
     closeChoiceEventPicker();
     closeFlowQuickMenus();
@@ -5339,34 +6715,52 @@ function createChoiceNodeEl(desc, choice, x, y) {
     }
   });
 
-  // Drag handle — appare al hover, permette di collegare la scelta a una scena trascinando
+  // Drag handle � appare al hover, permette di collegare la scelta a una scena trascinando
   const inputHandle = document.createElement("span");
   inputHandle.className = "node-connector node-connector--in choice-node-anchor";
   inputHandle.title = "Ingresso nodo evento";
   el.appendChild(inputHandle);
 
-  const linkHandle = document.createElement("span");
-  linkHandle.className = "choice-node-link node-connector node-connector--out";
-  linkHandle.title = "Trascina per collegare a una scena o a un altro evento";
-  linkHandle.addEventListener("pointerdown", (e) => {
-    e.stopPropagation();
-    e.preventDefault();
-    const bounds = getCurrentFlowBoardBounds();
-    const start = eventNodeAnchor(choice, bounds);
-    closeChoiceTargetsPopover();
-    closeChoiceEventPicker();
-    state.linkDraft = {
-      sceneId: choice.id,
-      choiceId: choice.id,
-      start: { ...start },
-      current: { ...start },
-      pointerClientX: e.clientX,
-      pointerClientY: e.clientY
-    };
-    scheduleFlowLinksRender("drag");
-    ensureFlowAutoScrollLoop();
+  const buildOutHandle = (portId = null, portLabel = "Continua", index = 0, total = 1) => {
+    const handle = document.createElement("span");
+    handle.className = "choice-node-link node-connector node-connector--out";
+    handle.title = portId
+      ? `Trascina il ramo "${portLabel}" verso una scena o un altro evento`
+      : "Trascina per collegare a una scena o a un altro evento";
+    if (total > 1) {
+      const top = total === 2
+        ? (index === 0 ? 34 : 66)
+        : 24 + (52 / Math.max(1, total - 1)) * index;
+      handle.style.top = `${top}%`;
+    }
+    handle.style.background = flowPortColor(portId);
+    handle.style.borderColor = "rgba(245,233,208,0.88)";
+    handle.addEventListener("pointerdown", (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      const bounds = getCurrentFlowBoardBounds();
+      const start = eventNodeAnchor(choice, bounds);
+      closeChoiceTargetsPopover();
+      closeChoiceEventPicker();
+      state.linkDraft = {
+        sceneId: choice.id,
+        choiceId: choice.id,
+        portId,
+        start: { ...start },
+        current: { ...start },
+        pointerClientX: e.clientX,
+        pointerClientY: e.clientY
+      };
+      scheduleFlowLinksRender("drag");
+      ensureFlowAutoScrollLoop();
+    });
+    return handle;
+  };
+
+      const ports = choice.event ? eventPortsForType(choice.event) : [{ id: null, label: "Continua" }];
+  ports.forEach((port, index) => {
+    el.appendChild(buildOutHandle(port.id, port.label, index, ports.length));
   });
-  el.appendChild(linkHandle);
   return el;
 }
 
@@ -5452,11 +6846,11 @@ function renderDescriptionEditor(desc) {
   if (els.replaceSceneImageBtn) els.replaceSceneImageBtn.disabled = false;
   if (els.removeSceneImageBtn) els.removeSceneImageBtn.disabled = false;
 
-  // Nascondi sezioni v1 non più presenti nel modello v2
+  // Nascondi sezioni v1 non pi� presenti nel modello v2
   if (els.sceneKind) els.sceneKind.closest("label")?.classList.add("hidden");
   if (els.sceneCombatConfig)  els.sceneCombatConfig.classList.add("hidden");
   if (els.sceneOutcomesSection) els.sceneOutcomesSection.classList.add("hidden");
-  document.getElementById("scene-loot-section")?.classList.add("hidden"); // v2: loot è sugli eventi
+  document.getElementById("scene-loot-section")?.classList.add("hidden"); // v2: loot � sugli eventi
   if (els.sceneChoicesSection) {
     els.sceneChoicesSection.classList.remove("hidden");
     els.sceneChoicesSection.open = true;
@@ -5592,10 +6986,8 @@ function buildSelectedEventPayloadCard(desc, choice) {
     { value: "skillcheck", label: "Prova (skill check)" },
     { value: "requirement", label: "Requisito oggetto" },
     { value: "loot", label: "Loot" },
-    { value: "condition", label: "Condizione" },
     { value: "transition", label: "Transizione" },
     { value: "dialogue", label: "Dialogo NPC" },
-    { value: "shop", label: "Negozio" }
   ].forEach(({ value, label }) => {
     const option = document.createElement("option");
     option.value = value;
@@ -5709,7 +7101,7 @@ function renderEventEditor(eventContext) {
     els.sceneChoicesSection.open = true;
   }
   if (els.sceneChoicesSummary) {
-    els.sceneChoicesSummary.textContent = `${visual.label} · payload`;
+    els.sceneChoicesSummary.textContent = `${visual.label} � payload`;
   }
   if (els.sceneChoicesHint) {
     const hintText = detached
@@ -5818,7 +7210,7 @@ function renderSceneLoot(scene) {
 
 function renderSceneImagePreview(scene) {
   // Supporta sia v2 (desc.image = URL/dataUrl) sia il caso in cui l'editor
-  // ha già caricato un'immagine (scene.eventImage = oggetto con dataUrl + metadati).
+  // ha gi� caricato un'immagine (scene.eventImage = oggetto con dataUrl + metadati).
   const normalizedImage = scene.eventImage ? normalizeSceneImage(scene.eventImage) : null;
   if (normalizedImage) scene.eventImage = normalizedImage;
   const previewUrl = normalizedImage?.dataUrl || (typeof scene.image === "string" ? scene.image : null);
@@ -5885,7 +7277,7 @@ function buildChoiceCard(desc, choice, index) {
   const removeBtn = document.createElement("button");
   removeBtn.type = "button";
   removeBtn.className = "danger small";
-  removeBtn.textContent = "✕";
+  removeBtn.textContent = "?";
   removeBtn.title = "Rimuovi scelta";
   removeBtn.addEventListener("click", () => {
     desc.choices.splice(index, 1);
@@ -5954,10 +7346,8 @@ function buildChoiceCard(desc, choice, index) {
     { value: "skillcheck", label: "Prova (skill check)" },
     { value: "requirement", label: "Requisito oggetto" },
     { value: "loot", label: "Loot" },
-    { value: "condition", label: "Condizione" },
     { value: "transition", label: "Transizione" },
     { value: "dialogue", label: "Dialogo NPC" },
-    { value: "shop", label: "Negozio" }
   ];
   eventTypes.forEach(({ value, label }) => {
     const opt = document.createElement("option");
@@ -5986,7 +7376,7 @@ function buildChoiceCard(desc, choice, index) {
     const notes = [summarizeChoiceFlow(choice)];
     if (choice.hidden) notes.push("Scelta nascosta");
     if (choice.burnAfterUse) notes.push("Uso singolo");
-    summaryHint.textContent = notes.join(" · ");
+    summaryHint.textContent = notes.join(" | ");
   }
 
   function rebuildEventConfig() {
@@ -6058,8 +7448,8 @@ function hydrateDescriptionTargetSelectAdvanced(select, currentValue, options = 
   select._hydrating = true;
   select.innerHTML = "";
   [
-    { value: DEATH_SENTINEL, label: "â˜  Morte" },
-    { value: STAY_SENTINEL, label: "ðŸ“ Resta qui" }
+    { value: DEATH_SENTINEL, label: "Morte immediata" },
+    { value: STAY_SENTINEL, label: "Resta qui" }
   ].forEach(({ value, label }) => {
     const option = document.createElement("option");
     option.value = value;
@@ -6178,9 +7568,9 @@ function buildSkillCheckConfig(container, ev, desc, choice) {
   attrSel.addEventListener("change", (e) => { ev.attribute = e.target.value; onChoiceChange(desc, choice); });
   attrLabel.appendChild(attrSel);
 
-  // Difficoltà
+  // Difficolt�
   const diffLabel = document.createElement("label");
-  diffLabel.textContent = " Difficoltà ";
+  diffLabel.textContent = " Difficolt� ";
   const diffInput = document.createElement("input");
   diffInput.type = "number"; diffInput.min = 1; diffInput.max = 30;
   diffInput.value = ev.difficulty || 12;
@@ -6198,9 +7588,9 @@ function buildSkillCheckConfig(container, ev, desc, choice) {
   container.append(attrLabel, diffLabel, burnLabel,
     document.createElement("br"),
     makeHint("Riuscita:"),
-    buildBranchRow("→ Destinazione successo", ev.successBranch, desc, choice),
+    buildBranchRow("Destinazione successo", ev.successBranch, desc, choice),
     makeHint("Fallimento:"),
-    buildBranchRow("→ Destinazione fallimento", ev.failureBranch, desc, choice, {
+    buildBranchRow("Destinazione fallimento", ev.failureBranch, desc, choice, {
       hydrateTargetSelect: hydrateFailureTargetSelect
     })
   );
@@ -6209,7 +7599,7 @@ function buildSkillCheckConfig(container, ev, desc, choice) {
 // ── Combat config ─────────────────────────────────────────────────────────────
 
 function buildCombatConfig(container, ev, desc, choice) {
-  container.appendChild(makeHint("Combattimento — gruppi nemici"));
+  container.appendChild(makeHint("Combattimento � gruppi nemici"));
 
   const groupList = document.createElement("div");
   groupList.className = "combat-group-list";
@@ -6234,9 +7624,9 @@ function buildCombatConfig(container, ev, desc, choice) {
   container.append(groupList, addGroupBtn,
     document.createElement("br"),
     makeHint("Vittoria:"),
-    buildBranchRow("→ Destinazione vittoria", ev.victoryBranch, desc, choice),
+    buildBranchRow("Destinazione vittoria", ev.victoryBranch, desc, choice),
     makeHint("Sconfitta:"),
-    buildBranchRow("→ Destinazione sconfitta", ev.defeatBranch, desc, choice)
+    buildBranchRow("Destinazione sconfitta", ev.defeatBranch, desc, choice)
   );
 
   // Ritirata (opzionale)
@@ -6255,7 +7645,7 @@ function buildCombatConfig(container, ev, desc, choice) {
   function rerenderRetreat() {
     retreatSection.innerHTML = "";
     if (ev.retreatBranch) {
-      retreatSection.appendChild(buildBranchRow("→ Destinazione ritirata", ev.retreatBranch, desc, choice, true));
+      retreatSection.appendChild(buildBranchRow("Destinazione ritirata", ev.retreatBranch, desc, choice, true));
     }
   }
   rerenderRetreat();
@@ -6268,7 +7658,7 @@ function buildCombatGroupRow(group, gi, ev, desc, choice, rerender) {
 
   // Selezione preset mostro
   const presetSel = document.createElement("select");
-  const noneOpt = document.createElement("option"); noneOpt.value = ""; noneOpt.textContent = "— scegli mostro —";
+  const noneOpt = document.createElement("option"); noneOpt.value = ""; noneOpt.textContent = "� scegli mostro �";
   presetSel.appendChild(noneOpt);
   MONSTER_PRESETS.forEach((p) => {
     const opt = document.createElement("option");
@@ -6363,9 +7753,9 @@ function buildRequirementConfig(container, ev, desc, choice) {
 
   container.append(modeLabel, valueLabel, consumeLabel,
     makeHint("Requisito soddisfatto:"),
-    buildBranchRow("→ Destinazione", ev.metBranch, desc, choice),
+    buildBranchRow("Destinazione", ev.metBranch, desc, choice),
     makeHint("Requisito non soddisfatto:"),
-    buildBranchRow("→ Destinazione", ev.unmetBranch, desc, choice)
+    buildBranchRow("Destinazione", ev.unmetBranch, desc, choice)
   );
 }
 
@@ -6388,7 +7778,7 @@ function buildLootEventConfig(container, ev, desc, choice) {
   });
   container.append(lootSection, addLootBtn,
     makeHint("Continua verso:"),
-    buildBranchRow("→ Destinazione", ev.branch, desc, choice)
+    buildBranchRow("Destinazione", ev.branch, desc, choice)
   );
 }
 
@@ -6403,7 +7793,7 @@ function buildConditionConfig(container, ev, desc, choice) {
   condLabel.appendChild(condSel);
   container.append(condLabel,
     makeHint("Continua verso:"),
-    buildBranchRow("→ Destinazione", ev.branch, desc, choice)
+    buildBranchRow("Destinazione", ev.branch, desc, choice)
   );
 }
 
@@ -6418,7 +7808,7 @@ function buildTransitionConfig(container, ev, desc, choice) {
   textLabel.appendChild(textArea);
   container.append(textLabel,
     makeHint("Continua verso:"),
-    buildBranchRow("→ Destinazione", ev.branch, desc, choice)
+    buildBranchRow("Destinazione", ev.branch, desc, choice)
   );
 }
 
@@ -6429,7 +7819,7 @@ function createDefaultEvent(type) {
   switch (type) {
     case "combat":      return { type: "combat", text: null, image: null, combatGroups: [], victoryBranch: emptyBranch(), defeatBranch: { ...emptyBranch(), targetId: DEATH_SENTINEL }, retreatBranch: null };
     case "skillcheck":  return { type: "skillcheck", text: null, attribute: "", difficulty: 12, successBranch: emptyBranch(), failureBranch: { ...emptyBranch(), targetId: STAY_SENTINEL }, burnOnFailure: false };
-case "requirement": return { type: "requirement", text: null, requirementMode: "presetItem", itemId: null, lockId: null, questItemId: null, metBranch: emptyBranch(), unmetBranch: emptyBranch() };
+    case "requirement": return { type: "requirement", text: null, requirementMode: "presetItem", itemId: null, lockId: null, questItemId: null, metBranch: emptyBranch(), unmetBranch: emptyBranch() };
     case "loot":        return { type: "loot", text: null, image: null, loot: [], branch: emptyBranch() };
     case "condition":   return { type: "condition", text: null, conditionId: "", branch: emptyBranch() };
     case "shop":        return { type: "shop", text: null, image: null, items: [], branch: emptyBranch() };
@@ -6464,6 +7854,7 @@ function createEmptyEventBranch() {
 
 function ensureCombatEventDefaults(ev) {
   ev.combatGroups = Array.isArray(ev.combatGroups) ? ev.combatGroups : [];
+  ev.combatGroups.forEach((group) => ensureGeneratedLootForCombatGroup(group));
   ev.victoryBranch = ev.victoryBranch || createEmptyEventBranch();
   ev.defeatBranch = ev.defeatBranch || createEmptyEventBranch();
   if (!ev.defeatBranch.targetId) ev.defeatBranch.targetId = DEATH_SENTINEL;
@@ -6683,6 +8074,7 @@ function buildCombatConfig(container, ev, desc, choice) {
 function buildCombatGroupRow(group, gi, ev, desc, choice, rerender, refreshOverview = null) {
   group.loot = Array.isArray(group.loot) ? group.loot : [];
   group.abilityIds = Array.isArray(group.abilityIds) ? group.abilityIds : [];
+  ensureGeneratedLootForCombatGroup(group);
 
   const card = document.createElement("section");
   card.className = "choice-card combat-group-card";
@@ -6723,7 +8115,7 @@ function buildCombatGroupRow(group, gi, ev, desc, choice, rerender, refreshOverv
 
   function refreshSummary() {
     title.textContent = group.name || `Gruppo ${gi + 1}`;
-    subtitle.textContent = `${combatGroupSourceLabel(group)}${group.monsterId ? ` • ${group.monsterId}` : group.archetypeId ? ` • ${group.archetypeId}` : ""}`;
+    subtitle.textContent = `${combatGroupSourceLabel(group)}${group.monsterId ? ` � ${group.monsterId}` : group.archetypeId ? ` � ${group.archetypeId}` : ""}`;
     summary.textContent = summarizeCombatGroup(group);
     refreshNotes();
     refreshOverview?.();
@@ -6738,7 +8130,7 @@ function buildCombatGroupRow(group, gi, ev, desc, choice, rerender, refreshOverv
   const presetSelect = document.createElement("select");
   const emptyPreset = document.createElement("option");
   emptyPreset.value = "";
-  emptyPreset.textContent = "— Nessun preset —";
+  emptyPreset.textContent = "Nessun preset";
   presetSelect.appendChild(emptyPreset);
   MONSTER_PRESETS.forEach((preset) => {
     const option = document.createElement("option");
@@ -6761,12 +8153,12 @@ function buildCombatGroupRow(group, gi, ev, desc, choice, rerender, refreshOverv
   const archetypeSelect = document.createElement("select");
   const emptyArchetype = document.createElement("option");
   emptyArchetype.value = "";
-  emptyArchetype.textContent = "— Nessun archetipo —";
+  emptyArchetype.textContent = "Nessun archetipo";
   archetypeSelect.appendChild(emptyArchetype);
   MONSTER_STAT_ARCHETYPES.forEach((archetype) => {
     const option = document.createElement("option");
     option.value = archetype.id;
-    option.textContent = `${archetype.label} — ${archetype.hint}`;
+    option.textContent = `${archetype.label} | ${archetype.hint}`;
     archetypeSelect.appendChild(option);
   });
   archetypeSelect.value = group.archetypeId || "";
@@ -6842,6 +8234,19 @@ function buildCombatGroupRow(group, gi, ev, desc, choice, rerender, refreshOverv
   advancedSummary.textContent = "Modifica loot e dettagli avanzati";
   advanced.appendChild(advancedSummary);
 
+  const generateRandomLootBtn = document.createElement("button");
+  generateRandomLootBtn.type = "button";
+  generateRandomLootBtn.className = "advanced-secondary-btn";
+  generateRandomLootBtn.textContent = "Genera loot casuale";
+  generateRandomLootBtn.addEventListener("click", () => {
+    group.loot = regenerateLootForCombatGroup(group);
+    rerenderLoot();
+    onChoiceChange(desc, choice);
+    refreshSummary();
+    advanced.open = true;
+  });
+  advanced.appendChild(generateRandomLootBtn);
+
   const lootWrap = document.createElement("div");
   lootWrap.className = "combat-group-loot";
   const lootHeader = document.createElement("div");
@@ -6881,7 +8286,7 @@ function createDefaultEvent(type) {
   switch (type) {
     case "combat":      return { type: "combat", text: null, image: null, combatGroups: [], victoryBranch: createEmptyEventBranch(), defeatBranch: { ...createEmptyEventBranch(), targetId: DEATH_SENTINEL }, retreatBranch: null };
     case "skillcheck":  return { type: "skillcheck", text: null, attribute: "", difficulty: 12, successBranch: createEmptyEventBranch(), failureBranch: { ...createEmptyEventBranch(), targetId: STAY_SENTINEL }, burnOnFailure: false };
-case "requirement": return { type: "requirement", text: null, requirementMode: "presetItem", itemId: null, lockId: null, questItemId: null, metBranch: createEmptyEventBranch(), unmetBranch: createEmptyEventBranch() };
+    case "requirement": return { type: "requirement", text: null, requirementMode: "presetItem", itemId: null, lockId: null, questItemId: null, metBranch: createEmptyEventBranch(), unmetBranch: createEmptyEventBranch() };
     case "loot":        return { type: "loot", text: null, image: null, loot: [], branch: createEmptyEventBranch() };
     case "condition":   return { type: "condition", text: null, conditionId: "", branch: createEmptyEventBranch() };
     case "shop":        return { type: "shop", text: null, image: null, items: [], branch: createEmptyEventBranch() };
@@ -6916,9 +8321,9 @@ function createDefaultCombatGroup() {
 function hydrateDescriptionTargetSelect(select, currentValue) {
   select._hydrating = true;
   const sentinels = [
-    { value: "", label: "— nessuna destinazione —" },
-    { value: DEATH_SENTINEL, label: "☠ Morte" },
-    { value: STAY_SENTINEL, label: "📍 Resta qui" }
+    { value: "", label: "Nessuna destinazione" },
+    { value: DEATH_SENTINEL, label: "Morte immediata" },
+    { value: STAY_SENTINEL, label: "Resta qui" }
   ];
   select.innerHTML = "";
   sentinels.forEach(({ value, label }) => {
@@ -6940,10 +8345,10 @@ function hydrateDescriptionTargetSelect(select, currentValue) {
   select._hydrating = false;
 }
 
-// ─── DEAD CODE from old model — kept as stubs so old call sites don't crash ───
+// ─── DEAD CODE from old model � kept as stubs so old call sites don't crash ───
 
 function renderChoiceCards(container, choices, handlers) {
-  // old model, not used — renderChoices replaces this entirely
+  // old model, not used � renderChoices replaces this entirely
   (choices || []).forEach((choice, index) => {
     const node = document.createElement("div"); // stub: no template in v2
     node.querySelector('[data-field="text"]').value = choice.text || "";
@@ -6960,7 +8365,7 @@ function renderChoiceCards(container, choices, handlers) {
     node.querySelector('[data-field="burnOnFailure"]').checked = Boolean(choice.skillCheck?.burnOnFailure);
     node.querySelector('[data-field="hidden"]').checked = Boolean(choice.hidden);
 
-    // ── nascondi "Collega a evento" quando il skill check è attivo ────────────
+    // ── nascondi "Collega a evento" quando il skill check � attivo ────────────
     function syncTargetVisibility() {
       const hasCheck = Boolean(choice.skillCheck?.attribute && choice.skillCheck?.successSceneId);
       if (targetLabel) targetLabel.style.display = hasCheck ? "none" : "";
@@ -7043,41 +8448,26 @@ function renderChoiceCards(container, choices, handlers) {
     });
 
     // ── requirements: mode-switch UI ─────────────────────────────────────────
-    const reqModeSelect   = node.querySelector('[data-field="reqMode"]');
-    const reqSections     = node.querySelectorAll("[data-req-section]");
-    const reqSummaryHint  = node.querySelector('[data-role="req-summary-hint"]');
-    const reqKeyHint      = node.querySelector('[data-role="req-key-hint"]');
-    const reqKeySelect    = node.querySelector('[data-field="requiredLockId"]');
-    const reqItemSelect   = node.querySelector('[data-field="requiredItemId"]');
-    const reqItemCustom   = node.querySelector('[data-field="requiredItemIdCustom"]');
-    const reqCatSelect    = node.querySelector('[data-field="requiredItemCategory"]');
-    const reqEffectSelect = node.querySelector('[data-field="requiredEffectId"]');
-
-    function detectMode() {
-      if (choice.requiredLockId)       return "key";
-      if (choice.requiredItemId)       return "item";
-      if (choice.requiredItemCategory) return "category";
-      if (choice.requiredEffectId)     return "effect";
-      return "";
-    }
-
-    function showSection(mode) {
-      reqSections.forEach((s) => { s.style.display = s.dataset.reqSection === mode ? "" : "none"; });
+    if (false) {
+      const lockId = "";
+      const name = "";
+      reqKeyHint.textContent = name
+        ? `Chiave: "${name}" � lockId ${lockId}`
+        : `? Nessuna chiave con lockId "${lockId}" trovata nell'avventura.`;
     }
 
     function updateKeyHint() {
       if (!reqKeyHint) return;
-      const lockId = choice.requiredLockId;
-      if (!lockId) { reqKeyHint.textContent = ""; return; }
-      const allLoot = [
-        ...collectAllAdventureLoot()
-      ];
-      const match = allLoot.find((l) => normalizeString(l.lockId) === lockId);
+      const lockId = normalizeString(choice.requiredLockId);
+      const allLoot = collectAllAdventureLoot();
+      const key = allLoot.find((l) => normalizeString(l.lockId) === lockId);
       const preset = LOOT_PRESETS.find((p) => p.lockId === lockId);
-      const name = match?.itemName || preset?.name;
-      reqKeyHint.textContent = name
-        ? `Chiave: "${name}" — lockId ${lockId}`
-        : `⚠ Nessuna chiave con lockId "${lockId}" trovata nell'avventura.`;
+      const name = key?.itemName || preset?.name || choice.requiredLockLabel || "";
+      reqKeyHint.textContent = lockId
+        ? (name
+          ? `Chiave: "${name}" � lockId ${lockId}`
+          : `? Nessuna chiave con lockId "${lockId}" trovata nell'avventura.`)
+        : "Seleziona una chiave gia presente nell'avventura.";
     }
 
     function updateSummaryHint() {
@@ -7086,14 +8476,14 @@ function renderChoiceCards(container, choices, handlers) {
         const allLoot = collectAllAdventureLoot();
         const key = allLoot.find((l) => normalizeString(l.lockId) === choice.requiredLockId);
         const preset = LOOT_PRESETS.find((p) => p.lockId === choice.requiredLockId);
-        reqSummaryHint.textContent = `🔑 ${key?.itemName || preset?.name || choice.requiredLockId}`;
+        reqSummaryHint.textContent = `${key?.itemName || preset?.name || choice.requiredLockId}`;
       } else if (choice.requiredItemId) {
-        reqSummaryHint.textContent = `📦 ${lootPresetById(choice.requiredItemId)?.name || choice.requiredItemId}`;
+        reqSummaryHint.textContent = `${lootPresetById(choice.requiredItemId)?.name || choice.requiredItemId}`;
       } else if (choice.requiredItemCategory) {
         const cat = ITEM_CATEGORIES.find((c) => c.value === choice.requiredItemCategory);
-        reqSummaryHint.textContent = `🗂 ${cat?.label || choice.requiredItemCategory}`;
+        reqSummaryHint.textContent = `${cat?.label || choice.requiredItemCategory}`;
       } else if (choice.requiredEffectId) {
-        reqSummaryHint.textContent = `✨ ${effectPresetLabel(choice.requiredEffectId)}`;
+        reqSummaryHint.textContent = `? ${effectPresetLabel(choice.requiredEffectId)}`;
       } else {
         reqSummaryHint.textContent = "Nessuno";
       }
@@ -7207,7 +8597,7 @@ function renderChoiceCards(container, choices, handlers) {
       if (!checkSummaryHint) return;
       if (choice.skillCheck?.attribute && choice.skillCheck?.successSceneId) {
         const skillLabel = SKILLS.find((s) => s.value === choice.skillCheck.attribute)?.label || choice.skillCheck.attribute;
-        checkSummaryHint.textContent = `⚀ ${skillLabel} dif. ${choice.skillCheck.difficulty || 0}`;
+        checkSummaryHint.textContent = `${skillLabel} dif. ${choice.skillCheck.difficulty || 0}`;
       } else {
         checkSummaryHint.textContent = "Solo se serve";
       }
@@ -7391,9 +8781,9 @@ function updateChoiceCheck(choice, node, onChange) {
   onChange();
 }
 
-function renderCombatGroups(_scene) {} // stub — rimosso: i gruppi combattimento si editano nel pannello scelta
+function renderCombatGroups(_scene) {} // stub � rimosso: i gruppi combattimento si editano nel pannello scelta
 
-// Stub — i mostri sono inline nei CombatGroup e non hanno più un pannello separato
+// Stub � i mostri sono inline nei CombatGroup e non hanno pi� un pannello separato
 function renderMonsterList() {}
 function renderMonsterEditor() {}
 
@@ -7476,8 +8866,8 @@ function renderLootList(container, items, options = {}) {
           const preset = effectPresetById(effectId);
           const chip = document.createElement("span");
           chip.className = "effect-chip";
-          chip.title = preset ? `${preset.description} — trigger: ${effectTriggerLabel(preset.trigger)} — famiglia: ${effectFamilyLabel(preset.family)}` : effectId;
-          chip.innerHTML = `<span class="effect-chip-label">${preset?.label || effectId}</span><button type="button" class="effect-chip-remove" data-idx="${i}" title="Rimuovi effetto">×</button>`;
+          chip.title = preset ? `${preset.description} � trigger: ${effectTriggerLabel(preset.trigger)} � famiglia: ${effectFamilyLabel(preset.family)}` : effectId;
+          chip.innerHTML = `<span class="effect-chip-label">${preset?.label || effectId}</span><button type="button" class="effect-chip-remove" data-idx="${i}" title="Rimuovi effetto">�</button>`;
           chip.querySelector(".effect-chip-remove").addEventListener("click", (e) => {
             e.stopPropagation();
             loot.effectIds = ids.filter((_, j) => j !== i);
@@ -7495,7 +8885,7 @@ function renderLootList(container, items, options = {}) {
     function updateAddEffectBtn() {
       const allowed = effectPresetsForCategory(loot.category || "").filter((e) => e.value && !(loot.effectIds || []).includes(e.value));
       addEffectBtn.disabled = allowed.length === 0;
-      addEffectBtn.title = allowed.length === 0 ? "Tutti gli effetti compatibili sono già stati aggiunti" : "Aggiungi un effetto compatibile con questa categoria";
+      addEffectBtn.title = allowed.length === 0 ? "Tutti gli effetti compatibili sono gi� stati aggiunti" : "Aggiungi un effetto compatibile con questa categoria";
     }
 
     function updateEffectHelp() {
@@ -7506,7 +8896,7 @@ function renderLootList(container, items, options = {}) {
           : "Scegli prima un tipo di loot per vedere gli effetti compatibili.";
       } else {
         const labels = ids.map((id) => effectPresetById(id)?.label || id).join(", ");
-        effectHelp.textContent = `Effetti attivi: ${labels}. Passa il mouse sui chip per i dettagli.`;
+        effectHelp.textContent = `Effetti attivi: ${labels}. Passa il mouse sui tag per i dettagli.`;
       }
     }
 
@@ -7514,7 +8904,7 @@ function renderLootList(container, items, options = {}) {
       const errors = (loot.effectIds || []).filter((id) => !effectAllowedForCategory(id, loot.category || ""));
       if (errors.length > 0) {
         const labels = errors.map((id) => effectPresetById(id)?.label || id).join(", ");
-        errorEl.textContent = `⚠ Effetto non compatibile con la categoria "${loot.category}": ${labels}. Rimuovilo o cambia categoria.`;
+        errorEl.textContent = `Effetto non compatibile con la categoria "${loot.category}": ${labels}. Rimuovilo o cambia categoria.`;
         errorEl.style.display = "";
       } else {
         errorEl.textContent = "";
@@ -7567,7 +8957,7 @@ function renderLootList(container, items, options = {}) {
       [1, 2, 3].forEach((tierValue) => {
         const option = document.createElement("option");
         option.value = String(tierValue);
-        option.textContent = `${"★".repeat(tierValue)} (${tierValue})`;
+        option.textContent = `${"\u2605".repeat(tierValue)} (${tierValue})`;
         if (tierValue === accessoryState.tier) option.selected = true;
         tierSelect.appendChild(option);
       });
@@ -7611,8 +9001,8 @@ function renderLootList(container, items, options = {}) {
         const catLabel = ITEM_CATEGORIES.find((c) => c.value === preset.category)?.label || preset.category;
         const rarLabel = ITEM_RARITIES.find((r) => r.value === preset.rarity)?.label || preset.rarity;
         preview.textContent = isAccessoryCategory(preset.category)
-          ? `${catLabel} | ${rarLabel} | ${accessorySetOptionByValue(preset.effectSetId)?.label || preset.effectSetId || "set"} ${"★".repeat(preset.tier || 1)}`
-          : `${catLabel} · ${rarLabel}`;
+          ? `${catLabel} | ${rarLabel} | ${accessorySetOptionByValue(preset.effectSetId)?.label || preset.effectSetId || "set"} ${"\u2605".repeat(preset.tier || 1)}`
+          : `${catLabel} | ${rarLabel}`;
         preview.style.display = "";
       } else {
         preview.textContent = "";
@@ -7623,7 +9013,7 @@ function renderLootList(container, items, options = {}) {
     function updateLockHint() {
       const id = loot.lockId?.trim();
       if (!id) { lockHint.textContent = ""; return; }
-      // lockId è ora usato nei Requirement event; cerca nelle choices
+      // lockId � ora usato nei Requirement event; cerca nelle choices
       const matches = (state.adventure.descriptions || []).flatMap((d) =>
         (d.choices || []).filter((c) => c.event?.type === "requirement" && c.event?.lockId === id).map(() => d.title || d.id)
       );
@@ -7662,9 +9052,9 @@ function renderLootList(container, items, options = {}) {
       meta.textContent  = `Quantita ${loot.quantity ?? 1} | ${runtimeLootItemId(loot)}`;
       const rarityLabel = loot.rarity ? loot.rarity.charAt(0).toUpperCase() + loot.rarity.slice(1) : "Comune";
       const accessoryBadge = isAccessoryCategory(loot.category) && accessoryState
-        ? `${accessorySetOptionByValue(accessoryState.effectSetId)?.label || accessoryState.effectSetId} ${"★".repeat(accessoryState.tier || 1)}`
+        ? `${accessorySetOptionByValue(accessoryState.effectSetId)?.label || accessoryState.effectSetId} ${"\u2605".repeat(accessoryState.tier || 1)}`
         : rarityLabel;
-      tag.textContent   = loot.questItem ? `Quest · ${accessoryBadge}` : accessoryBadge;
+      tag.textContent   = loot.questItem ? `Quest | ${accessoryBadge}` : accessoryBadge;
       action.textContent = node.open ? "Approva" : "Modifica";
     }
 
@@ -7790,7 +9180,7 @@ function renderLootList(container, items, options = {}) {
       syncVisibility();
       updateLockHint();
       // Auto-espandi opzioni avanzate quando si seleziona key o armor
-      if (lootAdvanced && (loot.category === "key" || loot.category === "armor" || select.value === "custom")) {
+      if (lootAdvanced && (loot.category === "key" || loot.category === "armor" || select.value === "custom" || questInline.checked)) {
         lootAdvanced.open = true;
       }
       onChange();
@@ -7839,7 +9229,7 @@ function renderLootList(container, items, options = {}) {
       onChange();
     });
 
-    // "+ Effetto" button — inline select that appears, picks one, then disappears
+    // "+ Effetto" button � inline select that appears, picks one, then disappears
     addEffectBtn.addEventListener("click", (event) => {
       event.stopPropagation();
       if (node.querySelector(".effect-add-select")) return; // already open
@@ -7849,7 +9239,7 @@ function renderLootList(container, items, options = {}) {
       sel.className = "effect-add-select";
       const placeholder = document.createElement("option");
       placeholder.value = "";
-      placeholder.textContent = "— Scegli effetto —";
+      placeholder.textContent = "Scegli effetto";
       sel.appendChild(placeholder);
       allowed.forEach((e) => {
         const opt = document.createElement("option");
@@ -7907,7 +9297,7 @@ function scheduleJsonRender(delay = 140, options = {}) {
   }, delay);
 }
 
-function scheduleMonsterListRender() {} // stub — no more separate monster panel
+function scheduleMonsterListRender() {} // stub � no more separate monster panel
 
 async function exportJson() {
   const cleaned = cleanAdventure(state.adventure);
@@ -8101,6 +9491,31 @@ function cleanAdventure(adventure) {
     return out;
   };
 
+  const serializeChapterGroup = (group) => pruneEmpty({
+    id: group.id,
+    type: "chapterGroup",
+    title: group.title || "Nuovo capitolo",
+    collapsed: Boolean(group.collapsed) || undefined,
+    nodeIds: Array.from(new Set((group.nodeIds || []).filter(Boolean))),
+    position: group.position ? {
+      x: clamp(Number(group.position.x) || 0, -FLOW_COORD_LIMIT, FLOW_COORD_LIMIT),
+      y: clamp(Number(group.position.y) || 0, -FLOW_COORD_LIMIT, FLOW_COORD_LIMIT)
+    } : undefined,
+    size: group.size ? {
+      w: Math.max(220, Number(group.size.w) || 280),
+      h: Math.max(120, Number(group.size.h) || 150)
+    } : undefined,
+    color: group.color || "amber",
+    portLabels: group.portLabels && Object.keys(group.portLabels).length ? { ...group.portLabels } : undefined,
+    nodeRoles: group.nodeRoles && Object.keys(group.nodeRoles).length
+      ? Object.fromEntries(
+          Object.entries(group.nodeRoles)
+            .map(([nodeId, role]) => [nodeId, normalizeChapterRole(role)])
+            .filter(([, role]) => role !== "none")
+        )
+      : undefined
+  });
+
   return {
     id: slugify(adventure.title || "new-adventure"),
     version: 2,
@@ -8115,6 +9530,7 @@ function cleanAdventure(adventure) {
     restoreLoadoutOnEnd: Boolean(adventure.restoreLoadoutOnEnd) || undefined,
     starterKitItems: (adventure.starterKitItems || []).filter((l) => l.itemName).map(serializeLoot),
     eventNodes: (adventure.eventNodes || []).map(serializeEventNode),
+    chapterGroups: (adventure.chapterGroups || []).map(serializeChapterGroup),
     descriptions: (adventure.descriptions || []).map((desc) => {
       const out = {
         id: desc.id,
@@ -8137,6 +9553,7 @@ function normalizeAdventureImport(adventure) {
 
   if (isV2) {
     const descriptions = (adventure.descriptions || []).map((desc, i) => normalizeImportedDescription(desc, i));
+    const eventNodes = (adventure.eventNodes || []).map((node, index) => normalizeImportedEventNode(node, index));
     const startingDescriptionId = normalizeString(adventure.startingDescriptionId) || descriptions[0]?.id || "";
     return {
       id: normalizeString(adventure.id) || slugify(adventure.title || "new-adventure"),
@@ -8152,7 +9569,8 @@ function normalizeAdventureImport(adventure) {
       restoreLoadoutOnEnd: Boolean(adventure.restoreLoadoutOnEnd),
       starterKitItems: (adventure.starterKitItems || []).map((loot) => normalizeLoot(loot)),
       descriptions,
-      eventNodes: (adventure.eventNodes || []).map((node, index) => normalizeImportedEventNode(node, index))
+      eventNodes,
+      chapterGroups: normalizeImportedChapterGroups(adventure.chapterGroups, descriptions, eventNodes)
     };
   }
 
@@ -8192,7 +9610,8 @@ function normalizeAdventureImport(adventure) {
     restoreLoadoutOnEnd: Boolean(adventure.restoreLoadoutOnEnd),
     starterKitItems: (adventure.starterKitItems || []).map((loot) => normalizeLoot(loot)),
     descriptions,
-    eventNodes: []
+    eventNodes: [],
+    chapterGroups: []
   };
 }
 
@@ -8215,6 +9634,40 @@ function normalizeImportedDescription(desc, index) {
     })),
     position
   };
+}
+
+function normalizeImportedChapterGroups(groups, descriptions = [], eventNodes = []) {
+  const source = Array.isArray(groups) ? groups : [];
+  const validNodeIds = new Set([
+    ...descriptions.map((desc) => desc.id),
+    ...eventNodes.map((node) => node.id)
+  ]);
+  const claimedNodeIds = new Set();
+  return source.map((group, index) => {
+    const nodeIds = Array.from(new Set((group?.nodeIds || []).filter((nodeId) => validNodeIds.has(nodeId) && !claimedNodeIds.has(nodeId))));
+    nodeIds.forEach((nodeId) => claimedNodeIds.add(nodeId));
+    if (!nodeIds.length) return null;
+    return {
+      id: normalizeString(group?.id) || `chapter_${index + 1}`,
+      type: "chapterGroup",
+      title: group?.title || `Capitolo ${index + 1}`,
+      collapsed: Boolean(group?.collapsed),
+      nodeIds,
+      position: clampFlowPoint(group?.position || { x: 0, y: 0 }),
+      size: {
+        w: Math.max(220, Number(group?.size?.w) || 280),
+        h: Math.max(120, Number(group?.size?.h) || 150)
+      },
+      color: group?.color || "amber",
+      portLabels: group?.portLabels && typeof group.portLabels === "object" ? { ...group.portLabels } : {},
+      nodeRoles: Object.fromEntries(
+        Object.entries(group?.nodeRoles && typeof group.nodeRoles === "object" ? group.nodeRoles : {})
+          .filter(([nodeId]) => nodeIds.includes(nodeId))
+          .map(([nodeId, role]) => [nodeId, normalizeChapterRole(role)])
+          .filter(([, role]) => role !== "none")
+      )
+    };
+  }).filter(Boolean);
 }
 
 
@@ -8289,7 +9742,7 @@ function normalizeImportedOutcomes(outcomes, scene) {
 }
 
 function migrateLegacyCheckGate(scene) {
-  // Formato nuovo: una check scene ha già un choice con isCheckGate/generatedCheckGate.
+  // Formato nuovo: una check scene ha gi� un choice con isCheckGate/generatedCheckGate.
   // Formato vecchio (pre-refactor): checkConfig + outcomes, nessun choice gate.
   // Questo migrator converte il vecchio nel nuovo.
 
@@ -8297,7 +9750,7 @@ function migrateLegacyCheckGate(scene) {
     (!isCheckScene(scene) && !isCombatScene(scene) && scene.checkConfig?.skill);
   if (!isLegacyCheck) return;
 
-  // Cerca un gate già generato (da import di JSON vecchio con la choice sintetica)
+  // Cerca un gate gi� generato (da import di JSON vecchio con la choice sintetica)
   const generatedGate = scene.choices.find((c) => c.generatedCheckGate && c.skillCheck);
   if (generatedGate) {
     generatedGate.isCheckGate = true;
@@ -8354,6 +9807,13 @@ function hydrateSceneTargetSelect(select, value = "") {
     if (desc.id === value) option.selected = true;
     select.appendChild(option);
   });
+  getAdventureEventNodes().forEach((node, index) => {
+    const option = document.createElement("option");
+    option.value = node.id;
+    option.textContent = `[Evento ${index + 1}] ${node.text || nodePickerKindLabel(node.event?.type)}`;
+    if (node.id === value) option.selected = true;
+    select.appendChild(option);
+  });
   select._hydrating = false;
 }
 
@@ -8363,7 +9823,7 @@ function hydrateDefeatTargetSelect(select, value = "") {
   hydrateSceneTargetSelect(select, value);
   const deathOpt = document.createElement("option");
   deathOpt.value = DEATH_SENTINEL;
-  deathOpt.textContent = "☠ Morte — schermata game over";
+  deathOpt.textContent = "Morte immediata - schermata game over";
   if (value === DEATH_SENTINEL) deathOpt.selected = true;
   // Inserisci dopo il placeholder (posizione 1)
   select.insertBefore(deathOpt, select.options[1] || null);
@@ -8376,7 +9836,7 @@ function hydrateSuccessTargetSelect(select, value = "") {
   hydrateSceneTargetSelect(select, value);
   const stayOpt = document.createElement("option");
   stayOpt.value = STAY_SENTINEL;
-  stayOpt.textContent = "📦 Resta qui — assegna loot al successo";
+  stayOpt.textContent = "Resta qui - assegna loot al successo";
   if (value === STAY_SENTINEL) stayOpt.selected = true;
   select.insertBefore(stayOpt, select.options[1] || null);
   if (value === STAY_SENTINEL) select.value = STAY_SENTINEL;
@@ -8388,7 +9848,7 @@ function hydrateFailureTargetSelect(select, value = "") {
   hydrateSceneTargetSelect(select, value);
   const retryOpt = document.createElement("option");
   retryOpt.value = RETRY_SENTINEL;
-  retryOpt.textContent = "🔄 Ritenta — ripete la prova";
+  retryOpt.textContent = "Ritenta - ripete la prova";
   if (value === RETRY_SENTINEL) retryOpt.selected = true;
   select.insertBefore(retryOpt, select.options[1] || null);
   if (value === RETRY_SENTINEL) select.value = RETRY_SENTINEL;
@@ -8400,12 +9860,12 @@ function hydrateRetreatTargetSelect(select, value = "") {
   hydrateSceneTargetSelect(select, value);
   const noEscapeOpt = document.createElement("option");
   noEscapeOpt.value = NO_ESCAPE_SENTINEL;
-  noEscapeOpt.textContent = "⚔ Non hai alcuna via di fuga. — il combattimento continua";
+  noEscapeOpt.textContent = "Nessuna via di fuga - il combattimento continua";
   if (value === NO_ESCAPE_SENTINEL) noEscapeOpt.selected = true;
   select.insertBefore(noEscapeOpt, select.options[1] || null);
   const deathOpt = document.createElement("option");
   deathOpt.value = DEATH_SENTINEL;
-  deathOpt.textContent = "☠ Morte — schermata game over";
+  deathOpt.textContent = "Morte immediata - schermata game over";
   if (value === DEATH_SENTINEL) deathOpt.selected = true;
   select.insertBefore(deathOpt, select.options[1] || null);
   if (value === DEATH_SENTINEL) select.value = DEATH_SENTINEL;
@@ -8417,7 +9877,7 @@ function hydrateSkillSelect(select, value = "") {
   select.innerHTML = "";
   const placeholder = document.createElement("option");
   placeholder.value = "";
-  placeholder.textContent = "— Nessuna prova —";
+  placeholder.textContent = "Nessuna prova";
   if (!value) placeholder.selected = true;
   select.appendChild(placeholder);
   SKILLS.forEach((skill) => {
@@ -8453,7 +9913,7 @@ function hydrateKeySelect(select, value = "") {
   select.innerHTML = "";
   const noneOpt = document.createElement("option");
   noneOpt.value = "";
-  noneOpt.textContent = "— Seleziona chiave —";
+  noneOpt.textContent = "Seleziona chiave";
   if (!value) noneOpt.selected = true;
   select.appendChild(noneOpt);
 
@@ -8482,7 +9942,7 @@ function hydrateKeySelect(select, value = "") {
   if (value && !seen.has(value)) {
     const opt = document.createElement("option");
     opt.value = value;
-    opt.textContent = `${value} ⚠ chiave non trovata nell'avventura`;
+    opt.textContent = `${value} | chiave non trovata nell'avventura`;
     opt.selected = true;
     select.appendChild(opt);
   }
@@ -8492,7 +9952,7 @@ function hydrateLootSelect(select, value = "") {
   select.innerHTML = "";
   const noneOpt = document.createElement("option");
   noneOpt.value = "";
-  noneOpt.textContent = "— Nessuno —";
+  noneOpt.textContent = "Nessuno";
   if (!value) noneOpt.selected = true;
   select.appendChild(noneOpt);
   LOOT_PRESETS.forEach((loot) => {
@@ -8619,15 +10079,15 @@ function hydrateEncounterSelect(select, value = "") {
   select.innerHTML = "";
   const none = document.createElement("option");
   none.value = "";
-  none.textContent = "— Nessuno —";
+  none.textContent = "� Nessuno �";
   select.appendChild(none);
-  // encounters non esiste nel modello v2 — select rimane vuota
+  // encounters non esiste nel modello v2 � select rimane vuota
   select.value = value || "";
   select._hydrating = false;
 }
 
 const CONDITION_OPTIONS = [
-  { value: "", label: "— Nessuna —" },
+  { value: "", label: "� Nessuna �" },
   { value: "focused",   label: "Concentrato (focused)" },
   { value: "guarded",   label: "In Guardia (guarded)" },
   { value: "staggered", label: "Stordito (staggered)" },
@@ -8670,7 +10130,7 @@ function hydrateMonsterSelect(select, value = "") {
 
   if (value === CREATE_MONSTER_OPTION) createOption.selected = true;
 }
-// hydrateMonsterSelect stub — encounters non esistono nel modello v2
+// hydrateMonsterSelect stub � encounters non esistono nel modello v2
 
 function getSelectedScene() {
   return state.adventure.descriptions.find((d) => d.id === state.selectedDescriptionId) || null;
@@ -8709,8 +10169,8 @@ function getSelectedMonster() { return null; } // no more separate monster model
 
 function sceneTitleById(sceneId, fallback = "nessuna destinazione") {
   if (!sceneId) return fallback;
-  if (sceneId === DEATH_SENTINEL) return "☠ Morte";
-  if (sceneId === STAY_SENTINEL) return "📍 Resta qui";
+  if (sceneId === DEATH_SENTINEL) return "Morte immediata";
+  if (sceneId === STAY_SENTINEL) return "Resta qui";
   const target = state.adventure.descriptions.find((d) => d.id === sceneId);
   if (target) return target.title;
   const eventNode = getStandaloneEventNodeById(sceneId);
@@ -8777,8 +10237,8 @@ function outcomeDefinitionsForScene(scene) {
   if (isCombatScene(scene)) {
     return [
       { key: "victory", title: "Se il combattimento finisce in vittoria", hint: "Premio, svolta o scelta successiva alla vittoria." },
-      { key: "defeat", title: "Se il combattimento finisce in sconfitta", hint: "Caduta, cattura o ultima scelta prima del memoriale. Scegli ☠ Morte per andare direttamente alla schermata game over senza passare per una scena intermedia." },
-      { key: "retreat", title: "Se il giocatore si ritira", hint: "Fuga, ripiego o bivio di emergenza. Scegli ☠ Morte per game over immediato, oppure ⚔ Non hai alcuna via di fuga. per bloccare la ritirata e far continuare il combattimento. Se vuoto, il runtime ricade sulla sconfitta." }
+      { key: "defeat", title: "Se il combattimento finisce in sconfitta", hint: "Caduta, cattura o ultima scelta prima del memoriale. Scegli Morte immediata per andare direttamente alla schermata game over senza passare per una scena intermedia." },
+      { key: "retreat", title: "Se il giocatore si ritira", hint: "Fuga, ripiego o bivio di emergenza. Scegli Morte immediata per game over immediato, oppure Nessuna via di fuga. per bloccare la ritirata e far continuare il combattimento. Se vuoto, il runtime ricade sulla sconfitta." }
     ];
   }
   return [];
@@ -8801,7 +10261,7 @@ function setOutcomeTarget(scene, key, targetSceneId) {
 }
 
 // Aggiunge una choice di navigazione diretta a targetId sulla description.
-// Se esiste già una choice senza destinazione, la riutilizza.
+// Se esiste gi� una choice senza destinazione, la riutilizza.
 function addLinkedTarget(desc, targetId) {
   desc.choices = desc.choices || [];
   const emptyChoice = desc.choices.find((c) => !c.targetId && !c.event);
@@ -8819,7 +10279,7 @@ function addLinkedTarget(desc, targetId) {
   }
 }
 
-// Alias per compatibilità interna (drag-to-create usa ancora questo nome in alcuni punti)
+// Alias per compatibilit� interna (drag-to-create usa ancora questo nome in alcuni punti)
 function addLinkedTargetToScene(desc, targetId) {
   addLinkedTarget(desc, targetId);
 }
@@ -9072,20 +10532,20 @@ function validateAdventure(adventure, cleaned = cleanAdventure(adventure), optio
     } else if (!validCategories.has(loot.category)) {
       errors.push(`${ownerLabel}: categoria non valida (${loot.category}).`);
     }
-    if (loot.rarity && !validRarities.has(loot.rarity)) {
-      errors.push(`${ownerLabel}: rarita non valida (${loot.rarity}).`);
-    }
     if (loot.category === "key" && !normalizeString(loot.lockId)) {
-      errors.push(`${ownerLabel}: il loot ${loot.itemName || loot.itemId} e una key ma non ha lockId.`);
+      errors.push(`${ownerLabel}: il loot ${loot.itemName || loot.itemId} e una chiave ma non ha lockId.`);
     }
     if (loot.questItemId && !loot.questItem) {
       errors.push(`${ownerLabel}: il loot ${loot.itemName || loot.itemId} ha questItemId ma non e marcato come quest item.`);
+    }
+    if (loot.rarity && !validRarities.has(loot.rarity)) {
+      errors.push(`${ownerLabel}: rarita non valida (${loot.rarity}).`);
     }
     (loot.effectIds || []).forEach((effectId) => {
       if (!validEffects.has(effectId)) {
         errors.push(`${ownerLabel}: effectId non valido (${effectId}).`);
       } else if (!effectAllowedForCategory(effectId, loot.category)) {
-        errors.push(`${ownerLabel}: effetto ${effectId} incompatibile con categoria ${loot.category || "—"}.`);
+        errors.push(`${ownerLabel}: effetto ${effectId} incompatibile con categoria ${loot.category || "�"}.`);
       }
     });
   }
@@ -9127,12 +10587,12 @@ function validateAdventure(adventure, cleaned = cleanAdventure(adventure), optio
         validateBranch(ev.failureBranch, `fallimento di ${label}`, descId);
         break;
       case "requirement":
-        if ((ev.requirementMode || "presetItem") === "key") {
+        if (ev.requirementMode === "key") {
           if (!ev.lockId) errors.push(`${label} in ${descId}: requirement key senza lockId.`);
-        } else if ((ev.requirementMode || "presetItem") === "questItem") {
+        } else if (ev.requirementMode === "questItem") {
           if (!ev.questItemId) errors.push(`${label} in ${descId}: requirement quest item senza questItemId.`);
         } else if (!ev.itemId) {
-          errors.push(`${label} in ${descId}: evento requisito senza itemId.`);
+          errors.push(`${label} in ${descId}: requirement preset item senza itemId.`);
         }
         validateBranch(ev.metBranch, `soddisfatto di ${label}`, descId);
         validateBranch(ev.unmetBranch, `non soddisfatto di ${label}`, descId);
@@ -9147,13 +10607,34 @@ function validateAdventure(adventure, cleaned = cleanAdventure(adventure), optio
         break;
       case "shop":
       case "transition":
-      case "dialogue":
         validateBranch(ev.branch, `branch di ${label}`, descId);
         break;
+      case "dialogue": {
+        ensureDialogueEventDefaults(ev);
+        const responses = Array.isArray(ev.root?.responses) ? ev.root.responses : [];
+        if (responses.length > 4) {
+          errors.push(`${label} in ${descId}: il dialogo supera il limite di 4 risposte visibili.`);
+        }
+        if (responses.length) {
+          responses.forEach((response, index) => {
+            if (!response.text?.trim()) {
+              pushWarning(`${label} in ${descId}: risposta ${index + 1} senza testo.`, { alphaBlocking: true });
+            }
+            if (!response.targetId) {
+              pushWarning(`${label} in ${descId}: risposta ${index + 1} senza destinazione.`, { alphaBlocking: true });
+            } else if (!isValidTargetId(response.targetId)) {
+              errors.push(`${label} in ${descId}: risposta ${index + 1} punta a un target inesistente (${response.targetId}).`);
+            }
+          });
+        } else {
+          validateBranch(ev.branch || ev.root?.branch, `uscita lineare di ${label}`, descId);
+        }
+        break;
+      }
     }
   }
 
-  // — Validazione testata avventura
+  // � Validazione testata avventura
   if (!cleaned.title?.trim()) {
     pushWarning("L'avventura non ha ancora un titolo leggibile.", { alphaBlocking: true });
   }
@@ -9168,7 +10649,7 @@ function validateAdventure(adventure, cleaned = cleanAdventure(adventure), optio
     return { errors, warnings, strictAlpha };
   }
 
-  // — Raccogli tutti gli ID
+  // � Raccogli tutti gli ID
   cleaned.descriptions.forEach((desc) => {
     if (descriptionIds.has(desc.id)) {
       errors.push(`ID duplicato: ${desc.id}.`);
@@ -9184,17 +10665,17 @@ function validateAdventure(adventure, cleaned = cleanAdventure(adventure), optio
     }
   });
 
-  // — Starter kit loot
+  // � Starter kit loot
   (cleaned.starterKitItems || []).forEach((loot) => validateLoot(loot, "Starter kit"));
 
-  // — ID iniziale
+  // � ID iniziale
   if (!cleaned.startingDescriptionId) {
     errors.push("Imposta una descrizione iniziale valida.");
   } else if (!descriptionIds.has(cleaned.startingDescriptionId)) {
     errors.push(`La descrizione iniziale ${cleaned.startingDescriptionId} non esiste.`);
   }
 
-  // — Validazione nodi
+  // � Validazione nodi
   cleaned.descriptions.forEach((desc) => {
     if (!desc.title?.trim()) {
       pushWarning(`La descrizione ${desc.id} non ha titolo.`, { alphaBlocking: true });
@@ -9231,8 +10712,6 @@ function validateAdventure(adventure, cleaned = cleanAdventure(adventure), optio
     validateEvent(node.event, `Nodo evento "${node.text || node.id}"`, node.id);
   });
 
-  // — Raggiungibilita
-  const reachable = new Set();
   const allLootEntries = [
     ...(cleaned.starterKitItems || []),
     ...(cleaned.descriptions || []).flatMap((desc) =>
@@ -9242,7 +10721,9 @@ function validateAdventure(adventure, cleaned = cleanAdventure(adventure), optio
       const ev = node.event;
       if (!ev) return [];
       if (ev.type === "loot") return ev.loot || [];
-      if (ev.type === "combat") return (ev.combatGroups || []).flatMap((group) => group.loot || []);
+      if (ev.type === "combat") {
+        return (ev.combatGroups || []).flatMap((group) => group.loot || []);
+      }
       return [];
     })
   ];
@@ -9279,6 +10760,8 @@ function validateAdventure(adventure, cleaned = cleanAdventure(adventure), optio
     validateRequirementReferences(node.event, `Nodo evento "${node.text || node.id}"`, node.id);
   });
 
+  // � Raggiungibilita
+  const reachable = new Set();
   if (descriptionIds.has(cleaned.startingDescriptionId)) {
     const queue = [cleaned.startingDescriptionId];
     const collectTargets = (branch) => {
@@ -9318,21 +10801,21 @@ function validateAdventure(adventure, cleaned = cleanAdventure(adventure), optio
 }
 
 
-// ── Predicati tipo-scena (v2: tutte le Description sono narrative, il tipo è negli Event sulle Choice) ──
+// ── Predicati tipo-scena (v2: tutte le Description sono narrative, il tipo � negli Event sulle Choice) ──
 // Mantenuti come stub per non rompere chiamate residue nel codice v1 non ancora rimosso.
 function isCombatScene(_scene) { return false; }
 function isCheckScene(_scene) { return false; }
 function derivedSceneKind(_scene) { return "description"; }
 
 function buildSceneEditorMetadata(desc) {
-  // In v2 l'unico metadato editor-only di una Description è la posizione sulla flow board.
-  // L'immagine è un campo dati diretto (desc.image), non un metadato editor.
+  // In v2 l'unico metadato editor-only di una Description � la posizione sulla flow board.
+  // L'immagine � un campo dati diretto (desc.image), non un metadato editor.
   if (!desc.position) return null;
   return { position: desc.position };
 }
 
-// buildChoiceEditorMetadata rimosso: endingText è già flat sulla choice.
-// Mantenuto come stub per compatibilità con chiamate esistenti.
+// buildChoiceEditorMetadata rimosso: endingText � gi� flat sulla choice.
+// Mantenuto come stub per compatibilit� con chiamate esistenti.
 function buildChoiceEditorMetadata(_choice) {
   return null;
 }
@@ -9343,7 +10826,7 @@ function esc(str) {
 
 function truncate(str, max) {
   str = String(str || "");
-  return str.length > max ? str.slice(0, max - 1) + "…" : str;
+  return str.length > max ? str.slice(0, max - 1) + "�" : str;
 }
 
 function pruneEmpty(object) {
@@ -9357,104 +10840,209 @@ function pruneEmpty(object) {
   );
 }
 
+const ARMOR_FAMILY_SPECS = [
+  {
+    familyId: "light_armor",
+    armorType: "light",
+    label: "Armature leggere",
+    rarityByTier: ["common", "uncommon", "rare"],
+    effectIdsByTier: [[], [], ["check_bonus"]],
+    variants: [
+      { id: "cuoio", name: "Cuoio" },
+      { id: "giaco_di_cuoio", name: "Giaco di cuoio" },
+      { id: "cuoio_borchiato", name: "Cuoio borchiato" }
+    ]
+  },
+  {
+    familyId: "medium_armor",
+    armorType: "medium",
+    label: "Armature medie",
+    rarityByTier: ["uncommon", "rare", "mythic"],
+    effectIdsByTier: [[], ["crit_guard"], ["crit_guard", "guarded_surge"]],
+    variants: [
+      { id: "cotta_di_maglia", name: "Cotta di maglia" },
+      { id: "corazza_a_scaglie", name: "Corazza a scaglie" },
+      { id: "brigantina", name: "Brigantina" }
+    ]
+  },
+  {
+    familyId: "heavy_armor",
+    armorType: "heavy",
+    label: "Armature pesanti",
+    rarityByTier: ["uncommon", "rare", "mythic"],
+    effectIdsByTier: [[], ["crit_guard"], ["crit_guard", "guarded_surge"]],
+    variants: [
+      { id: "armatura_a_bande", name: "Armatura a bande" },
+      { id: "armatura_completa", name: "Armatura completa" },
+      { id: "corazza_di_piastre", name: "Corazza di piastre" }
+    ]
+  }
+];
+
+const SHIELD_FAMILY_SPECS = [
+  {
+    familyId: "light_shield",
+    label: "Scudi leggeri",
+    rarityByTier: ["common", "uncommon", "rare"],
+    effectIdsByTier: [["guarded_surge"], ["guarded_surge", "crit_guard"], ["guarded_surge", "crit_guard", "cleanse_exposed"]],
+    variants: [
+      { id: "buckler", name: "Buckler" },
+      { id: "scudo_rotondo", name: "Scudo rotondo" },
+      { id: "targa", name: "Targa" }
+    ]
+  },
+  {
+    familyId: "heavy_shield",
+    label: "Scudi pesanti",
+    rarityByTier: ["uncommon", "rare", "mythic"],
+    effectIdsByTier: [["guarded_surge"], ["guarded_surge", "crit_guard"], ["guarded_surge", "crit_guard", "ember_retaliation"]],
+    variants: [
+      { id: "scudo_pesante", name: "Scudo pesante" },
+      { id: "scudo_a_torre", name: "Scudo a torre" },
+      { id: "pavese", name: "Pavese" }
+    ]
+  }
+];
+
+function buildArmorTierPresets() {
+  return ARMOR_FAMILY_SPECS.flatMap((family) =>
+    family.variants.flatMap((variant) =>
+      [1, 2, 3].map((tier) => ({
+        id: `${variant.id}_${tier}`,
+        name: `${variant.name} ${"\u2605".repeat(tier)}`,
+        category: "armor",
+        rarity: family.rarityByTier[tier - 1],
+        familyId: family.familyId,
+        armorType: family.armorType,
+        tier,
+        effectIds: [...(family.effectIdsByTier[tier - 1] || [])]
+      }))
+    )
+  );
+}
+
+function buildShieldTierPresets() {
+  return SHIELD_FAMILY_SPECS.flatMap((family) =>
+    family.variants.flatMap((variant) =>
+      [1, 2, 3].map((tier) => ({
+        id: `${variant.id}_${tier}`,
+        name: `${variant.name} ${"\u2605".repeat(tier)}`,
+        category: "shield",
+        rarity: family.rarityByTier[tier - 1],
+        familyId: family.familyId,
+        tier,
+        effectIds: [...(family.effectIdsByTier[tier - 1] || [])]
+      }))
+    )
+  );
+}
+
 const BASE_TIER_LOOT_PRESETS = [
   { id: "coins", name: "Monete", category: "treasure", rarity: "common", effectIds: ["trade_value"] },
-  { id: "healing_potion", name: "Pozione curativa ★", category: "consumable", rarity: "common", tier: 1, effectIds: ["restore_hp"] },
-  { id: "healing_potion_2", name: "Pozione curativa ★★", category: "consumable", rarity: "uncommon", tier: 2, effectIds: ["restore_hp"] },
-  { id: "healing_potion_3", name: "Pozione curativa ★★★", category: "consumable", rarity: "rare", tier: 3, effectIds: ["restore_hp"] },
-  { id: "travel_rations", name: "Razioni da viaggio ★", category: "consumable", rarity: "common", tier: 1, effectIds: ["restore_hp", "recover_boost"] },
-  { id: "travel_rations_2", name: "Razioni da viaggio ★★", category: "consumable", rarity: "uncommon", tier: 2, effectIds: ["restore_hp", "recover_boost"] },
-  { id: "travel_rations_3", name: "Razioni da viaggio ★★★", category: "consumable", rarity: "rare", tier: 3, effectIds: ["restore_hp", "recover_boost"] },
-  { id: "alchemic_fire", name: "Fuoco alchemico ★", category: "consumable", rarity: "common", tier: 1, effectIds: ["direct_damage"] },
-  { id: "alchemic_fire_2", name: "Fuoco alchemico ★★", category: "consumable", rarity: "uncommon", tier: 2, effectIds: ["direct_damage", "apply_staggered"] },
-  { id: "alchemic_fire_3", name: "Fuoco alchemico ★★★", category: "consumable", rarity: "rare", tier: 3, effectIds: ["direct_damage", "apply_staggered", "bonus_damage"] },
-  { id: "warding_dust", name: "Polvere di guardia ★", category: "consumable", rarity: "common", tier: 1, effectIds: ["defense_potion"] },
-  { id: "warding_dust_2", name: "Polvere di guardia ★★", category: "consumable", rarity: "uncommon", tier: 2, effectIds: ["defense_potion", "guarded_surge"] },
-  { id: "warding_dust_3", name: "Polvere di guardia ★★★", category: "consumable", rarity: "rare", tier: 3, effectIds: ["defense_potion", "guarded_surge", "crit_guard"] },
-  { id: "phoenix_tear", name: "Lacrima della Fenice ★", category: "consumable", rarity: "uncommon", tier: 1, effectIds: ["restore_all"] },
-  { id: "phoenix_tear_2", name: "Lacrima della Fenice ★★", category: "consumable", rarity: "rare", tier: 2, effectIds: ["restore_all", "recover_boost"] },
-  { id: "phoenix_tear_3", name: "Lacrima della Fenice ★★★", category: "consumable", rarity: "mythic", tier: 3, effectIds: ["restore_all", "recover_boost", "focus_surge"] },
+  { id: "healing_potion", name: "Pozione curativa \u2605", category: "consumable", rarity: "common", tier: 1, effectIds: ["restore_hp"] },
+  { id: "healing_potion_2", name: "Pozione curativa \u2605\u2605", category: "consumable", rarity: "uncommon", tier: 2, effectIds: ["restore_hp"] },
+  { id: "healing_potion_3", name: "Pozione curativa \u2605\u2605\u2605", category: "consumable", rarity: "rare", tier: 3, effectIds: ["restore_hp"] },
+  { id: "travel_rations", name: "Razioni da viaggio \u2605", category: "consumable", rarity: "common", tier: 1, effectIds: ["restore_hp", "recover_boost"] },
+  { id: "travel_rations_2", name: "Razioni da viaggio \u2605\u2605", category: "consumable", rarity: "uncommon", tier: 2, effectIds: ["restore_hp", "recover_boost"] },
+  { id: "travel_rations_3", name: "Razioni da viaggio \u2605\u2605\u2605", category: "consumable", rarity: "rare", tier: 3, effectIds: ["restore_hp", "recover_boost"] },
+  { id: "alchemic_fire", name: "Fuoco alchemico \u2605", category: "consumable", rarity: "common", tier: 1, effectIds: ["direct_damage"] },
+  { id: "alchemic_fire_2", name: "Fuoco alchemico \u2605\u2605", category: "consumable", rarity: "uncommon", tier: 2, effectIds: ["direct_damage", "apply_staggered"] },
+  { id: "alchemic_fire_3", name: "Fuoco alchemico \u2605\u2605\u2605", category: "consumable", rarity: "rare", tier: 3, effectIds: ["direct_damage", "apply_staggered", "bonus_damage"] },
+  { id: "warding_dust", name: "Polvere di guardia \u2605", category: "consumable", rarity: "common", tier: 1, effectIds: ["defense_potion"] },
+  { id: "warding_dust_2", name: "Polvere di guardia \u2605\u2605", category: "consumable", rarity: "uncommon", tier: 2, effectIds: ["defense_potion", "guarded_surge"] },
+  { id: "warding_dust_3", name: "Polvere di guardia \u2605\u2605\u2605", category: "consumable", rarity: "rare", tier: 3, effectIds: ["defense_potion", "guarded_surge", "crit_guard"] },
+  { id: "phoenix_tear", name: "Lacrima della Fenice \u2605", category: "consumable", rarity: "uncommon", tier: 1, effectIds: ["restore_all"] },
+  { id: "phoenix_tear_2", name: "Lacrima della Fenice \u2605\u2605", category: "consumable", rarity: "rare", tier: 2, effectIds: ["restore_all", "recover_boost"] },
+  { id: "phoenix_tear_3", name: "Lacrima della Fenice \u2605\u2605\u2605", category: "consumable", rarity: "mythic", tier: 3, effectIds: ["restore_all", "recover_boost", "focus_surge"] },
   { id: "torch", name: "Torcia", category: "utility", rarity: "common", effectIds: [] },
   { id: "rope", name: "Corda", category: "utility", rarity: "common", effectIds: [] },
   { id: "flint_and_steel", name: "Acciarino e Pietra Focaia", category: "utility", rarity: "common", effectIds: [] },
+  { id: "wood_bundle", name: "Legno", category: "material", rarity: "common", familyId: "wood", variantId: "wood_bundle", effectIds: ["trade_value"] },
+  { id: "raw_iron", name: "Ferro grezzo", category: "material", rarity: "common", familyId: "raw_iron", variantId: "raw_iron", effectIds: ["trade_value"] },
+  { id: "leather_strip", name: "Pelle", category: "material", rarity: "common", familyId: "leather", variantId: "leather_strip", effectIds: ["trade_value"] },
+  { id: "cloth_scrap", name: "Stoffa", category: "material", rarity: "common", familyId: "cloth", variantId: "cloth_scrap", effectIds: ["trade_value"] },
+  { id: "herb_bundle", name: "Erbe", category: "material", rarity: "common", familyId: "herbs", variantId: "herb_bundle", effectIds: ["trade_value"] },
+  { id: "crystal_shard", name: "Cristalli", category: "material", rarity: "common", familyId: "crystals", variantId: "crystal_shard", effectIds: ["trade_value"] },
+  { id: "scale_fragment", name: "Squame", category: "material", rarity: "common", familyId: "scales", variantId: "scale_fragment", effectIds: ["trade_value"] },
   { id: "grappling_hook", name: "Rampino", category: "utility", rarity: "uncommon", effectIds: [] },
-  { id: "pugnale_1", name: "Pugnale ★", category: "weapon", rarity: "common", familyId: "blade_1h", tier: 1, effectIds: [] },
-  { id: "pugnale_2", name: "Pugnale ★★", category: "weapon", rarity: "uncommon", familyId: "blade_1h", tier: 2, effectIds: [] },
-  { id: "pugnale_3", name: "Pugnale ★★★", category: "weapon", rarity: "rare", familyId: "blade_1h", tier: 3, effectIds: ["cleanse_exposed"] },
-  { id: "spada_corta_1", name: "Spada corta ★", category: "weapon", rarity: "common", familyId: "blade_1h", tier: 1, effectIds: [] },
-  { id: "spada_corta_2", name: "Spada corta ★★", category: "weapon", rarity: "uncommon", familyId: "blade_1h", tier: 2, effectIds: [] },
-  { id: "spada_corta_3", name: "Spada corta ★★★", category: "weapon", rarity: "rare", familyId: "blade_1h", tier: 3, effectIds: ["cleanse_exposed"] },
-  { id: "spada_1", name: "Spada ★", category: "weapon", rarity: "common", familyId: "blade_1h", tier: 1, effectIds: [] },
-  { id: "spada_2", name: "Spada ★★", category: "weapon", rarity: "uncommon", familyId: "blade_1h", tier: 2, effectIds: [] },
-  { id: "spada_3", name: "Spada ★★★", category: "weapon", rarity: "rare", familyId: "blade_1h", tier: 3, effectIds: ["cleanse_exposed"] },
-  { id: "spadone_1", name: "Spadone ★", category: "weapon", rarity: "uncommon", familyId: "blade_2h", tier: 1, effectIds: [] },
-  { id: "spadone_2", name: "Spadone ★★", category: "weapon", rarity: "rare", familyId: "blade_2h", tier: 2, effectIds: ["apply_staggered"] },
-  { id: "spadone_3", name: "Spadone ★★★", category: "weapon", rarity: "mythic", familyId: "blade_2h", tier: 3, effectIds: ["apply_staggered", "bonus_damage"] },
-  { id: "ascia_2h_1", name: "Ascia a due mani ★", category: "weapon", rarity: "uncommon", familyId: "blade_2h", tier: 1, effectIds: [] },
-  { id: "ascia_2h_2", name: "Ascia a due mani ★★", category: "weapon", rarity: "rare", familyId: "blade_2h", tier: 2, effectIds: ["apply_staggered"] },
-  { id: "ascia_2h_3", name: "Ascia a due mani ★★★", category: "weapon", rarity: "mythic", familyId: "blade_2h", tier: 3, effectIds: ["apply_staggered", "bonus_damage"] },
-  { id: "alabarda_1", name: "Alabarda ★", category: "weapon", rarity: "uncommon", familyId: "blade_2h", tier: 1, effectIds: [] },
-  { id: "alabarda_2", name: "Alabarda ★★", category: "weapon", rarity: "rare", familyId: "blade_2h", tier: 2, effectIds: ["apply_staggered"] },
-  { id: "alabarda_3", name: "Alabarda ★★★", category: "weapon", rarity: "mythic", familyId: "blade_2h", tier: 3, effectIds: ["apply_staggered", "bonus_damage"] },
-  { id: "randello_1", name: "Randello ★", category: "weapon", rarity: "common", familyId: "blunt_1h", tier: 1, effectIds: [] },
-  { id: "randello_2", name: "Randello ★★", category: "weapon", rarity: "uncommon", familyId: "blunt_1h", tier: 2, effectIds: ["apply_staggered"] },
-  { id: "randello_3", name: "Randello ★★★", category: "weapon", rarity: "rare", familyId: "blunt_1h", tier: 3, effectIds: ["apply_staggered"] },
-  { id: "mazza_1", name: "Mazza ★", category: "weapon", rarity: "common", familyId: "blunt_1h", tier: 1, effectIds: [] },
-  { id: "mazza_2", name: "Mazza ★★", category: "weapon", rarity: "uncommon", familyId: "blunt_1h", tier: 2, effectIds: ["apply_staggered"] },
-  { id: "mazza_3", name: "Mazza ★★★", category: "weapon", rarity: "rare", familyId: "blunt_1h", tier: 3, effectIds: ["apply_staggered"] },
-  { id: "martello_da_guerra_1", name: "Martello da guerra ★", category: "weapon", rarity: "common", familyId: "blunt_1h", tier: 1, effectIds: [] },
-  { id: "martello_da_guerra_2", name: "Martello da guerra ★★", category: "weapon", rarity: "uncommon", familyId: "blunt_1h", tier: 2, effectIds: ["apply_staggered"] },
-  { id: "martello_da_guerra_3", name: "Martello da guerra ★★★", category: "weapon", rarity: "rare", familyId: "blunt_1h", tier: 3, effectIds: ["apply_staggered"] },
-  { id: "grande_mazza_1", name: "Grande mazza ★", category: "weapon", rarity: "uncommon", familyId: "blunt_2h", tier: 1, effectIds: ["apply_staggered"] },
-  { id: "grande_mazza_2", name: "Grande mazza ★★", category: "weapon", rarity: "rare", familyId: "blunt_2h", tier: 2, effectIds: ["apply_staggered"] },
-  { id: "grande_mazza_3", name: "Grande mazza ★★★", category: "weapon", rarity: "mythic", familyId: "blunt_2h", tier: 3, effectIds: ["apply_staggered", "bonus_damage"] },
-  { id: "maglio_1", name: "Maglio ★", category: "weapon", rarity: "uncommon", familyId: "blunt_2h", tier: 1, effectIds: ["apply_staggered"] },
-  { id: "maglio_2", name: "Maglio ★★", category: "weapon", rarity: "rare", familyId: "blunt_2h", tier: 2, effectIds: ["apply_staggered"] },
-  { id: "maglio_3", name: "Maglio ★★★", category: "weapon", rarity: "mythic", familyId: "blunt_2h", tier: 3, effectIds: ["apply_staggered", "bonus_damage"] },
-  { id: "maul_1", name: "Maul ★", category: "weapon", rarity: "uncommon", familyId: "blunt_2h", tier: 1, effectIds: ["apply_staggered"] },
-  { id: "maul_2", name: "Maul ★★", category: "weapon", rarity: "rare", familyId: "blunt_2h", tier: 2, effectIds: ["apply_staggered"] },
-  { id: "maul_3", name: "Maul ★★★", category: "weapon", rarity: "mythic", familyId: "blunt_2h", tier: 3, effectIds: ["apply_staggered", "bonus_damage"] },
-  { id: "arco_leggero_1", name: "Arco leggero ★", category: "weapon", rarity: "common", familyId: "bow", tier: 1, effectIds: [] },
-  { id: "arco_leggero_2", name: "Arco leggero ★★", category: "weapon", rarity: "uncommon", familyId: "bow", tier: 2, effectIds: [] },
-  { id: "arco_leggero_3", name: "Arco leggero ★★★", category: "weapon", rarity: "rare", familyId: "bow", tier: 3, effectIds: ["guaranteed_crit"] },
-  { id: "arco_corto_1", name: "Arco corto ★", category: "weapon", rarity: "common", familyId: "bow", tier: 1, effectIds: [] },
-  { id: "arco_corto_2", name: "Arco corto ★★", category: "weapon", rarity: "uncommon", familyId: "bow", tier: 2, effectIds: [] },
-  { id: "arco_corto_3", name: "Arco corto ★★★", category: "weapon", rarity: "rare", familyId: "bow", tier: 3, effectIds: ["guaranteed_crit"] },
-  { id: "arco_del_cacciatore_1", name: "Arco del cacciatore ★", category: "weapon", rarity: "common", familyId: "bow", tier: 1, effectIds: [] },
-  { id: "arco_del_cacciatore_2", name: "Arco del cacciatore ★★", category: "weapon", rarity: "uncommon", familyId: "bow", tier: 2, effectIds: [] },
-  { id: "arco_del_cacciatore_3", name: "Arco del cacciatore ★★★", category: "weapon", rarity: "rare", familyId: "bow", tier: 3, effectIds: ["guaranteed_crit"] },
-  { id: "bastone_da_viaggio_1", name: "Bastone da viaggio ★", category: "weapon", rarity: "common", familyId: "staff", tier: 1, effectIds: ["recover_boost"] },
-  { id: "bastone_da_viaggio_2", name: "Bastone da viaggio ★★", category: "weapon", rarity: "uncommon", familyId: "staff", tier: 2, effectIds: ["recover_boost"] },
-  { id: "bastone_da_viaggio_3", name: "Bastone da viaggio ★★★", category: "weapon", rarity: "rare", familyId: "staff", tier: 3, effectIds: ["recover_boost", "check_bonus"] },
-  { id: "bastone_ferrato_1", name: "Bastone ferrato ★", category: "weapon", rarity: "common", familyId: "staff", tier: 1, effectIds: ["recover_boost"] },
-  { id: "bastone_ferrato_2", name: "Bastone ferrato ★★", category: "weapon", rarity: "uncommon", familyId: "staff", tier: 2, effectIds: ["recover_boost"] },
-  { id: "bastone_ferrato_3", name: "Bastone ferrato ★★★", category: "weapon", rarity: "rare", familyId: "staff", tier: 3, effectIds: ["recover_boost", "check_bonus"] },
-  { id: "bastone_degli_anziani_1", name: "Bastone degli Anziani ★", category: "weapon", rarity: "common", familyId: "staff", tier: 1, effectIds: ["recover_boost"] },
-  { id: "bastone_degli_anziani_2", name: "Bastone degli Anziani ★★", category: "weapon", rarity: "uncommon", familyId: "staff", tier: 2, effectIds: ["recover_boost"] },
-  { id: "bastone_degli_anziani_3", name: "Bastone degli Anziani ★★★", category: "weapon", rarity: "rare", familyId: "staff", tier: 3, effectIds: ["recover_boost", "check_bonus"] },
-  { id: "cuoio_1", name: "Cuoio ★", category: "armor", rarity: "common", armorType: "light", effectIds: [] },
-  { id: "cuoio_borchiato_2", name: "Cuoio borchiato ★★", category: "armor", rarity: "uncommon", armorType: "light", effectIds: [] },
-  { id: "cotta_di_maglia_1", name: "Cotta di maglia ★", category: "armor", rarity: "uncommon", armorType: "medium", effectIds: [] },
-  { id: "armatura_completa_1", name: "Armatura completa ★", category: "armor", rarity: "rare", armorType: "heavy", effectIds: [] },
-  { id: "buckler_1", name: "Buckler ★", category: "shield", rarity: "common", effectIds: [] },
-  { id: "buckler_2", name: "Buckler ★★", category: "shield", rarity: "uncommon", effectIds: ["guarded_surge"] },
-  { id: "buckler_3", name: "Buckler ★★★", category: "shield", rarity: "rare", effectIds: ["guarded_surge", "cleanse_exposed"] },
-  { id: "scudo_rotondo_1", name: "Scudo rotondo ★", category: "shield", rarity: "uncommon", effectIds: ["guarded_surge"] },
-  { id: "scudo_rotondo_2", name: "Scudo rotondo ★★", category: "shield", rarity: "rare", effectIds: ["guarded_surge", "crit_guard"] },
-  { id: "scudo_pesante_1", name: "Scudo pesante ★", category: "shield", rarity: "rare", effectIds: ["guarded_surge"] },
-  { id: "elmo_guardia_1", name: "Elmo della Guardia ★", category: "helm", rarity: "rare", effectIds: ["crit_guard"] },
-  { id: "mantello_ombra_2", name: "Mantello dell'Ombra ★★", category: "cloak", rarity: "mythic", effectIds: ["cleanse_exposed", "recover_boost"] },
+  { id: "daga_1", name: "Daga \u2605", category: "weapon", rarity: "common", familyId: "dagger", tier: 1, effectIds: [] },
+  { id: "daga_2", name: "Daga \u2605\u2605", category: "weapon", rarity: "uncommon", familyId: "dagger", tier: 2, effectIds: ["bonus_damage"] },
+  { id: "daga_3", name: "Daga \u2605\u2605\u2605", category: "weapon", rarity: "rare", familyId: "dagger", tier: 3, effectIds: ["bonus_damage", "cleanse_exposed"] },
+  { id: "stiletto_1", name: "Stiletto \u2605", category: "weapon", rarity: "common", familyId: "dagger", tier: 1, effectIds: [] },
+  { id: "stiletto_2", name: "Stiletto \u2605\u2605", category: "weapon", rarity: "uncommon", familyId: "dagger", tier: 2, effectIds: ["bonus_damage"] },
+  { id: "stiletto_3", name: "Stiletto \u2605\u2605\u2605", category: "weapon", rarity: "rare", familyId: "dagger", tier: 3, effectIds: ["bonus_damage", "cleanse_exposed"] },
+  { id: "kryss_1", name: "Kryss \u2605", category: "weapon", rarity: "common", familyId: "dagger", tier: 1, effectIds: [] },
+  { id: "kryss_2", name: "Kryss \u2605\u2605", category: "weapon", rarity: "uncommon", familyId: "dagger", tier: 2, effectIds: ["bonus_damage"] },
+  { id: "kryss_3", name: "Kryss \u2605\u2605\u2605", category: "weapon", rarity: "rare", familyId: "dagger", tier: 3, effectIds: ["bonus_damage", "cleanse_exposed"] },
+  { id: "spada_1", name: "Spada \u2605", category: "weapon", rarity: "common", familyId: "blade_1h", tier: 1, effectIds: [] },
+  { id: "spada_2", name: "Spada \u2605\u2605", category: "weapon", rarity: "uncommon", familyId: "blade_1h", tier: 2, effectIds: [] },
+  { id: "spada_3", name: "Spada \u2605\u2605\u2605", category: "weapon", rarity: "rare", familyId: "blade_1h", tier: 3, effectIds: ["cleanse_exposed"] },
+  { id: "gladio_1", name: "Gladio \u2605", category: "weapon", rarity: "common", familyId: "blade_1h", tier: 1, effectIds: [] },
+  { id: "gladio_2", name: "Gladio \u2605\u2605", category: "weapon", rarity: "uncommon", familyId: "blade_1h", tier: 2, effectIds: [] },
+  { id: "gladio_3", name: "Gladio \u2605\u2605\u2605", category: "weapon", rarity: "rare", familyId: "blade_1h", tier: 3, effectIds: ["cleanse_exposed"] },
+  { id: "scimitarra_1", name: "Scimitarra \u2605", category: "weapon", rarity: "common", familyId: "blade_1h", tier: 1, effectIds: [] },
+  { id: "scimitarra_2", name: "Scimitarra \u2605\u2605", category: "weapon", rarity: "uncommon", familyId: "blade_1h", tier: 2, effectIds: [] },
+  { id: "scimitarra_3", name: "Scimitarra \u2605\u2605\u2605", category: "weapon", rarity: "rare", familyId: "blade_1h", tier: 3, effectIds: ["cleanse_exposed"] },
+  { id: "zweihander_1", name: "Zweih�nder \u2605", category: "weapon", rarity: "uncommon", familyId: "blade_2h", tier: 1, effectIds: [] },
+  { id: "zweihander_2", name: "Zweih�nder \u2605\u2605", category: "weapon", rarity: "rare", familyId: "blade_2h", tier: 2, effectIds: ["apply_staggered"] },
+  { id: "zweihander_3", name: "Zweih�nder \u2605\u2605\u2605", category: "weapon", rarity: "mythic", familyId: "blade_2h", tier: 3, effectIds: ["apply_staggered", "bonus_damage"] },
+  { id: "flamberga_1", name: "Flamberga \u2605", category: "weapon", rarity: "uncommon", familyId: "blade_2h", tier: 1, effectIds: [] },
+  { id: "flamberga_2", name: "Flamberga \u2605\u2605", category: "weapon", rarity: "rare", familyId: "blade_2h", tier: 2, effectIds: ["apply_staggered"] },
+  { id: "flamberga_3", name: "Flamberga \u2605\u2605\u2605", category: "weapon", rarity: "mythic", familyId: "blade_2h", tier: 3, effectIds: ["apply_staggered", "bonus_damage"] },
+  { id: "claymore_1", name: "Claymore \u2605", category: "weapon", rarity: "uncommon", familyId: "blade_2h", tier: 1, effectIds: [] },
+  { id: "claymore_2", name: "Claymore \u2605\u2605", category: "weapon", rarity: "rare", familyId: "blade_2h", tier: 2, effectIds: ["apply_staggered"] },
+  { id: "claymore_3", name: "Claymore \u2605\u2605\u2605", category: "weapon", rarity: "mythic", familyId: "blade_2h", tier: 3, effectIds: ["apply_staggered", "bonus_damage"] },
+  { id: "randello_1", name: "Randello \u2605", category: "weapon", rarity: "common", familyId: "blunt_1h", tier: 1, effectIds: [] },
+  { id: "randello_2", name: "Randello \u2605\u2605", category: "weapon", rarity: "uncommon", familyId: "blunt_1h", tier: 2, effectIds: ["apply_staggered"] },
+  { id: "randello_3", name: "Randello \u2605\u2605\u2605", category: "weapon", rarity: "rare", familyId: "blunt_1h", tier: 3, effectIds: ["apply_staggered"] },
+  { id: "mazza_1", name: "Mazza \u2605", category: "weapon", rarity: "common", familyId: "blunt_1h", tier: 1, effectIds: [] },
+  { id: "mazza_2", name: "Mazza \u2605\u2605", category: "weapon", rarity: "uncommon", familyId: "blunt_1h", tier: 2, effectIds: ["apply_staggered"] },
+  { id: "mazza_3", name: "Mazza \u2605\u2605\u2605", category: "weapon", rarity: "rare", familyId: "blunt_1h", tier: 3, effectIds: ["apply_staggered"] },
+  { id: "martello_da_guerra_1", name: "Martello da guerra \u2605", category: "weapon", rarity: "common", familyId: "blunt_1h", tier: 1, effectIds: [] },
+  { id: "martello_da_guerra_2", name: "Martello da guerra \u2605\u2605", category: "weapon", rarity: "uncommon", familyId: "blunt_1h", tier: 2, effectIds: ["apply_staggered"] },
+  { id: "martello_da_guerra_3", name: "Martello da guerra \u2605\u2605\u2605", category: "weapon", rarity: "rare", familyId: "blunt_1h", tier: 3, effectIds: ["apply_staggered"] },
+  { id: "grande_mazza_1", name: "Grande mazza \u2605", category: "weapon", rarity: "uncommon", familyId: "blunt_2h", tier: 1, effectIds: ["apply_staggered"] },
+  { id: "grande_mazza_2", name: "Grande mazza \u2605\u2605", category: "weapon", rarity: "rare", familyId: "blunt_2h", tier: 2, effectIds: ["apply_staggered"] },
+  { id: "grande_mazza_3", name: "Grande mazza \u2605\u2605\u2605", category: "weapon", rarity: "mythic", familyId: "blunt_2h", tier: 3, effectIds: ["apply_staggered", "bonus_damage"] },
+  { id: "maglio_1", name: "Maglio \u2605", category: "weapon", rarity: "uncommon", familyId: "blunt_2h", tier: 1, effectIds: ["apply_staggered"] },
+  { id: "maglio_2", name: "Maglio \u2605\u2605", category: "weapon", rarity: "rare", familyId: "blunt_2h", tier: 2, effectIds: ["apply_staggered"] },
+  { id: "maglio_3", name: "Maglio \u2605\u2605\u2605", category: "weapon", rarity: "mythic", familyId: "blunt_2h", tier: 3, effectIds: ["apply_staggered", "bonus_damage"] },
+  { id: "maul_1", name: "Maul \u2605", category: "weapon", rarity: "uncommon", familyId: "blunt_2h", tier: 1, effectIds: ["apply_staggered"] },
+  { id: "maul_2", name: "Maul \u2605\u2605", category: "weapon", rarity: "rare", familyId: "blunt_2h", tier: 2, effectIds: ["apply_staggered"] },
+  { id: "maul_3", name: "Maul \u2605\u2605\u2605", category: "weapon", rarity: "mythic", familyId: "blunt_2h", tier: 3, effectIds: ["apply_staggered", "bonus_damage"] },
+  { id: "arco_leggero_1", name: "Arco leggero \u2605", category: "weapon", rarity: "common", familyId: "bow", tier: 1, effectIds: [] },
+  { id: "arco_leggero_2", name: "Arco leggero \u2605\u2605", category: "weapon", rarity: "uncommon", familyId: "bow", tier: 2, effectIds: [] },
+  { id: "arco_leggero_3", name: "Arco leggero \u2605\u2605\u2605", category: "weapon", rarity: "rare", familyId: "bow", tier: 3, effectIds: ["guaranteed_crit"] },
+  { id: "arco_corto_1", name: "Arco corto \u2605", category: "weapon", rarity: "common", familyId: "bow", tier: 1, effectIds: [] },
+  { id: "arco_corto_2", name: "Arco corto \u2605\u2605", category: "weapon", rarity: "uncommon", familyId: "bow", tier: 2, effectIds: [] },
+  { id: "arco_corto_3", name: "Arco corto \u2605\u2605\u2605", category: "weapon", rarity: "rare", familyId: "bow", tier: 3, effectIds: ["guaranteed_crit"] },
+  { id: "arco_del_cacciatore_1", name: "Arco del cacciatore \u2605", category: "weapon", rarity: "common", familyId: "bow", tier: 1, effectIds: [] },
+  { id: "arco_del_cacciatore_2", name: "Arco del cacciatore \u2605\u2605", category: "weapon", rarity: "uncommon", familyId: "bow", tier: 2, effectIds: [] },
+  { id: "arco_del_cacciatore_3", name: "Arco del cacciatore \u2605\u2605\u2605", category: "weapon", rarity: "rare", familyId: "bow", tier: 3, effectIds: ["guaranteed_crit"] },
+  { id: "bastone_da_viaggio_1", name: "Bastone da viaggio \u2605", category: "weapon", rarity: "common", familyId: "staff", tier: 1, effectIds: ["recover_boost"] },
+  { id: "bastone_da_viaggio_2", name: "Bastone da viaggio \u2605\u2605", category: "weapon", rarity: "uncommon", familyId: "staff", tier: 2, effectIds: ["recover_boost"] },
+  { id: "bastone_da_viaggio_3", name: "Bastone da viaggio \u2605\u2605\u2605", category: "weapon", rarity: "rare", familyId: "staff", tier: 3, effectIds: ["recover_boost", "check_bonus"] },
+  { id: "bastone_ferrato_1", name: "Bastone ferrato \u2605", category: "weapon", rarity: "common", familyId: "staff", tier: 1, effectIds: ["recover_boost"] },
+  { id: "bastone_ferrato_2", name: "Bastone ferrato \u2605\u2605", category: "weapon", rarity: "uncommon", familyId: "staff", tier: 2, effectIds: ["recover_boost"] },
+  { id: "bastone_ferrato_3", name: "Bastone ferrato \u2605\u2605\u2605", category: "weapon", rarity: "rare", familyId: "staff", tier: 3, effectIds: ["recover_boost", "check_bonus"] },
+  { id: "bastone_degli_anziani_1", name: "Bastone degli Anziani \u2605", category: "weapon", rarity: "common", familyId: "staff", tier: 1, effectIds: ["recover_boost"] },
+  { id: "bastone_degli_anziani_2", name: "Bastone degli Anziani \u2605\u2605", category: "weapon", rarity: "uncommon", familyId: "staff", tier: 2, effectIds: ["recover_boost"] },
+  { id: "bastone_degli_anziani_3", name: "Bastone degli Anziani \u2605\u2605\u2605", category: "weapon", rarity: "rare", familyId: "staff", tier: 3, effectIds: ["recover_boost", "check_bonus"] },
+  ...buildArmorTierPresets(),
+  ...buildShieldTierPresets(),
+  { id: "elmo_guardia_1", name: "Elmo della Guardia \u2605", category: "helm", rarity: "rare", effectIds: ["crit_guard"] },
+  { id: "mantello_ombra_2", name: "Mantello dell'Ombra \u2605\u2605", category: "cloak", rarity: "mythic", effectIds: ["cleanse_exposed", "recover_boost"] },
   { id: "road_boots", name: "Stivali da viaggio", category: "boots", rarity: "common", effectIds: [] },
   { id: "trail_boots", name: "Stivali da pista", category: "boots", rarity: "uncommon", effectIds: ["fatigue_relief", "focus_surge"] },
   { id: "iron_boots", name: "Stivali ferrati", category: "boots", rarity: "rare", effectIds: ["fatigue_relief", "guarded_surge"] },
   { id: "forge_boots", name: "Stivali della Forgia", category: "boots", rarity: "mythic", effectIds: ["fatigue_relief", "guarded_surge", "ember_retaliation"] },
-  { id: "anello_difesa_1", name: "Anello della Difesa ★", category: "ring", rarity: "rare", effectIds: ["defense_surge"] },
-  { id: "anello_lama_2", name: "Anello della Lama ★★", category: "ring", rarity: "mythic", effectIds: ["bonus_damage", "focus_surge"] },
-  { id: "anello_sapere_3", name: "Anello del Sapere ★★★", category: "ring", rarity: "legendary", effectIds: ["check_bonus", "focus_surge", "recover_boost"] },
+  { id: "anello_difesa_1", name: "Anello della Difesa \u2605", category: "ring", rarity: "rare", effectIds: ["defense_surge"] },
+  { id: "anello_lama_2", name: "Anello della Lama \u2605\u2605", category: "ring", rarity: "mythic", effectIds: ["bonus_damage", "focus_surge"] },
+  { id: "anello_sapere_3", name: "Anello del Sapere \u2605\u2605\u2605", category: "ring", rarity: "legendary", effectIds: ["check_bonus", "focus_surge", "recover_boost"] },
   { id: "ancient_key", name: "Chiave antica", category: "key", rarity: "uncommon", effectIds: ["key_access"], lockId: "magister_archive" },
   { id: "arcane_scroll", name: "Pergamena arcana", category: "treasure", rarity: "rare", effectIds: ["check_bonus", "trade_value"] },
   { id: "ritual_gem", name: "Gemma rituale", category: "relic", rarity: "rare", effectIds: ["trade_value"] },
-  { id: "wolf_pelt", name: "Pelle di lupo", category: "treasure", rarity: "common", effectIds: ["trade_value"] },
+  { id: "wolf_pelt", name: "Pelle di lupo", category: "material", rarity: "common", familyId: "leather", variantId: "wolf_pelt", effectIds: ["trade_value"] },
   { id: "eclipse_blade", name: "Lama dell'Eclisse", category: "relic", rarity: "unique", effectIds: ["bonus_damage", "guaranteed_crit", "apply_staggered"] },
   { id: "crown_of_embers", name: "Corona delle Braci", category: "relic", rarity: "mythic", effectIds: ["ember_retaliation", "crit_guard", "guarded_surge"] },
   { id: "lama_del_silenzio", name: "Lama del Silenzio", category: "relic", rarity: "unique", effectIds: ["guaranteed_crit", "apply_staggered", "bonus_damage"] },
@@ -9504,7 +11092,7 @@ const ACCESSORY_LOOT_PRESETS = ACCESSORY_SLOT_OPTIONS.flatMap((slot) =>
   ACCESSORY_SET_OPTIONS.flatMap((setOption) =>
     [1, 2, 3].map((tier) => ({
       id: `${slot.prefix}_${setOption.value}_${tier}`,
-      name: `${slot.label} ${setOption.suffix} ${"★".repeat(tier)}`,
+      name: `${slot.label} ${setOption.suffix} ${"\u2605".repeat(tier)}`,
       category: slot.value,
       rarity: setOption.rarityByTier[tier - 1],
       effectIds: [...(setOption.effectIdsByTier[tier - 1] || [])],
@@ -9524,23 +11112,40 @@ const TIER_LOOT_PRESETS = [
 LOOT_PRESETS.splice(0, LOOT_PRESETS.length, ...BASE_TIER_LOOT_PRESETS, ...ACCESSORY_LOOT_PRESETS);
 
 const LEGACY_LOOT_PRESET_ALIASES = {
-  dagger: "pugnale_1",
-  long_dagger: "pugnale_2",
-  shadow_blade: "pugnale_3",
-  scimitarra_1: "spada_1",
-  scimitarra_2: "spada_2",
-  scimitarra_3: "spada_3",
+  dagger: "daga_1",
+  pugnale: "daga_1",
+  pugnale_1: "daga_1",
+  pugnale_2: "daga_2",
+  pugnale_3: "daga_3",
+  "spada corta": "gladio_1",
+  long_dagger: "daga_2",
+  shadow_blade: "daga_3",
+  spada_corta_1: "gladio_1",
+  spada_corta_2: "gladio_2",
+  spada_corta_3: "gladio_3",
+  spadone: "zweihander_1",
   ascia_da_guerra_1: "spada_1",
   ascia_da_guerra_2: "spada_2",
   ascia_da_guerra_3: "spada_3",
   rusted_blade: "spada_1",
-  short_sword: "spada_corta_2",
+  short_sword: "gladio_2",
   longsword: "spada_3",
   ancestor_blade: "spada_3",
   hatchet: "spada_1",
-  battle_axe: "spadone_2",
-  war_axe: "ascia_2h_2",
-  great_axe: "ascia_2h_3",
+  battle_axe: "zweihander_2",
+  spadone_1: "zweihander_1",
+  spadone_2: "zweihander_2",
+  spadone_3: "zweihander_3",
+  "ascia a due mani": "flamberga_1",
+  ascia_2h_1: "flamberga_1",
+  ascia_2h_2: "flamberga_2",
+  ascia_2h_3: "flamberga_3",
+  alabarda: "claymore_1",
+  alabarda_1: "claymore_1",
+  alabarda_2: "claymore_2",
+  alabarda_3: "claymore_3",
+  war_axe: "flamberga_2",
+  great_axe: "claymore_3",
   flagello_1: "maglio_1",
   flagello_2: "maglio_2",
   flagello_3: "maglio_3",
@@ -9554,7 +11159,7 @@ const LEGACY_LOOT_PRESET_ALIASES = {
   void_staff: "bastone_degli_anziani_3",
   camp_buckler: "buckler_1",
   iron_shield: "scudo_rotondo_1",
-  tower_shield: "scudo_pesante_1",
+  tower_shield: "scudo_a_torre_1",
   miner_helm: "elmo_guardia_1",
   bronze_helm: "elmo_guardia_1",
   war_helm: "elmo_guardia_1",
@@ -9588,9 +11193,9 @@ function selectableLootPresets({ includeCustom = true, includeAccessoryPickers =
 
 function lootPresetTierInfo(preset) {
   if (!preset) return { value: "all", label: "Tutti i tier", sort: 0 };
-  const explicitTier = Number(preset.tier) || ((preset.name.match(/★/g) || []).length);
+  const explicitTier = Number(preset.tier) || ((preset.name.match(/\u2605/g) || []).length);
   if (explicitTier >= 1 && explicitTier <= 3) {
-    return { value: `tier_${explicitTier}`, label: "★".repeat(explicitTier), sort: explicitTier };
+    return { value: `tier_${explicitTier}`, label: "\u2605".repeat(explicitTier), sort: explicitTier };
   }
   if (preset.category === "relic" || ["mythic", "legendary", "unique"].includes(preset.rarity)) {
     return { value: "special", label: "Speciale", sort: 4 };
@@ -9610,7 +11215,7 @@ const ACCESSORY_SET_TOOLTIP_TEXT = {
   lama: "Aumenta il danno inflitto.",
   sapere: "Aumenta le prove e i check.",
   preda: "Aumenta pressione offensiva e precisione letale.",
-  impatto: "Può sbilanciare il nemico.",
+  impatto: "Pu� sbilanciare il nemico.",
   brace: "Infligge ritorsione quando difendi.",
   sigillo: "Aiuta ad aprire passaggi e rami narrativi.",
   mercato: "Aumenta valore di vendita e resa economica."
@@ -9628,14 +11233,16 @@ function lootPresetFamilyInfo(preset) {
     };
   }
   if (preset.category === "weapon") {
+    if (preset.familyId === "dagger") return { value: "dagger", label: "Pugnali", sort: 9 };
     if (preset.familyId === "blade_1h") return { value: "blade_1h", label: "Lame 1 mano", sort: 10 };
     if (preset.familyId === "blade_2h") return { value: "blade_2h", label: "Lame 2 mani", sort: 11 };
     if (preset.familyId === "blunt_1h") return { value: "blunt_1h", label: "Mazze 1 mano", sort: 12 };
     if (preset.familyId === "blunt_2h") return { value: "blunt_2h", label: "Mazze 2 mani", sort: 13 };
     if (preset.familyId === "bow") return { value: "bow", label: "Archi", sort: 14 };
     if (preset.familyId === "staff") return { value: "staff", label: "Bastoni", sort: 15 };
-    if (/^(pugnale|spada_corta|spada_)/.test(preset.id)) return { value: "blade_1h", label: "Lame 1 mano", sort: 10 };
-    if (/^(spadone|ascia_2h|alabarda)/.test(preset.id)) return { value: "blade_2h", label: "Lame 2 mani", sort: 11 };
+    if (/^(daga|stiletto|kryss|pugnale)/.test(preset.id)) return { value: "dagger", label: "Pugnali", sort: 9 };
+    if (/^(spada_|gladio|scimitarra)/.test(preset.id)) return { value: "blade_1h", label: "Lame 1 mano", sort: 10 };
+    if (/^(zweihander|flamberga|claymore|spadone|ascia_2h|alabarda)/.test(preset.id)) return { value: "blade_2h", label: "Lame 2 mani", sort: 11 };
     if (/^(randello|mazza_|martello_da_guerra)/.test(preset.id)) return { value: "blunt_1h", label: "Mazze 1 mano", sort: 12 };
     if (/^(grande_mazza|maglio|maul)/.test(preset.id)) return { value: "blunt_2h", label: "Mazze 2 mani", sort: 13 };
     if (/^arco_/.test(preset.id)) return { value: "bow", label: "Archi", sort: 14 };
@@ -9643,15 +11250,30 @@ function lootPresetFamilyInfo(preset) {
     return { value: "weapon_misc", label: "Armi", sort: 19 };
   }
   if (preset.category === "armor") {
+    if (preset.familyId === "light_armor") return { value: "armor_light", label: "Armature leggere", sort: 30 };
+    if (preset.familyId === "medium_armor") return { value: "armor_medium", label: "Armature medie", sort: 31 };
+    if (preset.familyId === "heavy_armor") return { value: "armor_heavy", label: "Armature pesanti", sort: 32 };
     if (preset.armorType === "light") return { value: "armor_light", label: "Armature leggere", sort: 30 };
     if (preset.armorType === "medium") return { value: "armor_medium", label: "Armature medie", sort: 31 };
     if (preset.armorType === "heavy") return { value: "armor_heavy", label: "Armature pesanti", sort: 32 };
     return { value: "armor_misc", label: "Armature", sort: 39 };
   }
   if (preset.category === "shield") {
-    return /^scudo_pesante/.test(preset.id)
+    if (preset.familyId === "heavy_shield") return { value: "shield_heavy", label: "Scudi pesanti", sort: 34 };
+    if (preset.familyId === "light_shield") return { value: "shield_light", label: "Scudi leggeri", sort: 33 };
+    return /^scudo_pesante|^scudo_a_torre|^pavese/.test(preset.id)
       ? { value: "shield_heavy", label: "Scudi pesanti", sort: 34 }
       : { value: "shield_light", label: "Scudi leggeri", sort: 33 };
+  }
+  if (preset.category === "material") {
+    if (preset.familyId === "wood") return { value: "material_wood", label: "Materiali | Legno", sort: 60 };
+    if (preset.familyId === "raw_iron") return { value: "material_raw_iron", label: "Materiali | Ferro grezzo", sort: 61 };
+    if (preset.familyId === "leather") return { value: "material_leather", label: "Materiali | Pelle", sort: 62 };
+    if (preset.familyId === "cloth") return { value: "material_cloth", label: "Materiali | Stoffa", sort: 63 };
+    if (preset.familyId === "herbs") return { value: "material_herbs", label: "Materiali | Erbe", sort: 64 };
+    if (preset.familyId === "crystals") return { value: "material_crystals", label: "Materiali | Cristalli", sort: 65 };
+    if (preset.familyId === "scales") return { value: "material_scales", label: "Materiali | Squame", sort: 66 };
+    return { value: "material_misc", label: "Materiali", sort: 69 };
   }
   if (preset.category === "consumable") return { value: "consumable", label: "Consumabili", sort: 70 };
   if (preset.category === "utility") return { value: "utility", label: "Strumenti", sort: 74 };
@@ -9690,6 +11312,20 @@ function lootPresetSearchText(preset) {
   ].join(" "));
 }
 
+function lootPresetPrimarySearchText(preset) {
+  const tierInfo = lootPresetTierInfo(preset);
+  const familyInfo = lootPresetFamilyInfo(preset);
+  const categoryLabel = ITEM_CATEGORIES.find((entry) => entry.value === preset.category)?.label || preset.category || "Altro";
+  return normalizeLootLookupKey([
+    preset.id,
+    preset.name,
+    categoryLabel,
+    familyInfo.label,
+    tierInfo.label,
+    accessorySetOptionByValue(preset.effectSetId)?.label || ""
+  ].join(" "));
+}
+
 function mountLootPicker(select, value = "", options = {}) {
   if (!select) return null;
 
@@ -9699,7 +11335,7 @@ function mountLootPicker(select, value = "", options = {}) {
     includeAccessoryPickers: Boolean(options.includeAccessoryPickers),
     compact: Boolean(options.compact),
     searchPlaceholder: options.searchPlaceholder || "Cerca item...",
-    noneLabel: options.noneLabel || "— Nessuno —"
+    noneLabel: options.noneLabel || "� Nessuno �"
   };
 
   let api = select._lootPickerApi || null;
@@ -9710,10 +11346,27 @@ function mountLootPicker(select, value = "", options = {}) {
     const filters = document.createElement("div");
     filters.className = "loot-picker-filters";
 
+    const tierField = document.createElement("label");
+    tierField.className = "loot-picker-field";
+    const tierLabel = document.createElement("span");
+    tierLabel.className = "loot-picker-field__label";
+    tierLabel.textContent = "Tier";
     const tierSelect = document.createElement("select");
     tierSelect.className = "loot-picker-control";
+
+    const familyField = document.createElement("label");
+    familyField.className = "loot-picker-field";
+    const familyLabel = document.createElement("span");
+    familyLabel.className = "loot-picker-field__label";
+    familyLabel.textContent = "Famiglia";
     const familySelect = document.createElement("select");
     familySelect.className = "loot-picker-control";
+
+    const searchField = document.createElement("label");
+    searchField.className = "loot-picker-field loot-picker-field--search";
+    const searchLabel = document.createElement("span");
+    searchLabel.className = "loot-picker-field__label";
+    searchLabel.textContent = settings.compact ? "Ricerca live" : "Cerca loot";
     const searchInput = document.createElement("input");
     searchInput.className = "loot-picker-control";
     searchInput.type = "search";
@@ -9726,8 +11379,12 @@ function mountLootPicker(select, value = "", options = {}) {
     const itemSelect = document.createElement("select");
     itemSelect.className = "loot-picker-control loot-picker-control--item";
 
-    filters.append(tierSelect, familySelect, searchInput);
-    root.append(filters, familyHint, suggestions, itemSelect);
+    tierField.append(tierLabel, tierSelect);
+    familyField.append(familyLabel, familySelect);
+    searchField.append(searchLabel, searchInput);
+    filters.append(tierField, familyField, searchField);
+    root.append(filters, familyHint, suggestions);
+    if (!settings.compact) root.appendChild(itemSelect);
     select.style.display = "none";
     select.insertAdjacentElement("afterend", root);
 
@@ -9794,7 +11451,7 @@ function mountLootPicker(select, value = "", options = {}) {
       return allPresets.filter((preset) => {
         if (state.tier !== "all" && lootPresetTierInfo(preset).value !== state.tier) return false;
         if (state.family !== "all" && lootPresetFamilyInfo(preset).value !== state.family) return false;
-        if (query && !lootPresetSearchText(preset).includes(query)) return false;
+        if (query && !lootPresetPrimarySearchText(preset).includes(query)) return false;
         return true;
       }).sort(compareLootPresets);
     }
@@ -9821,7 +11478,7 @@ function mountLootPicker(select, value = "", options = {}) {
         empty.className = "loot-picker-suggestions__empty";
         empty.textContent = "Nessun item corrisponde a questa ricerca.";
         suggestions.appendChild(empty);
-        suggestions.style.display = "";
+        suggestions.style.display = "grid";
         itemSelect.classList.add("loot-picker-control--muted");
         return;
       }
@@ -9840,7 +11497,7 @@ function mountLootPicker(select, value = "", options = {}) {
         });
         suggestions.appendChild(option);
       });
-      suggestions.style.display = "";
+      suggestions.style.display = "grid";
       itemSelect.classList.add("loot-picker-control--muted");
     }
 
@@ -9861,7 +11518,7 @@ function mountLootPicker(select, value = "", options = {}) {
       filtered.forEach((preset) => {
         const option = document.createElement("option");
         option.value = preset.id;
-        option.textContent = `${preset.name} · ${lootPresetFamilyInfo(preset).label}`;
+        option.textContent = `${preset.name} � ${lootPresetFamilyInfo(preset).label}`;
         if (preset.id === state.value) option.selected = true;
         itemSelect.appendChild(option);
       });
@@ -9911,6 +11568,7 @@ function mountLootPicker(select, value = "", options = {}) {
 
     api = {
       root,
+      itemSelect,
       setValue(nextValue = "", { preserveFilters = false } = {}) {
         state.value = nextValue || "";
         select.value = state.value;
@@ -9921,6 +11579,13 @@ function mountLootPicker(select, value = "", options = {}) {
   }
 
   api.root.classList.toggle("loot-picker--compact", settings.compact);
+  if (api.itemSelect) {
+    if (settings.compact) {
+      api.itemSelect.remove();
+    } else if (!api.itemSelect.isConnected) {
+      api.root.appendChild(api.itemSelect);
+    }
+  }
   api.setValue(value || "", { preserveFilters: false });
   return api;
 }
@@ -9959,7 +11624,7 @@ function allLootPresetsForLookup() {
 function normalizeLootLookupKey(value) {
   return String(value || "")
     .toLowerCase()
-    .replace(/\s*[★]+/g, "")
+    .replace(/\s*[?]+/g, "")
     .replace(/[_-]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -10052,7 +11717,7 @@ function hydrateLootSelect(select, value = "") {
   select.innerHTML = "";
   const noneOpt = document.createElement("option");
   noneOpt.value = "";
-  noneOpt.textContent = "â€” Nessuno â€”";
+  noneOpt.textContent = "Nessuno";
   if (!value) noneOpt.selected = true;
   select.appendChild(noneOpt);
   activeLootPresets().forEach((loot) => {
@@ -10062,7 +11727,7 @@ function hydrateLootSelect(select, value = "") {
     const rarityLabel = ITEM_RARITIES.find((entry) => entry.value === loot.rarity)?.label || loot.rarity || "Comune";
     option.textContent = loot.id === "custom"
       ? loot.name
-      : `${loot.name} · ${categoryLabel} · ${rarityLabel}`;
+      : `${loot.name} | ${categoryLabel} | ${rarityLabel}`;
     if (loot.id === value) option.selected = true;
     select.appendChild(option);
   });
@@ -10072,7 +11737,7 @@ function hydrateLootSelect(select, value = "") {
   select.innerHTML = "";
   const noneOpt = document.createElement("option");
   noneOpt.value = "";
-  noneOpt.textContent = "— Nessuno —";
+  noneOpt.textContent = "Nessuno";
   if (!value) noneOpt.selected = true;
   select.appendChild(noneOpt);
   activeLootPresets().forEach((loot) => {
@@ -10081,10 +11746,10 @@ function hydrateLootSelect(select, value = "") {
     const categoryLabel = ITEM_CATEGORIES.find((entry) => entry.value === loot.category)?.label || loot.category || "Altro";
     const rarityLabel = ITEM_RARITIES.find((entry) => entry.value === loot.rarity)?.label || loot.rarity || "Comune";
     option.textContent = loot.accessoryPicker
-      ? `${loot.name} · scegli set e stelle`
+      ? `${loot.name} | scegli set e stelle`
       : loot.id === "custom"
         ? loot.name
-        : `${loot.name} · ${categoryLabel} · ${rarityLabel}`;
+        : `${loot.name} | ${categoryLabel} | ${rarityLabel}`;
     if (loot.id === value) option.selected = true;
     select.appendChild(option);
   });
@@ -10098,7 +11763,7 @@ function hydrateLootSelect(select, value = "", options = {}) {
   select.innerHTML = "";
   const noneOpt = document.createElement("option");
   noneOpt.value = "";
-  noneOpt.textContent = options.noneLabel || "— Nessuno —";
+  noneOpt.textContent = options.noneLabel || "Nessuno";
   if (!value) noneOpt.selected = true;
   select.appendChild(noneOpt);
   presets.forEach((loot) => {
@@ -10108,7 +11773,7 @@ function hydrateLootSelect(select, value = "", options = {}) {
     const rarityLabel = ITEM_RARITIES.find((entry) => entry.value === loot.rarity)?.label || loot.rarity || "Comune";
     option.textContent = loot.id === "custom"
       ? loot.name
-      : `${loot.name} · ${categoryLabel} · ${rarityLabel}`;
+      : `${loot.name} | ${categoryLabel} | ${rarityLabel}`;
     if (loot.id === value) option.selected = true;
     select.appendChild(option);
   });
@@ -10119,7 +11784,7 @@ function hydrateKeySelect(select, value = "") {
   select.innerHTML = "";
   const noneOpt = document.createElement("option");
   noneOpt.value = "";
-  noneOpt.textContent = "â€” Seleziona chiave â€”";
+  noneOpt.textContent = "Seleziona chiave";
   if (!value) noneOpt.selected = true;
   select.appendChild(noneOpt);
 
@@ -10148,7 +11813,54 @@ function hydrateKeySelect(select, value = "") {
   if (value && !seen.has(value)) {
     const opt = document.createElement("option");
     opt.value = value;
-    opt.textContent = `${value} âš  chiave non trovata nell'avventura`;
+    opt.textContent = `${value} | chiave non trovata nell'avventura`;
+    opt.selected = true;
+    select.appendChild(opt);
+  }
+}
+
+function collectAdventureKeyOptions() {
+  if (!state?.adventure) return [];
+  const seen = new Set();
+  return collectAllAdventureLoot()
+    .filter((loot) => loot.category === "key" && normalizeString(loot.lockId))
+    .reduce((acc, loot) => {
+      const lockId = normalizeString(loot.lockId);
+      if (!lockId || seen.has(lockId)) return acc;
+      seen.add(lockId);
+      acc.push({
+        lockId,
+        label: loot.itemName || loot.itemId || lockId
+      });
+      return acc;
+    }, []);
+}
+
+function hydrateKeySelect(select, value = "") {
+  select.innerHTML = "";
+  const keys = collectAdventureKeyOptions();
+
+  const noneOpt = document.createElement("option");
+  noneOpt.value = "";
+  noneOpt.textContent = keys.length
+    ? "Seleziona chiave"
+    : "Non ci sono chiavi nella tua avventura";
+  noneOpt.disabled = !keys.length;
+  if (!value) noneOpt.selected = true;
+  select.appendChild(noneOpt);
+
+  keys.forEach(({ lockId, label }) => {
+    const opt = document.createElement("option");
+    opt.value = lockId;
+    opt.textContent = `${label} (${lockId})`;
+    if (lockId === value) opt.selected = true;
+    select.appendChild(opt);
+  });
+
+  if (value && !keys.some((entry) => entry.lockId === value)) {
+    const opt = document.createElement("option");
+    opt.value = value;
+    opt.textContent = `${value} | chiave non trovata nell'avventura`;
     opt.selected = true;
     select.appendChild(opt);
   }
@@ -10158,7 +11870,7 @@ function hydrateQuestItemSelect(select, value = "") {
   select.innerHTML = "";
   const noneOpt = document.createElement("option");
   noneOpt.value = "";
-  noneOpt.textContent = "— Seleziona quest item —";
+  noneOpt.textContent = "Seleziona quest item";
   if (!value) noneOpt.selected = true;
   select.appendChild(noneOpt);
 
@@ -10182,7 +11894,7 @@ function hydrateQuestItemSelect(select, value = "") {
   if (value && !seen.has(value)) {
     const opt = document.createElement("option");
     opt.value = value;
-    opt.textContent = `${value} ⚠ quest item non trovato nell'avventura`;
+    opt.textContent = `${value} ? quest item non trovato nell'avventura`;
     opt.selected = true;
     select.appendChild(opt);
   }
@@ -10217,7 +11929,7 @@ const RARITY_PROGRESS_ORDER = ["common", "uncommon", "rare", "epic", "mythic", "
 function inferLootTierValue(snapshot) {
   const explicitTier = Number(snapshot?.tier);
   if (explicitTier >= 1 && explicitTier <= 3) return explicitTier;
-  const starTier = (snapshot?.name?.match(/★/g) || []).length;
+  const starTier = (snapshot?.name?.match(/\u2605/g) || []).length;
   return starTier >= 1 && starTier <= 3 ? starTier : null;
 }
 
@@ -10307,9 +12019,9 @@ function buildSkillCheckConfig(container, ev, desc, choice) {
     basics,
     burnToggle,
     makeHint("Riuscita:"),
-    buildBranchRow("â†’ Destinazione successo", ev.successBranch, desc, choice),
+    buildBranchRow("Destinazione successo", ev.successBranch, desc, choice),
     makeHint("Fallimento:"),
-    buildBranchRow("â†’ Destinazione fallimento", ev.failureBranch, desc, choice)
+    buildBranchRow("Destinazione fallimento", ev.failureBranch, desc, choice)
   );
 }
 
@@ -10432,6 +12144,9 @@ function buildSkillCheckConfig(container, ev, desc, choice) {
 }
 
 function buildRequirementConfig(container, ev, desc, choice) {
+  const currentMode = getRequirementMode(ev);
+  const summaryCard = document.createElement("div");
+  summaryCard.className = "event-config-mini-card event-config-mini-card--requirement";
   const modeSelect = document.createElement("select");
   [
     { value: "presetItem", label: "Oggetto dal catalogo" },
@@ -10443,68 +12158,85 @@ function buildRequirementConfig(container, ev, desc, choice) {
     option.textContent = label;
     modeSelect.appendChild(option);
   });
-  modeSelect.value = ev.requirementMode || (ev.lockId ? "key" : ev.questItemId ? "questItem" : "presetItem");
+  modeSelect.value = currentMode;
 
-  const valueInput = document.createElement("select");
+  const valueControl = document.createElement("select");
 
   function syncRequirement() {
     const mode = modeSelect.value;
     ev.requirementMode = mode;
-    ev.itemId = mode === "presetItem" ? (valueInput.value || null) : null;
-    ev.lockId = mode === "key" ? (valueInput.value || null) : null;
-    ev.questItemId = mode === "questItem" ? (valueInput.value || null) : null;
+    ev.itemId = mode === "presetItem" ? (valueControl.value || null) : null;
+    ev.lockId = mode === "key" ? (valueControl.value || null) : null;
+    ev.questItemId = mode === "questItem" ? (valueControl.value || null) : null;
     onChoiceChange(desc, choice);
   }
 
   function hydrateRequirementValueControl() {
     const mode = modeSelect.value;
     if (mode === "key") {
-      hydrateKeySelect(valueInput, ev.lockId || "");
+      hydrateKeySelect(valueControl, ev.lockId || "");
     } else if (mode === "questItem") {
-      hydrateQuestItemSelect(valueInput, ev.questItemId || "");
+      hydrateQuestItemSelect(valueControl, ev.questItemId || "");
     } else {
-      hydrateLootSelect(valueInput, ev.itemId || "", {
+      hydrateLootSelect(valueControl, ev.itemId || "", {
         includeCustom: false,
         compact: true,
-        noneLabel: "— Seleziona oggetto —"
+        noneLabel: "Seleziona oggetto"
       });
     }
   }
 
+  const refreshRequirementSummary = () => {
+    const meta = requirementModeMeta(modeSelect.value);
+    valueLabel.textContent = meta.valueLabel;
+    summaryCard.innerHTML = `
+      <div class="event-config-mini-card__head">
+        <strong>${esc(meta.label)}: ${esc(requirementValueSummary(ev))}</strong>
+        <span class="event-config-mini-card__meta">${esc(meta.hint)}</span>
+      </div>
+    `;
+  };
+
   modeSelect.addEventListener("change", () => {
     hydrateRequirementValueControl();
     syncRequirement();
+    refreshRequirementSummary();
   });
-  valueInput.addEventListener("change", syncRequirement);
+  valueControl.addEventListener("change", () => {
+    syncRequirement();
+    refreshRequirementSummary();
+  });
   hydrateRequirementValueControl();
 
   const grid = document.createElement("div");
   grid.className = "choice-settings-grid";
 
   const modeLabel = document.createElement("label");
-  modeLabel.textContent = "Tipo di requisito";
+  modeLabel.textContent = "Controlla";
   modeLabel.appendChild(modeSelect);
 
   const valueLabel = document.createElement("label");
-  valueLabel.textContent = "Valore richiesto";
-  valueLabel.appendChild(valueInput);
+  valueLabel.textContent = requirementModeMeta(currentMode).valueLabel;
+  valueLabel.appendChild(valueControl);
 
   grid.append(modeLabel, valueLabel);
+  refreshRequirementSummary();
 
   container.append(
     buildEventSection(
       "Controllo di requisito",
-      "Questo nodo verifica solo item. Se il requisito e soddisfatto, il runtime consuma sempre 1 unita dell'oggetto usato.",
+      "Decidi cosa deve possedere il lettore. Se il requisito e soddisfatto, il ramo positivo consuma sempre una unita dell'oggetto richiesto.",
+      summaryCard,
       grid
     ),
     buildEventSection(
       "Requisito soddisfatto",
-      "Questo ramo si attiva quando il lettore possiede cio che hai richiesto.",
+      "Questo ramo parte quando il lettore possiede davvero l'oggetto, la chiave o il quest item richiesto.",
       buildBranchRow("Destinazione soddisfatto", ev.metBranch, desc, choice)
     ),
     buildEventSection(
       "Requisito non soddisfatto",
-      "Usa questo ramo per blocchi, deviazioni o fallback narrativi.",
+      "Usa questo ramo per blocchi, deviazioni, messaggi di rifiuto o alternative narrative.",
       buildBranchRow("Destinazione non soddisfatto", ev.unmetBranch, desc, choice)
     )
   );
@@ -10539,7 +12271,16 @@ function buildLootEventConfig(container, ev, desc, choice) {
     rerenderLoot();
     onChoiceChange(desc, choice);
   });
-  addBar.append(presetSelect, addLootBtn);
+  const generateRandomLootBtn = document.createElement("button");
+  generateRandomLootBtn.type = "button";
+  generateRandomLootBtn.className = "advanced-secondary-btn";
+  generateRandomLootBtn.textContent = "Genera loot casuale";
+  generateRandomLootBtn.addEventListener("click", () => {
+    ev.loot = mergeLootEntries([...(ev.loot || []), ...generateRandomEventLootBundle()]);
+    rerenderLoot();
+    onChoiceChange(desc, choice);
+  });
+  addBar.append(presetSelect, addLootBtn, generateRandomLootBtn);
 
   rerenderLoot();
 
@@ -10647,7 +12388,7 @@ function buildShopEventConfig(container, ev, desc, choice) {
       title.textContent = item.itemName || lootLabelFromPreset(item.itemId) || `Oggetto ${index + 1}`;
       const meta = document.createElement("span");
       meta.className = "event-config-mini-card__meta";
-      meta.textContent = [item.category || "categoria libera", item.rarity || "common"].join(" · ");
+      meta.textContent = [item.category || "categoria libera", item.rarity || "common"].join(" | ");
       head.append(title, meta);
 
       const fields = document.createElement("div");
@@ -10726,9 +12467,7 @@ function buildShopEventConfig(container, ev, desc, choice) {
 }
 
 function buildDialogueEventConfig(container, ev, desc, choice) {
-  ev.root = ev.root || { npcText: "", responses: [], branch: createEmptyEventBranch() };
-  ev.branch = ev.branch || ev.root.branch || createEmptyEventBranch();
-  ev.root.branch = ev.branch;
+  ensureDialogueEventDefaults(ev);
 
   const basics = document.createElement("div");
   basics.className = "choice-settings-grid";
@@ -10749,8 +12488,8 @@ function buildDialogueEventConfig(container, ev, desc, choice) {
   responseInfo.className = "event-config-inline-note";
   const responseCount = Array.isArray(ev.root.responses) ? ev.root.responses.length : 0;
   responseInfo.textContent = responseCount
-    ? `Risposte gia presenti nel nodo: ${responseCount}.`
-    : "Nessuna risposta multipla ancora definita.";
+    ? `Risposte presenti nel nodo: ${responseCount}/4.`
+    : "Nessuna risposta ancora definita: il dialogo usera l'uscita lineare.";
 
   basics.append(npcLabel, responseInfo);
 
@@ -10763,19 +12502,186 @@ function buildDialogueEventConfig(container, ev, desc, choice) {
     onChoiceChange(desc, choice);
   });
 
+  const responseCards = document.createElement("div");
+  responseCards.className = "event-config-list";
+  const responses = Array.isArray(ev.root.responses) ? ev.root.responses : [];
+  if (!responses.length) {
+    const emptyNote = document.createElement("p");
+    emptyNote.className = "event-config-inline-note";
+    emptyNote.textContent = "Il nodo non ha ancora risposte multiple. In questo caso usa l'uscita lineare qui sotto.";
+    responseCards.appendChild(emptyNote);
+  } else {
+    responses.forEach((response, index) => {
+      const card = document.createElement("div");
+      card.className = "event-config-mini-card";
+
+      const head = document.createElement("div");
+      head.className = "event-config-mini-card__head";
+      const title = document.createElement("strong");
+      title.textContent = `Risposta ${index + 1}`;
+      const meta = document.createElement("span");
+      const intentText = dialogueIntentLabel(response.intent);
+      const gateText = response.gateType && response.gateType !== "none"
+        ? ` � gate: ${dialogueGateLabel(response.gateType)}`
+        : "";
+      meta.className = "event-config-mini-card__meta";
+      meta.textContent = `${intentText}${gateText}`;
+      head.append(title, meta);
+      card.appendChild(head);
+
+      const textLabel = document.createElement("label");
+      textLabel.textContent = "Testo risposta";
+      const textInput = document.createElement("input");
+      textInput.type = "text";
+      textInput.placeholder = "Es. Chi sei davvero?";
+      textInput.value = response.text || "";
+      textInput.addEventListener("input", (event) => {
+        response.text = event.target.value;
+        onChoiceChange(desc, choice);
+      });
+      textLabel.appendChild(textInput);
+      card.appendChild(textLabel);
+
+      const controlGrid = document.createElement("div");
+      controlGrid.className = "choice-settings-grid";
+
+      const intentLabel = document.createElement("label");
+      intentLabel.textContent = "Intento";
+      const intentSelect = document.createElement("select");
+      DIALOGUE_RESPONSE_INTENTS.forEach(({ value, label }) => {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = label;
+        if (response.intent === value) option.selected = true;
+        intentSelect.appendChild(option);
+      });
+      intentSelect.addEventListener("change", (event) => {
+        response.intent = event.target.value || "ask";
+        onChoiceChange(desc, choice);
+      });
+      intentLabel.appendChild(intentSelect);
+      controlGrid.appendChild(intentLabel);
+
+      const gateLabel = document.createElement("label");
+      gateLabel.textContent = "Gate";
+      const gateSelect = document.createElement("select");
+      DIALOGUE_GATE_OPTIONS.forEach(({ value, label }) => {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = label;
+        if ((response.gateType || "none") === value) option.selected = true;
+        gateSelect.appendChild(option);
+      });
+      gateSelect.addEventListener("change", (event) => {
+        response.gateType = event.target.value || "none";
+        if (response.gateType === "none") response.gateRefId = "";
+        onChoiceChange(desc, choice);
+        renderSceneEditor();
+      });
+      gateLabel.appendChild(gateSelect);
+      controlGrid.appendChild(gateLabel);
+      card.appendChild(controlGrid);
+
+      if (response.gateType && response.gateType !== "none") {
+        const gateRefLabel = document.createElement("label");
+        gateRefLabel.textContent = "Riferimento gate";
+        const gateRefInput = document.createElement("input");
+        gateRefInput.type = "text";
+        gateRefInput.placeholder = "ID nodo o chiave di sblocco";
+        gateRefInput.value = response.gateRefId || "";
+        gateRefInput.addEventListener("input", (event) => {
+          response.gateRefId = event.target.value;
+          onChoiceChange(desc, choice);
+        });
+        gateRefLabel.appendChild(gateRefInput);
+        card.appendChild(gateRefLabel);
+      }
+
+      card.appendChild(buildTargetRow("Destinazione", response.targetId || "", (value) => {
+        response.targetId = value || null;
+        onChoiceChange(desc, choice);
+      }));
+
+      const toggles = document.createElement("div");
+      toggles.className = "event-config-list";
+      toggles.appendChild(buildBehaviorToggleCard({
+        title: "Mostra solo quando sbloccata",
+        description: "La risposta resta nascosta finche il giocatore non sblocca la condizione narrativa adatta.",
+        checked: Boolean(response.hiddenUntilUnlocked),
+        onToggle: (value) => {
+          response.hiddenUntilUnlocked = value;
+          onChoiceChange(desc, choice);
+        },
+        tone: "stealth"
+      }));
+      toggles.appendChild(buildBehaviorToggleCard({
+        title: "Usa una sola volta",
+        description: "Dopo essere stata scelta, questa risposta viene consumata e non puo riapparire.",
+        checked: Boolean(response.once),
+        onToggle: (value) => {
+          response.once = value;
+          onChoiceChange(desc, choice);
+        },
+        tone: "burn"
+      }));
+      card.appendChild(toggles);
+
+      const actions = document.createElement("div");
+      actions.className = "event-config-actions";
+      const removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.className = "danger";
+      removeBtn.textContent = "Rimuovi risposta";
+      removeBtn.addEventListener("click", () => {
+        ev.root.responses.splice(index, 1);
+        onChoiceChange(desc, choice);
+        renderSceneEditor();
+      });
+      actions.appendChild(removeBtn);
+      card.appendChild(actions);
+
+      responseCards.appendChild(card);
+    });
+  }
+
+  const responseActions = document.createElement("div");
+  responseActions.className = "event-config-actions";
+  const addResponseBtn = document.createElement("button");
+  addResponseBtn.type = "button";
+  addResponseBtn.className = "small";
+  addResponseBtn.textContent = "+ Aggiungi risposta";
+  addResponseBtn.disabled = responses.length >= 4;
+  addResponseBtn.addEventListener("click", () => {
+    if ((ev.root.responses || []).length >= 4) return;
+    ev.root.responses.push(createDialogueResponse());
+    onChoiceChange(desc, choice);
+    renderSceneEditor();
+  });
+  responseActions.appendChild(addResponseBtn);
+
   container.append(
     buildEventSection(
       "Battuta del dialogo",
-      "Qui definisci il personaggio e la sua apertura. Le risposte multiple possono essere estese in un secondo pass.",
+      "Qui definisci il PNG e la sua apertura. Dalla mappa puoi gia costruire le risposte principali del dialogo.",
       basics,
       speech
     ),
     buildEventSection(
+      "Risposte del giocatore",
+      "Mantieni il nodo asciutto: massimo 4 risposte visibili e un solo gate principale per ciascuna.",
+      responseCards,
+      responseActions
+    ),
+    buildEventSection(
       "Uscita del nodo",
-      "Se il dialogo porta avanti il flusso con un solo esito, collega qui il ramo principale.",
+      "Se il dialogo non ha ancora risposte multiple, usa questa uscita lineare come ramo principale.",
       buildBranchRow("Destinazione continua", ev.branch, desc, choice)
     )
   );
 }
 
 bootstrap();
+
+
+
+
