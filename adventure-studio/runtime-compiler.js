@@ -179,12 +179,6 @@
     if (nonEmpty(branch.condition)) {
       state.warnings.push(`${contextLabel}: condition non e ancora migrata nel runtime compilato e verra ignorata.`);
     }
-    if (nonEmpty(branch.unlockChoiceId)) {
-      state.warnings.push(`${contextLabel}: unlockChoiceId non e ancora migrato nel runtime compilato e verra ignorato.`);
-    }
-    if (branch.burnAfterUse) {
-      state.warnings.push(`${contextLabel}: burnAfterUse sul branch non e ancora migrato nel runtime compilato.`);
-    }
   }
 
   function buildContinueChoice(sceneId, nextSceneId, text = "Continua") {
@@ -277,7 +271,8 @@
         text: nonEmpty(branch?.text) || undefined,
         loot: cloneLootList(branch?.loot),
         condition: nonEmpty(branch?.condition) || undefined,
-        unlockChoiceId: nonEmpty(branch?.unlockChoiceId) || undefined
+        unlockChoiceId: nonEmpty(branch?.unlockChoiceId) || undefined,
+        burnAfterUse: branch?.burnAfterUse || undefined
       };
     }
     const nextTarget = compileBranchTarget(state, branch, seed, {
@@ -394,7 +389,7 @@
               ...(failure.targetId === STAY_SENTINEL && failure.text ? { failureText: failure.text } : {}),
               ...(failure.targetId === STAY_SENTINEL && failure.condition ? { failureCondition: failure.condition } : {}),
               ...(failure.targetId === STAY_SENTINEL && failure.unlockChoiceId ? { failureUnlockChoiceId: failure.unlockChoiceId } : {}),
-              ...(event.burnOnFailure ? { burnOnFailure: true } : {})
+              ...(event.burnOnFailure || (failure.burnAfterUse && failure.targetId === STAY_SENTINEL) ? { burnOnFailure: true } : {})
             }
           })
         ];
@@ -477,18 +472,18 @@
     scene.image = description.image || null;
     scene.sceneLoot = [];
     scene.choices = (Array.isArray(description.choices) ? description.choices : []).map((choice, index) => {
-      if (choice?.burnAfterUse) {
-        state.warnings.push(`Scena ${description.id}, scelta ${index + 1}: burnAfterUse sulla scelta non e ancora migrato nel runtime compilato.`);
-      }
+      const choiceId = choice.id || `${description.id}__choice_${index + 1}`;
+      const choiceText = choice.text || `Scelta ${index + 1}`;
+      const baseFlags = {
+        ...(choice?.hidden ? { hidden: true } : {}),
+        ...(choice?.burnAfterUse ? { burnAfterUse: true } : {})
+      };
       if (choice?.event) {
         const eventSceneId = compileInlineEventScene(state, choice.event, `${description.id}_${choice.id || index + 1}`, {
           titleHint: choice.text || eventLabel(choice.event.type),
           choiceText: choice.text || "Continua"
         });
-        return sceneChoice(choice.id || `${description.id}__choice_${index + 1}`, choice.text || `Scelta ${index + 1}`, {
-          nextSceneId: eventSceneId,
-          ...(choice.hidden ? { hidden: true } : {})
-        });
+        return sceneChoice(choiceId, choiceText, { nextSceneId: eventSceneId, ...baseFlags });
       }
       const nextSceneId = resolveTargetId(
         state,
@@ -496,9 +491,9 @@
         `Scena ${description.id}, scelta ${index + 1}`,
         []
       );
-      return sceneChoice(choice.id || `${description.id}__choice_${index + 1}`, choice.text || `Scelta ${index + 1}`, {
+      return sceneChoice(choiceId, choiceText, {
         ...(nextSceneId ? { nextSceneId } : {}),
-        ...(choice?.hidden ? { hidden: true } : {})
+        ...baseFlags
       });
     });
   }
