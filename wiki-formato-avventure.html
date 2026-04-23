@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>.txt-Master | Wiki del Formato Avventure</title>
+  <meta name="description" content="Formato delle avventure di .txt-Master: JSON, scene, scelte, skill check, nemici, oggetti e struttura dei contenuti per Adventure Studio.">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <nav class="site-nav">
+    <a class="site-nav__brand" href="./index.html">.txt-Master</a>
+    <div class="site-nav__links">
+      <a href="./index.html" class="site-nav__link">Portale</a>
+      <a href="./wiki.html" class="site-nav__link site-nav__link--active">Wiki</a>
+      <a href="./grimorio.html" class="site-nav__link">Grimorio</a>
+      <a href="./adventure-studio/index.html" class="site-nav__link">Adventure Studio</a>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div class="hero__inner">
+      <div class="eyebrow">Adventure Studio</div>
+      <h1>Formato delle avventure</h1>
+      <p class="hero__copy">
+        <strong>.txt-Master</strong> è progettato per usare avventure strutturate in dati validabili, preferibilmente in <strong>JSON</strong>. Questa pagina spiega la logica del formato e il ruolo delle sue componenti principali.
+      </p>
+      <div class="hero__actions">
+        <a class="button button--primary" href="./wiki.html">Torna alla wiki</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="panel">
+      <div class="eyebrow">Che cosa è verificato</div>
+      <h2>Il formato dati è parte centrale del progetto</h2>
+      <p>
+        Il progetto indica esplicitamente JSON come formato consigliato per le avventure e mostra già una struttura semplificata con <strong>id</strong>, <strong>title</strong>, <strong>startingSceneId</strong>, <strong>scenes</strong>, testo, immagini, scelte e skill check. Il contenuto deve essere validabile e convertibile in scene giocabili dal motore dell'app.
+      </p>
+    </section>
+
+    <section class="panel">
+      <div class="eyebrow">Scena</div>
+      <h2>L'unità fondamentale</h2>
+      <p>
+        La scena è l'unità narrativa e tecnica di base. Una scena contiene almeno un identificatore, un testo da mostrare e una o più conseguenze possibili. Queste conseguenze possono essere scelte esplicite, controlli regolati dal sistema, combattimenti, premi o transizioni automatiche.
+      </p>
+    </section>
+
+    <section class="panel">
+      <div class="eyebrow">Scelte</div>
+      <h2>Decisioni e bivi</h2>
+      <p>
+        Le scelte collegano una scena alla successiva e rappresentano il punto di contatto principale fra il giocatore e il contenuto authored. Una scelta ben progettata non è soltanto un testo cliccabile: è un nodo di interazione che può richiedere condizioni, costi, verifiche o produrre effetti permanenti sullo stato della partita.
+      </p>
+    </section>
+
+    <section class="panel">
+      <div class="eyebrow">Verifiche</div>
+      <h2>Skill check strutturati</h2>
+      <p>
+        Il formato supporta prove con almeno quattro elementi: abilità o statistica coinvolta, difficoltà, scena di successo e scena di fallimento. Questo permette di modellare nel JSON sia il bivio narrativo sia la risoluzione regolistica, senza lasciare la logica nascosta nel testo libero.
+      </p>
+    </section>
+
+    <section class="panel">
+      <div class="eyebrow">Estensioni</div>
+      <h2>Che cosa il formato dovrà poter rappresentare</h2>
+      <p>
+        Oltre alle scene narrative, il formato dovrà poter rappresentare nemici, oggetti, immagini, metadati dell'avventura, regole speciali opzionali e possibili elementi di stato. La solidità del progetto dipende molto dalla chiarezza con cui questi blocchi vengono separati e validati.
+      </p>
+    </section>
+
+    <section class="panel">
+      <div class="eyebrow">Uso pratico</div>
+      <h2>Perché questa pagina è importante</h2>
+      <p>
+        Questa parte della wiki è destinata a diventare il ponte tra gli autori e il motore del gioco. Serve sia a chi costruisce avventure in Adventure Studio sia a chi vuole capire quali elementi di gameplay siano realmente supportati dal sistema.
+      </p>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>.txt-Master | Wiki del formato dati delle avventure.</p>
+  </footer>
+</body>
+</html>
