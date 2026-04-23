@@ -9274,11 +9274,33 @@ function renderLootList(container, items, options = {}) {
   });
 }
 
+function buildCompiledRuntimePayload(cleaned, validation) {
+  const compiler = window.TxtMasterRuntimeCompiler;
+  if (!compiler || typeof compiler.compileAdventureGraphToRuntime !== "function") {
+    validation.errors.push("Compilatore runtime non disponibile nello Studio.");
+    return null;
+  }
+  try {
+    const result = compiler.compileAdventureGraphToRuntime(cleaned);
+    if (Array.isArray(result?.warnings) && result.warnings.length) {
+      validation.warnings.push(...result.warnings);
+    }
+    if (Array.isArray(result?.errors) && result.errors.length) {
+      validation.errors.push(...result.errors);
+    }
+    return result?.adventure || null;
+  } catch (error) {
+    validation.errors.push(`Compilatore runtime: ${error?.message || error}`);
+    return null;
+  }
+}
+
 function renderJson({ syncScene = true } = {}) {
   if (syncScene) syncCurrentSceneEditorStateFromDom();
   const cleaned = cleanAdventure(state.adventure);
   const validation = validateAdventure(state.adventure, cleaned, { strictAlpha: state.ui.strictAlpha });
-  els.jsonOutput.value = JSON.stringify(cleaned, null, 2);
+  const compiled = buildCompiledRuntimePayload(cleaned, validation);
+  els.jsonOutput.value = JSON.stringify(compiled || cleaned, null, 2);
   renderValidation(validation);
   persistLocalProject({ syncScene: false });
 }
@@ -9302,12 +9324,13 @@ function scheduleMonsterListRender() {} // stub — no more separate monster panel
 async function exportJson() {
   const cleaned = cleanAdventure(state.adventure);
   const validation = validateAdventure(state.adventure, cleaned, { strictAlpha: state.ui.strictAlpha });
+  const compiled = buildCompiledRuntimePayload(cleaned, validation);
   renderValidation(validation);
-  if (validation.errors.length > 0) {
+  if (validation.errors.length > 0 || !compiled) {
     window.alert(`Esportazione bloccata: ${validation.errors.length} errori da correggere.`);
     return;
   }
-  const payload = JSON.stringify(cleaned, null, 2);
+  const payload = JSON.stringify(compiled, null, 2);
   const suggestedName = `${slugify(state.adventure.title || "adventure")}.json`;
 
   if (typeof window.showSaveFilePicker === "function") {

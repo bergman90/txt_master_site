@@ -1,9 +1,9 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="it">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Adventure Studio — .txt-Master</title>
+  <title>Adventure Studio â€” .txt-Master</title>
   <meta name="description" content="Editor visuale per creare avventure dark fantasy compatibili con .txt-Master. Nodi drag-and-drop, combattimenti, loot e export JSON diretto.">
   <link rel="stylesheet" href="./styles.css">
 </head>
@@ -162,8 +162,9 @@
             <button id="add-scene-btn">Nuovo evento</button>
           </div>
           <div class="flow-toolbar">
-            <input id="flow-search" type="search" placeholder="Cerca nodo…" class="flow-search-input" autocomplete="off" aria-label="Cerca nodo per titolo">
+            <input id="flow-search" type="search" placeholder="Cerca nodo..." class="flow-search-input" autocomplete="off" aria-label="Cerca nodo per titolo">
             <span id="flow-stats" class="flow-stats"></span>
+            <button id="group-chapter-btn" type="button" class="small hidden">Raggruppa in capitolo</button>
             <button id="flow-zoom-out-btn" type="button" class="small" aria-label="Riduci mappa">-</button>
             <span id="flow-zoom-label" class="flow-zoom-label">100%</span>
             <button id="flow-zoom-in-btn" type="button" class="small" aria-label="Aumenta mappa">+</button>
@@ -370,11 +371,11 @@
         <div class="req-mode-row">
           <label>Tipo requisito
             <select data-field="reqMode">
-              <option value="">— Nessuno —</option>
-              <option value="key">🔑 Chiave</option>
-              <option value="item">📦 Oggetto specifico</option>
-              <option value="category">🗂 Categoria</option>
-              <option value="effect">✨ Effetto</option>
+              <option value="">â€” Nessuno â€”</option>
+              <option value="key">ðŸ”‘ Chiave</option>
+              <option value="item">ðŸ“¦ Oggetto specifico</option>
+              <option value="category">ðŸ—‚ Categoria</option>
+              <option value="effect">âœ¨ Effetto</option>
             </select>
           </label>
         </div>
@@ -385,7 +386,7 @@
         <div data-req-section="item" class="req-section choice-check-grid" style="display:none">
           <label>Oggetto (preset)<select data-field="requiredItemId"></select></label>
           <label>ItemId runtime<input data-field="requiredItemIdCustom" type="text" placeholder="es. ancient_seal"></label>
-          <p class="hint full-width">Scegli dal preset o scrivi l'itemId direttamente se è un oggetto personalizzato. Il giocatore deve averlo in inventario.</p>
+          <p class="hint full-width">Scegli dal preset o scrivi l'itemId direttamente se Ã¨ un oggetto personalizzato. Il giocatore deve averlo in inventario.</p>
         </div>
         <div data-req-section="category" class="req-section choice-check-grid" style="display:none">
           <label class="full-width">Categoria richiesta<select data-field="requiredItemCategory"></select></label>
@@ -410,8 +411,8 @@
           <label>Evento se successo<select data-field="checkSuccess"></select></label>
           <label>Evento se fallisce <small>(vuoto = rimane qui)</small><select data-field="checkFailure"></select></label>
         </div>
-        <label class="checkbox-line"><input data-field="burnOnFailure" type="checkbox"> Brucia scelta al fallimento — scompare dopo un tentativo fallito</label>
-        <!-- SUCCESSO inline — visibile solo con "Resta qui" -->
+        <label class="checkbox-line"><input data-field="burnOnFailure" type="checkbox"> Brucia scelta al fallimento â€” scompare dopo un tentativo fallito</label>
+        <!-- SUCCESSO inline â€” visibile solo con "Resta qui" -->
         <div data-role="success-inline-section" style="display:none">
           <p class="hint inline-branch-label">Esito successo (resta nella scena)</p>
           <div data-role="success-loot-list"></div>
@@ -421,7 +422,7 @@
           <label>Condizione al successo<select data-field="successCondition"></select></label>
           <label>Sblocca scelta (ID) al successo<input data-field="successUnlockChoiceId" type="text" placeholder="es. hidden_door"></label>
         </div>
-        <!-- FALLIMENTO inline — visibile solo con "Resta qui" -->
+        <!-- FALLIMENTO inline â€” visibile solo con "Resta qui" -->
         <div data-role="failure-inline-section" style="display:none">
           <p class="hint inline-branch-label">Esito fallimento (resta nella scena)</p>
           <div data-role="failure-loot-list"></div>
@@ -432,7 +433,7 @@
           <label>Sblocca scelta (ID) al fallimento<input data-field="failureUnlockChoiceId" type="text" placeholder="es. hidden_door"></label>
         </div>
       </details>
-      <label class="checkbox-line"><input data-field="hidden" type="checkbox"> Scelta nascosta — visibile solo se sbloccata da una prova (successUnlockChoiceId / failureUnlockChoiceId)</label>
+      <label class="checkbox-line"><input data-field="hidden" type="checkbox"> Scelta nascosta â€” visibile solo se sbloccata da una prova (successUnlockChoiceId / failureUnlockChoiceId)</label>
       <hr class="choice-divider">
       <button data-action="remove-choice" class="danger small">Rimuovi scelta</button>
     </div>
@@ -445,7 +446,7 @@
         <div class="loot-summary-meta">
           <small data-role="loot-meta">Quantita 1</small>
           <small data-role="loot-tag">Comune</small>
-          <label class="loot-quest-inline" title="Quest item: questo oggetto è necessario per sbloccare una scelta narrativa specifica. Non si può scartare."><input data-field="questItem" type="checkbox"> Quest</label>
+          <label class="loot-quest-inline" title="Quest item: questo oggetto Ã¨ necessario per sbloccare una scelta narrativa specifica. Non si puÃ² scartare."><input data-field="questItem" type="checkbox"> Quest</label>
           <small data-role="loot-action">Approva loot</small>
         </div>
       </summary>
@@ -475,12 +476,12 @@
         <div data-role="armor-type-row" style="display:none">
           <label>Peso armatura
             <select data-field="armorType">
-              <option value="light">Leggera — nessuna penalità</option>
-              <option value="medium">Media — stamina max -1, -1 a survival/precision/dex</option>
-              <option value="heavy">Pesante — stamina max -2, -2 a survival/precision/dex</option>
+              <option value="light">Leggera â€” nessuna penalitÃ </option>
+              <option value="medium">Media â€” stamina max -1, -1 a survival/precision/dex</option>
+              <option value="heavy">Pesante â€” stamina max -2, -2 a survival/precision/dex</option>
             </select>
           </label>
-          <p class="hint">Il peso viene usato dal runtime per calcolare penalità a stamina e skill check di mobilità.</p>
+          <p class="hint">Il peso viene usato dal runtime per calcolare penalitÃ  a stamina e skill check di mobilitÃ .</p>
         </div>
 
         <div data-role="lock-row">
@@ -501,7 +502,7 @@
           <label>Nome personalizzato<input data-field="customName" type="text" placeholder="Solo se scegli Personalizzato"></label>
         </div>
 
-        <p class="hint quest-hint">Il flag Quest si imposta dalla riga del titolo della card (checkbox "Quest"). Il giocatore non potrà scartarlo; usalo solo se una scelta nell'avventura ha lo stesso itemId come requisito.</p>
+        <p class="hint quest-hint">Il flag Quest si imposta dalla riga del titolo della card (checkbox "Quest"). Il giocatore non potrÃ  scartarlo; usalo solo se una scelta nell'avventura ha lo stesso itemId come requisito.</p>
       </details>
 
       <div class="button-row loot-actions">
@@ -569,7 +570,7 @@
   <!-- Save toast -->
   <div id="save-toast" class="save-toast" aria-live="polite">Avventura salvata!</div>
 
-  <!-- Node Picker — aggiunge nodi scena o nodi evento indipendenti -->
+  <!-- Node Picker â€” aggiunge nodi scena o nodi evento indipendenti -->
   <div id="node-picker" class="node-picker hidden" role="dialog" aria-label="Aggiungi nodo">
     <div id="node-picker-step1">
       <div class="node-picker-title">Aggiungi nodo al grafo</div>
@@ -604,16 +605,6 @@
           <span class="node-picker-label">Loot</span>
           <span class="node-picker-hint">Ricompense e bottino</span>
         </button>
-        <button class="node-picker-btn node-picker-btn--condition" data-kind="condition" title="Nodo evento condizione">
-          <span class="node-picker-icon">&#x2728;</span>
-          <span class="node-picker-label">Condizione</span>
-          <span class="node-picker-hint">Stati e flag</span>
-        </button>
-        <button class="node-picker-btn node-picker-btn--shop" data-kind="shop" title="Nodo evento negozio">
-          <span class="node-picker-icon">&#x1F3EA;</span>
-          <span class="node-picker-label">Negozio</span>
-          <span class="node-picker-hint">Compra / vendi</span>
-        </button>
         <button class="node-picker-btn node-picker-btn--dialogue" data-kind="dialogue" title="Nodo evento dialogo">
           <span class="node-picker-icon">&#x1F4AC;</span>
           <span class="node-picker-label">Dialogo</span>
@@ -628,6 +619,8 @@
     </div>
   </div>
 
+  <script src="./runtime-compiler.js"></script>
   <script src="./app.js"></script>
 </body>
 </html>
+

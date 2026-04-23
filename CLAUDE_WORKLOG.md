@@ -532,3 +532,9 @@ Formato consigliato:
 - Nella repo privata e stato fissato un primo seed di ricette per la futura forgia.
 - Una sola ricetta resta pensata come esplicita all'inizio (`Pozione curativa T1`), le altre vengono mantenute come ricette da scoprire.
 - Il dettaglio operativo delle ricette seed resta nella repo privata, insieme al catalogo runtime del crafting.
+## 2026-04-23 - Sync runtime compiler v1
+- Sincronizzato dal repo privato il nuovo compilatore graph -> runtime di Adventure Studio.
+- Il portale carica ora dventure-studio/runtime-compiler.js prima di pp.js.
+- JSON preview ed export nello Studio puntano al payload runtime compilato, non piu al solo modello editoriale v2.
+- Documento di supporto sincronizzato: docs/adventure-runtime-compiler-v1.md.
+- Questo pass e soprattutto architetturale: prepara la migrazione dal nuovo modello a nodi dello Studio al formato runtime che l'app sa gia leggere.
