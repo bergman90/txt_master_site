@@ -40,29 +40,6 @@
       .filter(Boolean);
   }
 
-  function makeSceneSkeleton(id) {
-    return {
-      id,
-      title: "",
-      text: "",
-      image: null,
-      sceneLoot: [],
-      choices: [],
-      encounterId: null,
-      encounterCount: 1,
-      victorySceneId: null,
-      defeatSceneId: null,
-      retreatSceneId: null
-    };
-  }
-
-  function sceneChoice(id, text, patch = {}) {
-    return {
-      id,
-      text: normalizeString(text) || "Continua",
-      ...patch
-    };
-  }
 
   function nonEmpty(value) {
     const normalized = normalizeString(value);
@@ -82,462 +59,329 @@
     return EVENT_LABELS[type] || "Evento";
   }
 
-  function composeSceneText(...parts) {
-    return parts
-      .map(nonEmpty)
-      .filter(Boolean)
-      .join("\n\n");
-  }
-
   function createCompilerState(cleaned) {
     const descriptions = Array.isArray(cleaned.descriptions) ? cleaned.descriptions : [];
     const eventNodes = Array.isArray(cleaned.eventNodes) ? cleaned.eventNodes : [];
-    const allIds = new Set([
-      ...descriptions.map((desc) => desc.id),
-      ...eventNodes.map((node) => node.id)
-    ]);
     return {
       cleaned,
       descriptions,
       eventNodes,
       descriptionMap: new Map(descriptions.map((desc) => [desc.id, desc])),
       eventNodeMap: new Map(eventNodes.map((node) => [node.id, node])),
-      runtimeScenes: [],
-      runtimeSceneMap: new Map(),
-      runtimeEncounters: [],
-      runtimeEncounterIds: new Set(),
       warnings: [],
-      errors: [],
-      reservedIds: allIds
+      errors: []
     };
   }
 
-  function uniqueId(state, seed) {
-    let candidate = slugifyFragment(seed);
-    if (!state.reservedIds.has(candidate)) {
-      state.reservedIds.add(candidate);
-      return candidate;
-    }
-    let index = 2;
-    while (state.reservedIds.has(`${candidate}_${index}`)) {
-      index += 1;
-    }
-    const unique = `${candidate}_${index}`;
-    state.reservedIds.add(unique);
-    return unique;
-  }
+  // ─────────────────────────────────────────────────────────────────
+  // V2 RUNTIME COMPILER — output: Adventure v2 (descriptions, inline
+  // events).  Replaces the old v1 scene-flattening approach.
+  // ─────────────────────────────────────────────────────────────────
 
-  function ensureRuntimeScene(state, id) {
-    if (state.runtimeSceneMap.has(id)) return state.runtimeSceneMap.get(id);
-    const scene = makeSceneSkeleton(id);
-    state.runtimeSceneMap.set(id, scene);
-    state.runtimeScenes.push(scene);
-    return scene;
-  }
-
-  function finalizeScene(scene) {
-    return {
-      id: scene.id,
-      title: scene.title || scene.id,
-      text: scene.text || "",
-      ...(scene.image ? { image: scene.image } : {}),
-      ...(scene.sceneLoot.length ? { sceneLoot: scene.sceneLoot } : {}),
-      ...(scene.choices.length ? { choices: scene.choices } : {}),
-      ...(scene.encounterId ? { encounterId: scene.encounterId } : {}),
-      ...(scene.encounterCount && scene.encounterCount > 1 ? { encounterCount: scene.encounterCount } : {}),
-      ...(scene.victorySceneId ? { victorySceneId: scene.victorySceneId } : {}),
-      ...(scene.defeatSceneId ? { defeatSceneId: scene.defeatSceneId } : {}),
-      ...(scene.retreatSceneId ? { retreatSceneId: scene.retreatSceneId } : {})
-    };
-  }
-
-  function resolveTargetId(state, targetId, contextLabel, allowedSentinels = []) {
+  /**
+   * Resolve a targetId to its type:
+   *   "description" → the target is a Description node
+   *   "event"       → the target is an Event node (to be embedded inline)
+   *   "sentinel"    → __death__ / __stay__ / __retry__ / __no_escape__
+   * Returns null if unknown.
+   */
+  function resolveV2Target(state, targetId, contextLabel) {
     const normalized = normalizeString(targetId);
     if (!normalized) return null;
-    if (isSentinel(normalized)) {
-      if (allowedSentinels.includes(normalized)) return normalized;
-      state.errors.push(`${contextLabel}: il sentinel ${normalized} non e supportato in questo contesto runtime.`);
-      return null;
-    }
-    if (state.descriptionMap.has(normalized) || state.eventNodeMap.has(normalized)) return normalized;
-    state.errors.push(`${contextLabel}: target runtime inesistente (${normalized}).`);
+    if (isSentinel(normalized)) return { type: "sentinel", id: normalized };
+    if (state.descriptionMap.has(normalized)) return { type: "description", id: normalized };
+    if (state.eventNodeMap.has(normalized)) return { type: "event", node: state.eventNodeMap.get(normalized) };
+    if (contextLabel) state.errors.push(`${contextLabel}: target "${normalized}" non trovato.`);
     return null;
   }
 
-  function branchHasPayload(branch) {
-    return Boolean(
-      nonEmpty(branch?.text) ||
-      (Array.isArray(branch?.loot) && branch.loot.length) ||
-      nonEmpty(branch?.condition) ||
-      nonEmpty(branch?.unlockChoiceId) ||
-      branch?.burnAfterUse
-    );
-  }
-
-  function pushBranchUnsupportedWarnings(state, branch, contextLabel) {
-    if (!branch) return;
-    if (nonEmpty(branch.condition)) {
-      state.warnings.push(`${contextLabel}: condition non e ancora migrata nel runtime compilato e verra ignorata.`);
-    }
-  }
-
-  function buildContinueChoice(sceneId, nextSceneId, text = "Continua") {
-    if (!nextSceneId || isSentinel(nextSceneId)) return null;
-    return sceneChoice(`${sceneId}__next`, text, { nextSceneId });
-  }
-
-  function compileBranchTarget(state, branch, seed, options = {}) {
-    if (!branch) return null;
-    const contextLabel = options.contextLabel || "Branch";
-    const allowedSentinels = Array.isArray(options.allowedSentinels) ? options.allowedSentinels : [];
-    const directTarget = resolveTargetId(state, branch.targetId, contextLabel, allowedSentinels);
-    const hasPayload = branchHasPayload(branch);
-    pushBranchUnsupportedWarnings(state, branch, contextLabel);
-
-    if (branch.event && !hasPayload) {
-      return compileInlineEventScene(state, branch.event, `${seed}__event`, {
-        titleHint: options.titleHint || contextLabel
-      });
-    }
-
-    if (!branch.event && !hasPayload) {
-      return directTarget;
-    }
-
-    if (isSentinel(directTarget) && !branch.event) {
-      state.warnings.push(`${contextLabel}: testo o loot del branch verso sentinel non sono supportati e verranno ignorati.`);
-      return directTarget;
-    }
-
-    const sceneId = uniqueId(state, `${seed}__branch`);
-    const scene = ensureRuntimeScene(state, sceneId);
-    scene.title = options.sceneTitle || `${options.titleHint || "Esito"}`
-      .trim();
-    scene.text = nonEmpty(branch.text) || "";
-    scene.sceneLoot = cloneLootList(branch.loot);
-    const nextSceneId = branch.event
-      ? compileInlineEventScene(state, branch.event, `${sceneId}__event`, {
-          titleHint: options.titleHint || contextLabel
-        })
-      : directTarget;
-    const continueChoice = buildContinueChoice(sceneId, nextSceneId, options.choiceText || "Continua");
-    scene.choices = continueChoice ? [continueChoice] : [];
-    return sceneId;
-  }
-
-  function compileCombatEncounter(state, sceneId, event, title) {
-    const groups = Array.isArray(event.combatGroups) ? event.combatGroups : [];
-    if (!groups.length) {
-      state.errors.push(`${title}: evento combattimento senza gruppi mostro.`);
-      return { encounterId: null, encounterCount: 1 };
-    }
-    const firstGroup = groups[0] || {};
-    if (groups.length > 1) {
-      state.warnings.push(`${title}: il runtime app supporta un solo profilo nemico per scena. Usero il primo gruppo come profilo di combattimento e manterro il resto come warning di authoring.`);
-    }
-    const encounterId = uniqueId(state, `enc_${sceneId}`);
-    const mergedLoot = groups.flatMap((group) => cloneLootList(group.loot));
-    const mergedGold = groups.reduce((sum, group) => sum + Number(group?.goldReward || 0), 0);
-    const encounter = {
-      id: encounterId,
-      name: nonEmpty(firstGroup.name) || title,
-      description: "",
-      hitPoints: Number(firstGroup.hitPoints || 1),
-      attackBonus: Number(firstGroup.attackBonus || 0),
-      defense: Number(firstGroup.defense || 0),
-      damageMin: Number(firstGroup.damageMin || 0),
-      damageMax: Number(firstGroup.damageMax || 0),
-      goldReward: mergedGold,
-      abilityIds: Array.isArray(firstGroup.abilityIds) ? [...firstGroup.abilityIds] : [],
-      loot: mergedLoot,
-      hasBerserkerPhase: Boolean(firstGroup.hasBerserkerPhase)
+  /** Compile a Branch from the graph into a v2 Branch runtime object. */
+  function compileBranchV2(state, branch, seed, inProgress) {
+    const base = {
+      ...(nonEmpty(branch?.text) ? { text: branch.text } : {}),
+      ...(Array.isArray(branch?.loot) && branch.loot.length ? { loot: cloneLootList(branch.loot) } : {}),
+      ...(nonEmpty(branch?.condition) ? { condition: branch.condition } : {}),
+      ...(nonEmpty(branch?.unlockChoiceId) ? { unlockChoiceId: branch.unlockChoiceId } : {}),
+      ...(branch?.burnAfterUse ? { burnAfterUse: true } : {})
     };
-    if (!state.runtimeEncounterIds.has(encounterId)) {
-      state.runtimeEncounterIds.add(encounterId);
-      state.runtimeEncounters.push(encounter);
+
+    // Branch carries its own nested event
+    if (branch?.event) {
+      const nested = compileEventV2(state, branch.event, `${seed}_ev`, inProgress);
+      if (nested) return { ...base, event: nested };
     }
+
+    const target = resolveV2Target(state, branch?.targetId, `branch ${seed}`);
+    if (!target) return { ...base };
+    if (target.type === "sentinel" || target.type === "description") {
+      return { ...base, targetId: target.id };
+    }
+    if (target.type === "event") {
+      if (inProgress && inProgress.has(target.node.id)) {
+        state.errors.push(`branch ${seed}: ciclo rilevato in "${target.node.id}". Branch trattato come __stay__.`);
+        return { ...base, targetId: STAY_SENTINEL };
+      }
+      const nested = compileEventNodeV2(state, target.node, seed, inProgress);
+      if (nested) return { ...base, event: nested };
+    }
+    return { ...base };
+  }
+
+  /** Compile a standalone Event node (from graph eventNodes[]) inline. */
+  function compileEventNodeV2(state, node, seed, inProgress) {
+    const nextProgress = new Set(inProgress || []);
+    nextProgress.add(node.id);
+    return compileEventV2(state, node.event, seed || node.id, nextProgress);
+  }
+
+  /** Dispatch-compile an event object by type. */
+  function compileEventV2(state, event, seed, inProgress) {
+    if (!event?.type) {
+      state.warnings.push(`${seed}: evento senza tipo, ignorato.`);
+      return null;
+    }
+    switch (event.type) {
+      case "combat":      return compileCombatV2(state, event, seed, inProgress);
+      case "skillcheck":  return compileSkillCheckV2(state, event, seed, inProgress);
+      case "requirement": return compileRequirementV2(state, event, seed, inProgress);
+      case "loot":        return compileLootV2(state, event, seed, inProgress);
+      case "transition":  return compileTransitionV2(state, event, seed, inProgress);
+      case "shop":        return compileShopV2(state, event, seed, inProgress);
+      case "dialogue":    return compileDialogueV2(state, event, seed, inProgress);
+      case "condition":   return compileConditionV2(state, event, seed, inProgress);
+      default:
+        state.warnings.push(`${seed}: tipo evento sconosciuto "${event.type}", ignorato.`);
+        return null;
+    }
+  }
+
+  function compileCombatGroupV2(group) {
     return {
-      encounterId,
-      encounterCount: Math.max(1, Number(firstGroup.count || 1))
+      ...(nonEmpty(group?.monsterId) ? { monsterId: group.monsterId } : {}),
+      count: Math.max(1, Number(group?.count || 1)),
+      name: nonEmpty(group?.name) || "Nemico",
+      ...(nonEmpty(group?.description) ? { description: group.description } : {}),
+      hitPoints: Number(group?.hitPoints || 1),
+      attackBonus: Number(group?.attackBonus || 0),
+      defense: Number(group?.defense || 0),
+      damageMin: Number(group?.damageMin || 0),
+      damageMax: Number(group?.damageMax || 0),
+      goldReward: Number(group?.goldReward || 0),
+      abilityIds: Array.isArray(group?.abilityIds) ? [...group.abilityIds] : [],
+      hasBerserkerPhase: group?.hasBerserkerPhase ? true : undefined,
+      loot: cloneLootList(group?.loot || [])
     };
   }
 
-  function compileSkillCheckBranch(state, branch, seed, contextLabel) {
-    const directTarget = resolveTargetId(state, branch?.targetId, contextLabel, [STAY_SENTINEL, RETRY_SENTINEL]);
-    pushBranchUnsupportedWarnings(state, branch, contextLabel);
-    if (directTarget === STAY_SENTINEL && !branch?.event) {
+  function compileCombatV2(state, event, seed, inProgress) {
+    const groups = (Array.isArray(event.combatGroups) ? event.combatGroups : []).map(compileCombatGroupV2);
+    if (!groups.length) state.errors.push(`${seed}: combat senza gruppi mostro.`);
+    return {
+      type: "combat",
+      ...(nonEmpty(event.text) ? { text: event.text } : {}),
+      ...(nonEmpty(event.image) ? { image: event.image } : {}),
+      combatGroups: groups,
+      victoryBranch: compileBranchV2(state, event.victoryBranch, `${seed}_v`, inProgress),
+      defeatBranch:  compileBranchV2(state, event.defeatBranch || { targetId: DEATH_SENTINEL }, `${seed}_d`, inProgress),
+      ...(event.retreatBranch
+        ? { retreatBranch: compileBranchV2(state, event.retreatBranch, `${seed}_r`, inProgress) }
+        : {})
+    };
+  }
+
+  function compileSkillCheckV2(state, event, seed, inProgress) {
+    return {
+      type: "skillcheck",
+      ...(nonEmpty(event.text) ? { text: event.text } : {}),
+      attribute: normalizeString(event.attribute) || "strength",
+      difficulty: Number(event.difficulty || 12),
+      successBranch: compileBranchV2(state, event.successBranch, `${seed}_s`, inProgress),
+      failureBranch: compileBranchV2(state, event.failureBranch, `${seed}_f`, inProgress),
+      ...(event.burnOnFailure ? { burnOnFailure: true } : {})
+    };
+  }
+
+  function compileRequirementV2(state, event, seed, inProgress) {
+    return {
+      type: "requirement",
+      ...(nonEmpty(event.text) ? { text: event.text } : {}),
+      ...(nonEmpty(event.itemId) ? { itemId: event.itemId } : {}),
+      ...(nonEmpty(event.itemCategory) ? { itemCategory: event.itemCategory } : {}),
+      ...(nonEmpty(event.effectId) ? { effectId: event.effectId } : {}),
+      ...(event.consumeOnMet ? { consumeOnMet: true } : {}),
+      metBranch:   compileBranchV2(state, event.metBranch,   `${seed}_met`,   inProgress),
+      unmetBranch: compileBranchV2(state, event.unmetBranch, `${seed}_unmet`, inProgress)
+    };
+  }
+
+  function compileLootV2(state, event, seed, inProgress) {
+    return {
+      type: "loot",
+      ...(nonEmpty(event.text) ? { text: event.text } : {}),
+      ...(nonEmpty(event.image) ? { image: event.image } : {}),
+      loot:   cloneLootList(event.loot || []),
+      branch: compileBranchV2(state, event.branch, `${seed}_next`, inProgress)
+    };
+  }
+
+  function compileTransitionV2(state, event, seed, inProgress) {
+    return {
+      type: "transition",
+      text:   nonEmpty(event.text) || "",
+      ...(nonEmpty(event.image) ? { image: event.image } : {}),
+      branch: compileBranchV2(state, event.branch, `${seed}_next`, inProgress)
+    };
+  }
+
+  function compileShopItemV2(item) {
+    return {
+      itemId:      normalizeString(item?.itemId) || "",
+      price:       Number(item?.price || 0),
+      ...(item?.limitedStock ? { limitedStock: true }                          : {}),
+      ...(Number(item?.stockCount) > 0 ? { stockCount: Number(item.stockCount) } : {})
+    };
+  }
+
+  function compileShopV2(state, event, seed, inProgress) {
+    return {
+      type: "shop",
+      ...(nonEmpty(event.text) ? { text: event.text } : {}),
+      ...(nonEmpty(event.image) ? { image: event.image } : {}),
+      items:  Array.isArray(event.items) ? event.items.map(compileShopItemV2) : [],
+      branch: compileBranchV2(state, event.branch, `${seed}_next`, inProgress)
+    };
+  }
+
+  function compileConditionV2(state, event, seed, inProgress) {
+    return {
+      type: "condition",
+      ...(nonEmpty(event.text) ? { text: event.text } : {}),
+      conditionId: normalizeString(event.conditionId) || "",
+      branch: compileBranchV2(state, event.branch, `${seed}_next`, inProgress)
+    };
+  }
+
+  function compileDialogueNodeV2(state, node, seed, inProgress) {
+    if (!node) return { npcText: "" };
+    const responses = Array.isArray(node.responses) ? node.responses : [];
+    if (responses.length) {
       return {
-        targetId: STAY_SENTINEL,
-        text: nonEmpty(branch?.text) || undefined,
-        loot: cloneLootList(branch?.loot),
-        condition: nonEmpty(branch?.condition) || undefined,
-        unlockChoiceId: nonEmpty(branch?.unlockChoiceId) || undefined,
-        burnAfterUse: branch?.burnAfterUse || undefined
+        npcText:   normalizeString(node.npcText) || "",
+        responses: responses.map((r, i) => compileDialogueResponseV2(state, r, `${seed}_r${i}`, inProgress))
       };
     }
-    const nextTarget = compileBranchTarget(state, branch, seed, {
-      contextLabel,
-      titleHint: contextLabel,
-      allowedSentinels: [STAY_SENTINEL, RETRY_SENTINEL]
-    });
     return {
-      targetId: nextTarget
+      npcText: normalizeString(node.npcText) || "",
+      branch:  compileBranchV2(state, node.branch, `${seed}_end`, inProgress)
     };
   }
 
-  function compileDialogueChoices(state, sceneId, event, contextLabel) {
-    const responses = Array.isArray(event.root?.responses) ? event.root.responses : [];
-    if (!responses.length) {
-      const nextSceneId = compileBranchTarget(state, event.branch || event.root?.branch, `${sceneId}__dialogue_branch`, {
-        contextLabel: `${contextLabel} | uscita lineare`,
-        titleHint: `${contextLabel} | uscita`
-      });
-      const nextChoice = buildContinueChoice(sceneId, nextSceneId, "Continua");
-      return nextChoice ? [nextChoice] : [];
+  function compileDialogueResponseV2(state, response, seed, inProgress) {
+    const id   = nonEmpty(response?.id)   || seed;
+    const text = normalizeString(response?.text) || "";
+    if (response?.gateType && response.gateType !== "none") {
+      state.warnings.push(`${seed}: gate "${response.gateType}" sulla risposta dialogo e solo metadata di authoring.`);
     }
-    return responses.map((response, index) => {
-      const nextSceneId = resolveTargetId(
-        state,
-        response.targetId,
-        `${contextLabel} | risposta ${index + 1}`,
-        []
-      );
-      if (response.gateType && response.gateType !== "none") {
-        state.warnings.push(`${contextLabel}: il gate "${response.gateType}" sulla risposta ${index + 1} resta metadata di authoring. In runtime conta il nodo collegato, non il badge.`);
-      }
-      if (response.once) {
-        state.warnings.push(`${contextLabel}: l'opzione "una volta" sulla risposta ${index + 1} non e ancora migrata nel runtime compilato.`);
-      }
-      return sceneChoice(response.id || `${sceneId}__response_${index + 1}`, response.text || `Risposta ${index + 1}`, {
-        ...(nextSceneId ? { nextSceneId } : {}),
-        ...(response.hiddenUntilUnlocked ? { hidden: true } : {})
-      });
-    });
+    if (response?.once) {
+      state.warnings.push(`${seed}: l'opzione "una volta" sulla risposta dialogo non e ancora supportata nel runtime v2.`);
+    }
+    if (response?.hiddenUntilUnlocked) {
+      state.warnings.push(`${seed}: hiddenUntilUnlocked sulla risposta dialogo non e ancora supportato nel runtime v2.`);
+    }
+    // Responses always exit the dialogue: compile as branch
+    const branchSrc = response?.branch || (response?.targetId ? { targetId: response.targetId } : null);
+    if (branchSrc) {
+      return { id, text, branch: compileBranchV2(state, branchSrc, seed, inProgress) };
+    }
+    // No explicit exit: stay
+    return { id, text, branch: { targetId: STAY_SENTINEL } };
   }
 
-  function compileEventIntoScene(state, scene, event, meta = {}) {
-    const sceneTitle = nonEmpty(meta.titleHint) || eventLabel(event?.type);
-    scene.title = scene.title || sceneTitle;
-    scene.text = scene.text || "";
-    scene.image = event?.image || scene.image || null;
+  function compileDialogueV2(state, event, seed, inProgress) {
+    return {
+      type:     "dialogue",
+      ...(nonEmpty(event.text)     ? { text:     event.text }     : {}),
+      npcName:  normalizeString(event.npcName) || "NPC",
+      ...(nonEmpty(event.npcImage) ? { npcImage: event.npcImage } : {}),
+      root: compileDialogueNodeV2(state, event.root, seed, inProgress)
+    };
+  }
 
-    switch (event?.type) {
-      case "transition": {
-        scene.text = nonEmpty(event.text) || "";
-        const nextSceneId = compileBranchTarget(state, event.branch, `${scene.id}__next`, {
-          contextLabel: `${sceneTitle} | transizione`,
-          titleHint: sceneTitle
-        });
-        const nextChoice = buildContinueChoice(scene.id, nextSceneId, meta.choiceText || meta.titleHint || "Continua");
-        scene.choices = nextChoice ? [nextChoice] : [];
-        return;
+  /** Compile a single Choice from a Description node. */
+  function compileChoiceV2(state, choice, descId, index) {
+    const id   = nonEmpty(choice?.id)   || `${descId}__choice_${index + 1}`;
+    const text = normalizeString(choice?.text) || `Scelta ${index + 1}`;
+    const flags = {
+      ...(choice?.hidden       ? { hidden:       true } : {}),
+      ...(choice?.burnAfterUse ? { burnAfterUse: true } : {})
+    };
+    const seed = `${descId}_${id}`;
+
+    // Inline event already embedded in the choice
+    if (choice?.event) {
+      const compiled = compileEventV2(state, choice.event, seed, new Set());
+      if (compiled) return { id, text, event: compiled, ...flags };
+    }
+
+    if (choice?.targetId) {
+      const target = resolveV2Target(state, choice.targetId, `${descId} scelta ${index + 1}`);
+      if (!target) return { id, text, ...flags };
+      if (target.type === "sentinel" || target.type === "description") {
+        return { id, text, targetId: target.id, ...flags };
       }
-      case "loot": {
-        scene.text = nonEmpty(event.text) || "";
-        scene.sceneLoot = cloneLootList(event.loot);
-        const nextSceneId = compileBranchTarget(state, event.branch, `${scene.id}__next`, {
-          contextLabel: `${sceneTitle} | loot`,
-          titleHint: sceneTitle
-        });
-        const nextChoice = buildContinueChoice(scene.id, nextSceneId, meta.choiceText || "Continua");
-        scene.choices = nextChoice ? [nextChoice] : [];
-        return;
-      }
-      case "requirement": {
-        scene.text = nonEmpty(event.text) || "";
-        const metTarget = compileBranchTarget(state, event.metBranch, `${scene.id}__met`, {
-          contextLabel: `${sceneTitle} | soddisfatto`,
-          titleHint: `${sceneTitle} | soddisfatto`,
-          allowedSentinels: [DEATH_SENTINEL, STAY_SENTINEL, RETRY_SENTINEL]
-        });
-        const unmetTarget = compileBranchTarget(state, event.unmetBranch, `${scene.id}__unmet`, {
-          contextLabel: `${sceneTitle} | non soddisfatto`,
-          titleHint: `${sceneTitle} | non soddisfatto`,
-          allowedSentinels: [DEATH_SENTINEL, STAY_SENTINEL, RETRY_SENTINEL]
-        });
-        scene.choices = [
-          sceneChoice(`${scene.id}__requirement`, meta.choiceText || meta.titleHint || "Verifica requisito", {
-            event: {
-              type: "requirement",
-              ...(event.requirementMode ? { requirementMode: event.requirementMode } : {}),
-              ...(event.itemId ? { itemId: event.itemId } : {}),
-              ...(event.lockId ? { lockId: event.lockId } : {}),
-              ...(event.questItemId ? { questItemId: event.questItemId } : {}),
-              metBranch: { ...(metTarget ? { targetId: metTarget } : {}) },
-              unmetBranch: { ...(unmetTarget ? { targetId: unmetTarget } : {}) }
-            }
-          })
-        ];
-        return;
-      }
-      case "skillcheck": {
-        scene.text = nonEmpty(event.text) || "";
-        const success = compileSkillCheckBranch(state, event.successBranch, `${scene.id}__success`, `${sceneTitle} | successo`);
-        const failure = compileSkillCheckBranch(state, event.failureBranch, `${scene.id}__failure`, `${sceneTitle} | fallimento`);
-        scene.choices = [
-          sceneChoice(`${scene.id}__check`, meta.choiceText || meta.titleHint || "Affronta la prova", {
-            skillCheck: {
-              attribute: normalizeString(event.attribute) || "",
-              difficulty: Number(event.difficulty || 12),
-              successSceneId: success.targetId || STAY_SENTINEL,
-              failureSceneId: failure.targetId || STAY_SENTINEL,
-              ...(success.targetId === STAY_SENTINEL && success.loot.length ? { successLoot: success.loot } : {}),
-              ...(success.targetId === STAY_SENTINEL && success.text ? { successText: success.text } : {}),
-              ...(success.targetId === STAY_SENTINEL && success.condition ? { successCondition: success.condition } : {}),
-              ...(success.targetId === STAY_SENTINEL && success.unlockChoiceId ? { successUnlockChoiceId: success.unlockChoiceId } : {}),
-              ...(failure.targetId === STAY_SENTINEL && failure.loot.length ? { failureLoot: failure.loot } : {}),
-              ...(failure.targetId === STAY_SENTINEL && failure.text ? { failureText: failure.text } : {}),
-              ...(failure.targetId === STAY_SENTINEL && failure.condition ? { failureCondition: failure.condition } : {}),
-              ...(failure.targetId === STAY_SENTINEL && failure.unlockChoiceId ? { failureUnlockChoiceId: failure.unlockChoiceId } : {}),
-              ...(event.burnOnFailure || (failure.burnAfterUse && failure.targetId === STAY_SENTINEL) ? { burnOnFailure: true } : {})
-            }
-          })
-        ];
-        return;
-      }
-      case "combat": {
-        scene.text = nonEmpty(event.text) || "";
-        const encounter = compileCombatEncounter(state, scene.id, event, sceneTitle);
-        scene.encounterId = encounter.encounterId;
-        scene.encounterCount = encounter.encounterCount;
-        scene.victorySceneId = compileBranchTarget(state, event.victoryBranch, `${scene.id}__victory`, {
-          contextLabel: `${sceneTitle} | vittoria`,
-          titleHint: `${sceneTitle} | vittoria`,
-          allowedSentinels: []
-        });
-        scene.defeatSceneId = compileBranchTarget(state, event.defeatBranch, `${scene.id}__defeat`, {
-          contextLabel: `${sceneTitle} | sconfitta`,
-          titleHint: `${sceneTitle} | sconfitta`,
-          allowedSentinels: [DEATH_SENTINEL]
-        });
-        if (event.retreatBranch) {
-          scene.retreatSceneId = compileBranchTarget(state, event.retreatBranch, `${scene.id}__retreat`, {
-            contextLabel: `${sceneTitle} | ritirata`,
-            titleHint: `${sceneTitle} | ritirata`,
-            allowedSentinels: [DEATH_SENTINEL, NO_ESCAPE_SENTINEL]
-          });
-        }
-        scene.choices = [];
-        return;
-      }
-      case "dialogue": {
-        const npcLine = composeSceneText(nonEmpty(event.text), nonEmpty(event.root?.npcText));
-        scene.text = npcLine || "";
-        scene.choices = compileDialogueChoices(state, scene.id, event, sceneTitle);
-        return;
-      }
-      case "condition": {
-        scene.text = nonEmpty(event.text) || "";
-        state.warnings.push(`${sceneTitle}: il nodo condition resta disattivato nel runtime compilato. Verra trattato come transizione narrativa semplice.`);
-        const nextSceneId = compileBranchTarget(state, event.branch, `${scene.id}__condition`, {
-          contextLabel: `${sceneTitle} | condizione`,
-          titleHint: sceneTitle
-        });
-        const nextChoice = buildContinueChoice(scene.id, nextSceneId, meta.choiceText || "Continua");
-        scene.choices = nextChoice ? [nextChoice] : [];
-        return;
-      }
-      case "shop": {
-        scene.text = nonEmpty(event.text) || "";
-        state.warnings.push(`${sceneTitle}: il nodo shop non viene piu esportato come meccanica runtime. Il negozio globale dell'app resta separato.`);
-        const nextSceneId = compileBranchTarget(state, event.branch, `${scene.id}__shop`, {
-          contextLabel: `${sceneTitle} | shop`,
-          titleHint: sceneTitle
-        });
-        const nextChoice = buildContinueChoice(scene.id, nextSceneId, meta.choiceText || "Continua");
-        scene.choices = nextChoice ? [nextChoice] : [];
-        return;
-      }
-      default: {
-        state.warnings.push(`${sceneTitle}: tipo evento sconosciuto (${event?.type || "?"}). Sara esportato come transizione vuota.`);
-        scene.choices = [];
+      if (target.type === "event") {
+        const compiled = compileEventNodeV2(state, target.node, seed, new Set());
+        if (compiled) return { id, text, event: compiled, ...flags };
       }
     }
+
+    return { id, text, ...flags };
   }
 
-  function compileInlineEventScene(state, event, seed, meta = {}) {
-    const sceneId = uniqueId(state, `rt_${seed}_${event?.type || "event"}`);
-    const scene = ensureRuntimeScene(state, sceneId);
-    compileEventIntoScene(state, scene, event, {
-      titleHint: meta.titleHint || eventLabel(event?.type),
-      choiceText: meta.choiceText || meta.titleHint || "Continua"
-    });
-    return sceneId;
-  }
-
-  function compileDescriptionScene(state, description) {
-    const scene = ensureRuntimeScene(state, description.id);
-    scene.title = description.title || description.id;
-    scene.text = description.text || "";
-    scene.image = description.image || null;
-    scene.sceneLoot = [];
-    scene.choices = (Array.isArray(description.choices) ? description.choices : []).map((choice, index) => {
-      const choiceId = choice.id || `${description.id}__choice_${index + 1}`;
-      const choiceText = choice.text || `Scelta ${index + 1}`;
-      const baseFlags = {
-        ...(choice?.hidden ? { hidden: true } : {}),
-        ...(choice?.burnAfterUse ? { burnAfterUse: true } : {})
-      };
-      if (choice?.event) {
-        const eventSceneId = compileInlineEventScene(state, choice.event, `${description.id}_${choice.id || index + 1}`, {
-          titleHint: choice.text || eventLabel(choice.event.type),
-          choiceText: choice.text || "Continua"
-        });
-        return sceneChoice(choiceId, choiceText, { nextSceneId: eventSceneId, ...baseFlags });
-      }
-      const nextSceneId = resolveTargetId(
-        state,
-        choice?.targetId,
-        `Scena ${description.id}, scelta ${index + 1}`,
-        []
-      );
-      return sceneChoice(choiceId, choiceText, {
-        ...(nextSceneId ? { nextSceneId } : {}),
-        ...baseFlags
-      });
-    });
-  }
-
-  function compileEventNodeScene(state, node) {
-    const scene = ensureRuntimeScene(state, node.id);
-    scene.title = nonEmpty(node.text) || eventLabel(node?.event?.type);
-    compileEventIntoScene(state, scene, node.event, {
-      titleHint: scene.title,
-      choiceText: scene.title
-    });
+  /** Compile a Description node into a v2 runtime Description object. */
+  function compileDescriptionV2(state, description) {
+    return {
+      id: description.id,
+      ...(nonEmpty(description.title) ? { title: description.title } : {}),
+      text:  normalizeString(description.text) || "",
+      ...(nonEmpty(description.image)   ? { image:    description.image }   : {}),
+      ...(description.isEnding          ? { isEnding: true }                : {}),
+      choices: (Array.isArray(description.choices) ? description.choices : [])
+        .map((choice, i) => compileChoiceV2(state, choice, description.id, i))
+    };
   }
 
   function compileAdventureGraphToRuntime(cleaned) {
     const state = createCompilerState(cleaned || {});
 
-    state.descriptions.forEach((description) => compileDescriptionScene(state, description));
-    state.eventNodes.forEach((node) => compileEventNodeScene(state, node));
+    const descriptions = state.descriptions.map((desc) => compileDescriptionV2(state, desc));
 
-    const startingSceneId = resolveTargetId(
-      state,
-      cleaned?.startingDescriptionId,
-      "Descrizione iniziale",
-      []
-    ) || state.descriptions[0]?.id || "";
+    const startingDescriptionId = (() => {
+      const id = normalizeString(cleaned?.startingDescriptionId);
+      if (id && state.descriptionMap.has(id)) return id;
+      return state.descriptions[0]?.id || "";
+    })();
 
     const adventure = {
-      id: normalizeString(cleaned?.id) || "adventure",
-      title: cleaned?.title || "",
-      description: cleaned?.description || "",
-      tags: Array.isArray(cleaned?.tags) ? [...cleaned.tags] : [],
-      adaptivePowerMultiplier: Number(cleaned?.adaptivePowerMultiplier || 0.12),
-      startingSceneId,
-      allowCarryOverLoadout: cleaned?.allowCarryOverLoadout !== false,
-      allowFreshStart: cleaned?.allowFreshStart !== false,
-      starterKitItems: cloneLootList(cleaned?.starterKitItems),
-      scenes: state.runtimeScenes.map(finalizeScene),
-      encounters: state.runtimeEncounters
+      id:                       normalizeString(cleaned?.id) || "adventure",
+      version:                  2,
+      title:                    cleaned?.title || "",
+      description:              cleaned?.description || "",
+      tags:                     Array.isArray(cleaned?.tags) ? [...cleaned.tags] : [],
+      adaptivePowerMultiplier:  Number(cleaned?.adaptivePowerMultiplier || 0.12),
+      startingDescriptionId,
+      allowCarryOverLoadout:    cleaned?.allowCarryOverLoadout !== false,
+      allowFreshStart:          cleaned?.allowFreshStart !== false,
+      ...(cleaned?.forceLoadout       ? { forceLoadout:       true } : {}),
+      ...(cleaned?.restoreLoadoutOnEnd ? { restoreLoadoutOnEnd: true } : {}),
+      starterKitItems:          cloneLootList(cleaned?.starterKitItems),
+      descriptions
     };
 
     return {
       adventure,
       warnings: state.warnings,
-      errors: state.errors
+      errors:   state.errors
     };
   }
 

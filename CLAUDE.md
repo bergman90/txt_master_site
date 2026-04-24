@@ -13,7 +13,8 @@ Sito statico su GitHub Pages. Zero dipendenze npm, zero bundler.
 ```
 adventure-studio/
   index.html    → entry point editor
-  app.js        → tutta la logica (~4300 righe, file unico)
+  app.js        → tutta la logica (~12700 righe, file unico)
+  runtime-compiler.js → compilatore graph v2 → runtime v2 JSON
   styles.css    → stili editor
 adventures/
   catalog.json                   → indice avventure pubblicate
@@ -36,20 +37,25 @@ service-worker.js   → PWA offline
 
 ### Funzionalità editor
 - Flow board con nodi drag&drop, linking frecce, auto-scroll
+- Due tipi di nodi: **Description** (testo + scelte) e **Event** (combattimento, skill check, requisito, loot, shop, dialogo, transizione, condizione)
+- Chapter groups: contenitori editoriali per raggruppare nodi sulla board — collapse/expand, drag, label. **Solo metadati di authoring**: non vengono compilati nel runtime JSON.
 - Pannello scena: testo, scelte, skill check, combattimento, loot, shop
 - Hotkeys: `N` nuovo nodo, `Canc` elimina, `Ctrl+C/V` copia/incolla, `Ctrl+S` salva JSON, `Esc` chiudi pannello
-- Export JSON compatibile col runtime Android (Adventure data class)
+- Export JSON compatibile col runtime Android v2 (Adventure.kt con descriptions[])
 - Validazione combinazioni loot/effetti
 
-### Formato JSON esportato
-Il JSON deve essere compatibile con `Adventure.kt` del runtime Android:
-- `id`, `title`, `description`, `startingSceneId`
+### Formato JSON esportato (v2)
+Output del compilatore (`runtime-compiler.js`) → compatibile con `Adventure.kt` v2:
+- `id`, `title`, `description`, `version: 2`, `startingDescriptionId`
 - `adaptivePowerMultiplier` (default 0.12)
 - `allowCarryOverLoadout`, `allowFreshStart`
 - `starterKitItems[]` → `LootDrop`
-- `scenes[]` → `Scene` (id, title, text, choices, encounterId, victorySceneId, defeatSceneId, sceneLoot)
-- `encounters[]` → `CombatEncounter`
+- `descriptions[]` → `Description` (id, title, text, image, isEnding, choices[])
+- `choices[]` → `Choice` (id, text, hidden, burnAfterUse, targetId | event)
+- `event` → `Event` sealed (type discriminator: combat/skillcheck/requirement/loot/transition/shop/dialogue/condition)
+- `Branch` → (text, loot, condition, unlockChoiceId, burnAfterUse, targetId | event)
 - Campi `_editor` sono metadati interni dell'editor: **non vengono parsati dal runtime Android**
+- Chapter groups (`chapterGroups` nel JSON del grafo editor): **ignorati silenziosamente** dal compilatore runtime
 
 ### Vocabolario effetti — valori validi
 Categorie: `weapon armor shield ring cloak helm boots consumable key quest treasure utility relic`
