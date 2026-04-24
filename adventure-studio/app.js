@@ -6020,7 +6020,6 @@ function showFlowEventQuickMenu(descId, choiceId, anchorRect) {
         })
       );
       const responseInfo = document.createElement("div");
-      responsesWrap.className = "flow-dialogue-quick";
       responseInfo.textContent = "Se il requisito e presente, il ramo soddisfatto consuma sempre 1 unita dell'oggetto richiesto.";
       menu.appendChild(responseInfo);
       const consumeLabel = document.createElement("div");

@@ -2612,6 +2612,14 @@ button.small {
   outline: none;
   border-color: var(--accent);
 }
+.ctp-row .searchable-combobox {
+  flex: 1;
+  min-width: 0;
+}
+.ctp-row .key-req-control {
+  flex: 1;
+  min-width: 0;
+}
 .searchable-combobox__dropdown {
   position: absolute;
   top: 100%;
