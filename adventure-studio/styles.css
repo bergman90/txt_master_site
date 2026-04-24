@@ -2592,6 +2592,94 @@ button.small {
   border-color: rgba(232, 170, 92, 0.6);
 }
 
+/* ── Searchable combobox ───────────────────────────────────────────────────── */
+.searchable-combobox {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+.searchable-combobox__input {
+  width: 100%;
+  padding: 5px 8px;
+  font-size: 0.78rem;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: rgba(10,14,20,0.85);
+  color: var(--text);
+  font-family: var(--mono);
+}
+.searchable-combobox__input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.searchable-combobox__dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 200;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 7px 7px;
+  max-height: 200px;
+  overflow-y: auto;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+}
+.searchable-combobox__option {
+  padding: 5px 10px;
+  font-size: 0.77rem;
+  cursor: pointer;
+  color: var(--text);
+}
+.searchable-combobox__option:hover,
+.searchable-combobox__option--focused {
+  background: var(--panel-2);
+}
+.searchable-combobox__option--selected {
+  background: rgba(74, 122, 90, 0.22);
+  color: #9dffa0;
+}
+.searchable-combobox__option--empty {
+  color: var(--muted);
+  cursor: default;
+  font-style: italic;
+}
+
+/* ── Key requirement dual-control ─────────────────────────────────────────── */
+.key-req-control {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+.key-req-lockid {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.key-req-lockid__label {
+  font-size: 0.72rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.key-req-lockid__input {
+  flex: 1;
+  padding: 4px 7px;
+  font-family: var(--mono);
+  font-size: 0.76rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: rgba(10,14,20,0.85);
+  color: #9de4ff;
+  min-width: 0;
+}
+.key-req-lockid__input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
 .flow-event-quick-menu {
   min-width: 280px;
   max-width: 340px;

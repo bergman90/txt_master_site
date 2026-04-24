@@ -5291,6 +5291,164 @@ function createQuickMenuSelect(hydrator, value = "") {
   return select;
 }
 
+// ── Searchable combobox (per presetItem requirement) ──────────────────────────
+function createItemSearchCombobox(currentValue, onChange) {
+  const presets = selectableLootPresets({ includeCustom: false, includeAccessoryPickers: false });
+  const options = presets.map((p) => {
+    const catLabel = ITEM_CATEGORIES.find((c) => c.value === p.category)?.label || p.category || "";
+    return { value: p.id, label: p.name, sub: catLabel };
+  });
+
+  const wrapper = document.createElement("div");
+  wrapper.className = "searchable-combobox";
+
+  const input = document.createElement("input");
+  input.type = "text";
+  input.className = "searchable-combobox__input";
+  input.placeholder = "Cerca oggetto...";
+  input.autocomplete = "off";
+  input.spellcheck = false;
+
+  const dropdown = document.createElement("div");
+  dropdown.className = "searchable-combobox__dropdown";
+  dropdown.style.display = "none";
+
+  let selectedValue = currentValue || "";
+  let focusedIdx = -1;
+
+  const findLabel = (val) => options.find((o) => o.value === val)?.label || "";
+  input.value = findLabel(selectedValue);
+
+  const renderDropdown = (filter) => {
+    dropdown.innerHTML = "";
+    focusedIdx = -1;
+    const q = (filter || "").toLowerCase();
+    const filtered = q
+      ? options.filter((o) => o.label.toLowerCase().includes(q) || o.sub.toLowerCase().includes(q))
+      : options;
+
+    if (filtered.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "searchable-combobox__option searchable-combobox__option--empty";
+      empty.textContent = "Nessun risultato";
+      dropdown.appendChild(empty);
+      return;
+    }
+    filtered.forEach(({ value, label, sub }) => {
+      const opt = document.createElement("div");
+      opt.className = "searchable-combobox__option" +
+        (value === selectedValue ? " searchable-combobox__option--selected" : "");
+      opt.textContent = sub ? `${label}  ·  ${sub}` : label;
+      opt.dataset.value = value;
+      opt.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        selectedValue = value;
+        input.value = label;
+        dropdown.style.display = "none";
+        onChange(value);
+      });
+      dropdown.appendChild(opt);
+    });
+  };
+
+  input.addEventListener("focus", () => {
+    renderDropdown(input.value !== findLabel(selectedValue) ? input.value : "");
+    dropdown.style.display = "";
+  });
+
+  input.addEventListener("input", () => {
+    renderDropdown(input.value);
+    dropdown.style.display = "";
+    if (!input.value) { selectedValue = ""; onChange(""); }
+  });
+
+  input.addEventListener("blur", () => {
+    setTimeout(() => { dropdown.style.display = "none"; }, 160);
+    const match = options.find((o) => o.label.toLowerCase() === input.value.toLowerCase());
+    if (match) {
+      selectedValue = match.value;
+      input.value = match.label;
+      onChange(match.value);
+    } else if (selectedValue) {
+      input.value = findLabel(selectedValue);
+    } else {
+      input.value = "";
+    }
+  });
+
+  input.addEventListener("keydown", (e) => {
+    const opts = [...dropdown.querySelectorAll(
+      ".searchable-combobox__option:not(.searchable-combobox__option--empty)"
+    )];
+    if (!opts.length) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      focusedIdx = Math.min(focusedIdx + 1, opts.length - 1);
+      opts.forEach((o, i) => o.classList.toggle("searchable-combobox__option--focused", i === focusedIdx));
+      opts[focusedIdx]?.scrollIntoView({ block: "nearest" });
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      focusedIdx = Math.max(focusedIdx - 1, 0);
+      opts.forEach((o, i) => o.classList.toggle("searchable-combobox__option--focused", i === focusedIdx));
+      opts[focusedIdx]?.scrollIntoView({ block: "nearest" });
+    } else if (e.key === "Enter" && focusedIdx >= 0) {
+      e.preventDefault();
+      const opt = opts[focusedIdx];
+      if (opt) {
+        selectedValue = opt.dataset.value;
+        input.value = options.find((o) => o.value === selectedValue)?.label || "";
+        dropdown.style.display = "none";
+        onChange(selectedValue);
+      }
+    } else if (e.key === "Escape") {
+      dropdown.style.display = "none";
+      input.value = findLabel(selectedValue);
+    }
+  });
+
+  wrapper.append(input, dropdown);
+  return wrapper;
+}
+
+// ── Key requirement control (dropdown + lockId text input) ────────────────────
+function buildKeyRequirementControl(currentLockId, onChange) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "key-req-control";
+
+  const keySelect = document.createElement("select");
+  keySelect.className = "ctp-scene-select";
+  hydrateKeySelect(keySelect, currentLockId || "");
+
+  const lockIdRow = document.createElement("div");
+  lockIdRow.className = "key-req-lockid";
+
+  const lockIdLabel = document.createElement("span");
+  lockIdLabel.className = "key-req-lockid__label";
+  lockIdLabel.textContent = "Codice:";
+
+  const lockIdInput = document.createElement("input");
+  lockIdInput.type = "text";
+  lockIdInput.className = "key-req-lockid__input";
+  lockIdInput.placeholder = "es. porta_del_vault";
+  lockIdInput.value = currentLockId || "";
+
+  keySelect.addEventListener("change", () => {
+    lockIdInput.value = keySelect.value;
+    onChange(keySelect.value);
+  });
+
+  lockIdInput.addEventListener("input", () => {
+    const val = lockIdInput.value.trim();
+    const match = [...keySelect.options].find((o) => o.value === val);
+    keySelect.value = match ? val : "";
+    onChange(val);
+  });
+
+  lockIdRow.append(lockIdLabel, lockIdInput);
+  wrapper.append(keySelect, lockIdRow);
+  return wrapper;
+}
+
 const DIALOGUE_RESPONSE_INTENTS = [
   { value: "ask", label: "Chiedi" },
   { value: "insist", label: "Insisti" },
@@ -5804,8 +5962,7 @@ function showFlowEventQuickMenu(descId, choiceId, anchorRect) {
         };
 
         if (mode === "key") {
-          control = createQuickMenuSelect(hydrateKeySelect, eventPayload.lockId || "");
-          control.addEventListener("change", (event) => onValueChange(event.target.value));
+          control = buildKeyRequirementControl(eventPayload.lockId || "", onValueChange);
         } else if (mode === "questItem") {
           control = createQuickMenuSelect(hydrateQuestItemSelect, eventPayload.questItemId || "");
           control.addEventListener("change", (event) => onValueChange(event.target.value));
@@ -5825,12 +5982,7 @@ function showFlowEventQuickMenu(descId, choiceId, anchorRect) {
           }, eventPayload.itemCategory || "");
           control.addEventListener("change", (event) => onValueChange(event.target.value));
         } else {
-          control = createQuickMenuSelect((select, value) => hydrateLootSelect(select, value, {
-            includeCustom: false,
-            compact: true,
-            noneLabel: "Seleziona oggetto"
-          }), eventPayload.itemId || "");
-          control.addEventListener("change", (event) => onValueChange(event.target.value));
+          control = createItemSearchCombobox(eventPayload.itemId || "", onValueChange);
         }
 
         appendQuickMenuRow(menu, meta.valueLabel, control);
@@ -12203,8 +12355,10 @@ function buildSkillCheckConfig(container, ev, desc, choice) {
 
 function buildRequirementConfig(container, ev, desc, choice) {
   const currentMode = getRequirementMode(ev);
+
   const summaryCard = document.createElement("div");
   summaryCard.className = "event-config-mini-card event-config-mini-card--requirement";
+
   const modeSelect = document.createElement("select");
   [
     { value: "presetItem",   label: "Oggetto dal catalogo" },
@@ -12219,48 +12373,17 @@ function buildRequirementConfig(container, ev, desc, choice) {
   });
   modeSelect.value = currentMode;
 
-  const valueControl = document.createElement("select");
+  // valueSlot: a div placeholder replaced whenever mode changes
+  const valueSlot = document.createElement("div");
+  valueSlot.className = "requirement-value-slot";
 
-  function syncRequirement() {
-    const mode = modeSelect.value;
-    ev.requirementMode = mode;
-    ev.itemId       = mode === "presetItem"   ? (valueControl.value || null) : null;
-    ev.itemCategory = mode === "itemCategory" ? (valueControl.value || null) : null;
-    ev.lockId       = mode === "key"          ? (valueControl.value || null) : null;
-    ev.questItemId  = mode === "questItem"    ? (valueControl.value || null) : null;
-    onChoiceChange(desc, choice);
-  }
+  // Separate text node for the label, so setting it never removes the slot child
+  const valueLabelText = document.createElement("span");
+  valueLabelText.textContent = requirementModeMeta(currentMode).valueLabel;
 
-  function hydrateRequirementValueControl() {
-    const mode = modeSelect.value;
-    if (mode === "key") {
-      hydrateKeySelect(valueControl, ev.lockId || "");
-    } else if (mode === "questItem") {
-      hydrateQuestItemSelect(valueControl, ev.questItemId || "");
-    } else if (mode === "itemCategory") {
-      valueControl.innerHTML = "";
-      const noneOpt = document.createElement("option");
-      noneOpt.value = ""; noneOpt.textContent = "Seleziona categoria";
-      if (!ev.itemCategory) noneOpt.selected = true;
-      valueControl.appendChild(noneOpt);
-      ITEM_CATEGORIES.filter((c) => c.value).forEach((c) => {
-        const opt = document.createElement("option");
-        opt.value = c.value; opt.textContent = c.label;
-        if (c.value === ev.itemCategory) opt.selected = true;
-        valueControl.appendChild(opt);
-      });
-    } else {
-      hydrateLootSelect(valueControl, ev.itemId || "", {
-        includeCustom: false,
-        compact: true,
-        noneLabel: "Seleziona oggetto"
-      });
-    }
-  }
-
-  const refreshRequirementSummary = () => {
+  const refreshSummary = () => {
     const meta = requirementModeMeta(modeSelect.value);
-    valueLabel.textContent = meta.valueLabel;
+    valueLabelText.textContent = meta.valueLabel;
     summaryCard.innerHTML = `
       <div class="event-config-mini-card__head">
         <strong>${esc(meta.label)}: ${esc(requirementValueSummary(ev))}</strong>
@@ -12269,35 +12392,88 @@ function buildRequirementConfig(container, ev, desc, choice) {
     `;
   };
 
+  const hydrateValueSlot = () => {
+    valueSlot.innerHTML = "";
+    const mode = modeSelect.value;
+
+    if (mode === "presetItem") {
+      valueSlot.appendChild(createItemSearchCombobox(ev.itemId || "", (val) => {
+        ev.requirementMode = "presetItem";
+        ev.itemId = val || null;
+        onChoiceChange(desc, choice);
+        refreshSummary();
+      }));
+    } else if (mode === "key") {
+      valueSlot.appendChild(buildKeyRequirementControl(ev.lockId || "", (val) => {
+        ev.requirementMode = "key";
+        ev.lockId = val || null;
+        onChoiceChange(desc, choice);
+        refreshSummary();
+      }));
+    } else if (mode === "questItem") {
+      const sel = document.createElement("select");
+      sel.className = "ctp-scene-select";
+      hydrateQuestItemSelect(sel, ev.questItemId || "");
+      sel.addEventListener("change", () => {
+        ev.requirementMode = "questItem";
+        ev.questItemId = sel.value || null;
+        onChoiceChange(desc, choice);
+        refreshSummary();
+      });
+      valueSlot.appendChild(sel);
+    } else { // itemCategory
+      const sel = document.createElement("select");
+      sel.className = "ctp-scene-select";
+      const noneOpt = document.createElement("option");
+      noneOpt.value = ""; noneOpt.textContent = "Seleziona categoria";
+      if (!ev.itemCategory) noneOpt.selected = true;
+      sel.appendChild(noneOpt);
+      ITEM_CATEGORIES.filter((c) => c.value).forEach((c) => {
+        const opt = document.createElement("option");
+        opt.value = c.value; opt.textContent = c.label;
+        if (c.value === ev.itemCategory) opt.selected = true;
+        sel.appendChild(opt);
+      });
+      sel.addEventListener("change", () => {
+        ev.requirementMode = "itemCategory";
+        ev.itemCategory = sel.value || null;
+        onChoiceChange(desc, choice);
+        refreshSummary();
+      });
+      valueSlot.appendChild(sel);
+    }
+  };
+
   modeSelect.addEventListener("change", () => {
-    hydrateRequirementValueControl();
-    syncRequirement();
-    refreshRequirementSummary();
+    const mode = modeSelect.value;
+    ev.requirementMode = mode;
+    ev.itemId       = mode === "presetItem"   ? (ev.itemId       || null) : null;
+    ev.itemCategory = mode === "itemCategory" ? (ev.itemCategory || null) : null;
+    ev.lockId       = mode === "key"          ? (ev.lockId       || null) : null;
+    ev.questItemId  = mode === "questItem"    ? (ev.questItemId  || null) : null;
+    hydrateValueSlot();
+    refreshSummary();
+    onChoiceChange(desc, choice);
   });
-  valueControl.addEventListener("change", () => {
-    syncRequirement();
-    refreshRequirementSummary();
-  });
-  hydrateRequirementValueControl();
+
+  hydrateValueSlot();
 
   const grid = document.createElement("div");
   grid.className = "choice-settings-grid";
 
   const modeLabel = document.createElement("label");
-  modeLabel.textContent = "Controlla";
-  modeLabel.appendChild(modeSelect);
+  modeLabel.append(document.createTextNode("Controlla"), modeSelect);
 
   const valueLabel = document.createElement("label");
-  valueLabel.textContent = requirementModeMeta(currentMode).valueLabel;
-  valueLabel.appendChild(valueControl);
+  valueLabel.append(valueLabelText, valueSlot);
 
   grid.append(modeLabel, valueLabel);
-  refreshRequirementSummary();
+  refreshSummary();
 
   container.append(
     buildEventSection(
       "Controllo di requisito",
-      "Decidi cosa deve possedere il lettore. Se il requisito e soddisfatto, il ramo positivo consuma sempre una unita dell'oggetto richiesto.",
+      "Decidi cosa deve possedere il lettore. Se il requisito è soddisfatto, il ramo positivo consuma sempre una unità dell'oggetto richiesto.",
       summaryCard,
       grid
     ),
