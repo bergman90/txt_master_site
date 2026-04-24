@@ -85,7 +85,7 @@ const EFFECT_PRESETS = [
   { value: "focus_surge", label: "Picco di messa a fuoco", family: "combat_tempo", trigger: "on_defend", description: "Applica la condizione Messa a fuoco dopo una guardia pulita o un recupero. Migliora il prossimo attacco.", categories: ["weapon", "helm", "ring", "cloak", "boots", "relic"] },
   { value: "guarded_surge", label: "Guardia rinforzata", family: "combat_defense", trigger: "on_defend", description: "Applica la condizione Guardia salda dopo aver difeso. Aumenta la difesa per 1-2 turni.", categories: ["weapon", "shield", "helm", "ring", "cloak", "boots", "relic"] },
   { value: "key_access", label: "Accesso narrativo", family: "narrative_key", trigger: "on_choice", description: "Sblocca passaggi, porte o rami narrativi specifici.", categories: ["key", "helm", "cloak", "ring", "boots", "relic", "quest"] },
-  { value: "trade_value", label: "Valore commerciale", family: "economy_loot", trigger: "passive", description: "Aumenta il valore economico percepito dell'oggetto.", categories: ["treasure", "helm", "cloak", "ring", "boots", "relic", "utility", "key", "quest"] },
+  { value: "trade_value", label: "Valore commerciale", family: "economy_loot", trigger: "passive", description: "Aumenta il valore economico percepito dell'oggetto.", categories: ["treasure", "helm", "cloak", "ring", "boots", "relic", "utility", "key", "quest", "material"] },
   { value: "check_bonus", label: "Bonus alle prove", family: "skill_check", trigger: "passive", description: "Concede un bonus alle prove o ai check. Perfetto per pergamene, talismani, accessori e bastoni arcani.", categories: ["weapon", "treasure", "relic", "helm", "ring", "cloak", "boots", "utility", "consumable"] }
 ];
 
@@ -2687,7 +2687,7 @@ function refreshFlowLinkMutationUi(descId, choiceId) {
 }
 
 function getRequirementMode(ev) {
-  return ev?.requirementMode || (ev?.lockId ? "key" : ev?.questItemId ? "questItem" : "presetItem");
+  return ev?.requirementMode || (ev?.lockId ? "key" : ev?.questItemId ? "questItem" : ev?.itemCategory ? "itemCategory" : "presetItem");
 }
 
 function requirementModeMeta(mode) {
@@ -2705,10 +2705,17 @@ function requirementModeMeta(mode) {
       hint: "Controlla un oggetto unico referenziabile via questItemId. Sul ramo soddisfatto ne consuma una unita."
     };
   }
+  if (mode === "itemCategory") {
+    return {
+      label: "Categoria",
+      valueLabel: "Categoria richiesta",
+      hint: "Controlla che il lettore abbia almeno un oggetto della categoria indicata (es. consumable, key). Consuma una unita sul ramo soddisfatto."
+    };
+  }
   return {
     label: "Oggetto",
     valueLabel: "Oggetto richiesto",
-    hint: "Controlla un oggetto del catalogo o del loot runtime. Sul ramo soddisfatto ne consuma una unita."
+    hint: "Controlla un oggetto specifico del catalogo. Sul ramo soddisfatto ne consuma una unita."
   };
 }
 
@@ -2726,6 +2733,11 @@ function requirementValueSummary(ev) {
     if (!questItemId) return "Nessun quest item selezionato";
     const lootMatch = collectAllAdventureLoot().find((loot) => normalizeString(loot?.questItemId) === questItemId);
     return lootMatch?.itemName || questItemId;
+  }
+  if (mode === "itemCategory") {
+    const cat = normalizeString(ev?.itemCategory);
+    if (!cat) return "Nessuna categoria selezionata";
+    return ITEM_CATEGORIES.find((c) => c.value === cat)?.label || cat;
   }
   const itemId = normalizeString(ev?.itemId);
   if (!itemId) return "Nessun oggetto selezionato";
@@ -5755,9 +5767,10 @@ function showFlowEventQuickMenu(descId, choiceId, anchorRect) {
       const modeSelect = document.createElement("select");
       modeSelect.className = "ctp-scene-select";
       [
-        { value: "presetItem", label: "Oggetto dal catalogo" },
-        { value: "key", label: "Chiave" },
-        { value: "questItem", label: "Quest item unico" }
+        { value: "presetItem",   label: "Oggetto dal catalogo" },
+        { value: "itemCategory", label: "Categoria oggetto" },
+        { value: "key",          label: "Chiave" },
+        { value: "questItem",    label: "Quest item unico" }
       ].forEach(({ value, label }) => {
         const option = document.createElement("option");
         option.value = value;
@@ -5782,9 +5795,10 @@ function showFlowEventQuickMenu(descId, choiceId, anchorRect) {
         let control = null;
         const onValueChange = (nextValue) => {
           eventPayload.requirementMode = mode;
-          eventPayload.itemId = mode === "presetItem" ? (nextValue || null) : null;
-          eventPayload.lockId = mode === "key" ? (nextValue || null) : null;
-          eventPayload.questItemId = mode === "questItem" ? (nextValue || null) : null;
+          eventPayload.itemId       = mode === "presetItem"   ? (nextValue || null) : null;
+          eventPayload.itemCategory = mode === "itemCategory" ? (nextValue || null) : null;
+          eventPayload.lockId       = mode === "key"          ? (nextValue || null) : null;
+          eventPayload.questItemId  = mode === "questItem"    ? (nextValue || null) : null;
           onChoiceChange(desc, liveChoice);
           renderSceneEditor();
         };
@@ -5794,6 +5808,21 @@ function showFlowEventQuickMenu(descId, choiceId, anchorRect) {
           control.addEventListener("change", (event) => onValueChange(event.target.value));
         } else if (mode === "questItem") {
           control = createQuickMenuSelect(hydrateQuestItemSelect, eventPayload.questItemId || "");
+          control.addEventListener("change", (event) => onValueChange(event.target.value));
+        } else if (mode === "itemCategory") {
+          control = createQuickMenuSelect((select, value) => {
+            select.innerHTML = "";
+            const noneOpt = document.createElement("option");
+            noneOpt.value = ""; noneOpt.textContent = "Seleziona categoria";
+            if (!value) noneOpt.selected = true;
+            select.appendChild(noneOpt);
+            ITEM_CATEGORIES.filter((c) => c.value).forEach((c) => {
+              const opt = document.createElement("option");
+              opt.value = c.value; opt.textContent = c.label;
+              if (c.value === value) opt.selected = true;
+              select.appendChild(opt);
+            });
+          }, eventPayload.itemCategory || "");
           control.addEventListener("change", (event) => onValueChange(event.target.value));
         } else {
           control = createQuickMenuSelect((select, value) => hydrateLootSelect(select, value, {
@@ -5810,9 +5839,10 @@ function showFlowEventQuickMenu(descId, choiceId, anchorRect) {
       modeSelect.addEventListener("change", () => {
         const mode = modeSelect.value;
         eventPayload.requirementMode = mode;
-        eventPayload.itemId = mode === "presetItem" ? (eventPayload.itemId || "") : null;
-        eventPayload.lockId = mode === "key" ? (eventPayload.lockId || "") : null;
-        eventPayload.questItemId = mode === "questItem" ? (eventPayload.questItemId || "") : null;
+        eventPayload.itemId       = mode === "presetItem"   ? (eventPayload.itemId       || "") : null;
+        eventPayload.itemCategory = mode === "itemCategory" ? (eventPayload.itemCategory || "") : null;
+        eventPayload.lockId       = mode === "key"          ? (eventPayload.lockId       || "") : null;
+        eventPayload.questItemId  = mode === "questItem"    ? (eventPayload.questItemId  || "") : null;
         onChoiceChange(desc, liveChoice);
         renderSceneEditor();
         rebuild();
@@ -9438,12 +9468,13 @@ function cleanAdventure(adventure) {
         return pruneEmpty({
           type: "requirement",
           text: ev.text || undefined,
-          requirementMode: ev.requirementMode || (ev.lockId ? "key" : ev.questItemId ? "questItem" : "presetItem"),
-          itemId: ev.itemId || undefined,
-          lockId: ev.lockId || undefined,
-          questItemId: ev.questItemId || undefined,
-          metBranch: serializeBranch(ev.metBranch) || {},
-          unmetBranch: serializeBranch(ev.unmetBranch) || {}
+          requirementMode: ev.requirementMode || (ev.lockId ? "key" : ev.questItemId ? "questItem" : ev.itemCategory ? "itemCategory" : "presetItem"),
+          itemId:       ev.itemId       || undefined,
+          itemCategory: ev.itemCategory || undefined,
+          lockId:       ev.lockId       || undefined,
+          questItemId:  ev.questItemId  || undefined,
+          metBranch:    serializeBranch(ev.metBranch)   || {},
+          unmetBranch:  serializeBranch(ev.unmetBranch) || {}
         });
       case "loot":
         return pruneEmpty({
@@ -10539,7 +10570,7 @@ function validateAdventure(adventure, cleaned = cleanAdventure(adventure), optio
 
   function isValidTargetId(id) {
     if (!id) return false;
-    if (id === "__death__" || id === "__stay__") return true;
+    if (["__death__", "__stay__", "__retry__", "__no_escape__"].includes(id)) return true;
     return descriptionIds.has(id) || eventNodeIds.has(id);
   }
 
@@ -10609,17 +10640,21 @@ function validateAdventure(adventure, cleaned = cleanAdventure(adventure), optio
         validateBranch(ev.successBranch, `successo di ${label}`, descId);
         validateBranch(ev.failureBranch, `fallimento di ${label}`, descId);
         break;
-      case "requirement":
-        if (ev.requirementMode === "key") {
+      case "requirement": {
+        const rmode = ev.requirementMode || (ev.lockId ? "key" : ev.questItemId ? "questItem" : ev.itemCategory ? "itemCategory" : "presetItem");
+        if (rmode === "key") {
           if (!ev.lockId) errors.push(`${label} in ${descId}: requirement key senza lockId.`);
-        } else if (ev.requirementMode === "questItem") {
+        } else if (rmode === "questItem") {
           if (!ev.questItemId) errors.push(`${label} in ${descId}: requirement quest item senza questItemId.`);
+        } else if (rmode === "itemCategory") {
+          if (!ev.itemCategory) errors.push(`${label} in ${descId}: requirement categoria senza valore.`);
         } else if (!ev.itemId) {
           errors.push(`${label} in ${descId}: requirement preset item senza itemId.`);
         }
         validateBranch(ev.metBranch, `soddisfatto di ${label}`, descId);
         validateBranch(ev.unmetBranch, `non soddisfatto di ${label}`, descId);
         break;
+      }
       case "loot":
         (ev.loot || []).forEach((loot) => validateLoot(loot, label));
         validateBranch(ev.branch, `branch di ${label}`, descId);
@@ -12172,9 +12207,10 @@ function buildRequirementConfig(container, ev, desc, choice) {
   summaryCard.className = "event-config-mini-card event-config-mini-card--requirement";
   const modeSelect = document.createElement("select");
   [
-    { value: "presetItem", label: "Oggetto dal catalogo" },
-    { value: "key", label: "Chiave" },
-    { value: "questItem", label: "Quest item unico" }
+    { value: "presetItem",   label: "Oggetto dal catalogo" },
+    { value: "itemCategory", label: "Categoria oggetto" },
+    { value: "key",          label: "Chiave" },
+    { value: "questItem",    label: "Quest item unico" }
   ].forEach(({ value, label }) => {
     const option = document.createElement("option");
     option.value = value;
@@ -12188,9 +12224,10 @@ function buildRequirementConfig(container, ev, desc, choice) {
   function syncRequirement() {
     const mode = modeSelect.value;
     ev.requirementMode = mode;
-    ev.itemId = mode === "presetItem" ? (valueControl.value || null) : null;
-    ev.lockId = mode === "key" ? (valueControl.value || null) : null;
-    ev.questItemId = mode === "questItem" ? (valueControl.value || null) : null;
+    ev.itemId       = mode === "presetItem"   ? (valueControl.value || null) : null;
+    ev.itemCategory = mode === "itemCategory" ? (valueControl.value || null) : null;
+    ev.lockId       = mode === "key"          ? (valueControl.value || null) : null;
+    ev.questItemId  = mode === "questItem"    ? (valueControl.value || null) : null;
     onChoiceChange(desc, choice);
   }
 
@@ -12200,6 +12237,18 @@ function buildRequirementConfig(container, ev, desc, choice) {
       hydrateKeySelect(valueControl, ev.lockId || "");
     } else if (mode === "questItem") {
       hydrateQuestItemSelect(valueControl, ev.questItemId || "");
+    } else if (mode === "itemCategory") {
+      valueControl.innerHTML = "";
+      const noneOpt = document.createElement("option");
+      noneOpt.value = ""; noneOpt.textContent = "Seleziona categoria";
+      if (!ev.itemCategory) noneOpt.selected = true;
+      valueControl.appendChild(noneOpt);
+      ITEM_CATEGORIES.filter((c) => c.value).forEach((c) => {
+        const opt = document.createElement("option");
+        opt.value = c.value; opt.textContent = c.label;
+        if (c.value === ev.itemCategory) opt.selected = true;
+        valueControl.appendChild(opt);
+      });
     } else {
       hydrateLootSelect(valueControl, ev.itemId || "", {
         includeCustom: false,
