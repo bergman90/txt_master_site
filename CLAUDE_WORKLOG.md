@@ -559,3 +559,13 @@ Formato consigliato:
 - Rifinita anche `wiki.html` per riallineare l'indice wiki al tono nuovo: meno overview generica, piu manuale di sistema.
 - Questo pass riguarda il sito pubblico. Nessun cambio runtime app in questo step.
 - Prossimo step naturale lato wiki: portare lo stesso livello di precisione anche su `wiki-attributi.html`, `wiki-abilita.html` e `wiki-classi-razze.html`.
+
+## 2026-04-25 - Flow board UX: marquee selection e chapter groups piu leggibili
+- Migliorata la marquee selection nella flow board: durante il drag i nodi intercettati vengono evidenziati in tempo reale.
+- Il rettangolo di selezione ora mostra anche un piccolo badge col conteggio nodi, cosi la selezione non sembra piu "vuota" mentre trascini.
+- Aggiunto stato visivo dedicato per i nodi in preview marquee (`is-marquee-preview`).
+- I chapter group ora riflettono meglio la selezione: se i loro nodi sono selezionati il gruppo si evidenzia, e se il marquee passa sopra nodi interni il gruppo mostra feedback visivo.
+- Click sul capitolo: seleziona direttamente tutti i nodi contenuti (shift-click additivo), rendendo il grouping meno clunky.
+- Nessun cambiamento al modello dati o al compilatore: e un pass UX puro sulla flow board.
+- File toccati: `adventure-studio/app.js`, `adventure-studio/styles.css`.
+- Verifica: `node --check adventure-studio/app.js` passato.
