@@ -5,6 +5,25 @@
 
 ---
 
+## Stato attuale — 2026-04-25 (aggiornamento 4)
+
+### Release build 11 — versionCode 11 / versionName 0.1.6-alpha
+
+AAB release: `app/build/outputs/bundle/release/app-release.aab` (16 MB, 2026-04-25 18:25)
+
+**Cosa include rispetto alla build precedente:**
+- UX skill check: `CheckResultBanner` prominente + `ChoiceCard` con chip evento contestuale
+- Fix crash v1/v2: APK compilato con Adventure.kt v2
+- Allineamento Studio ↔ App Step 1-4:
+  - SKILLS: +guard, +precision, +alchemy, +constitution
+  - CONDITION_OPTIONS: +7 condizioni mancanti
+  - EFFECT_FAMILIES: +exploration / EFFECT_TRIGGERS: +on_low_hp, +on_scene_enter
+  - Branch extras UI: loot, condition, unlockChoiceId
+  - Condition event: campo testo narrativo
+- Fix rarity tier accessori (tier 2=mythic, tier 3=legendary)
+
+---
+
 ## Stato attuale — 2026-04-25 (aggiornamento 3)
 
 ### Roadmap allineamento Studio ↔ App — Step 3 e 4 completati
