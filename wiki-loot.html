@@ -68,28 +68,259 @@
     <section class="panel">
       <div class="eyebrow">Armi</div>
       <h2>Famiglie arma canoniche</h2>
-      <p>Ogni famiglia esiste per produrre un pattern di gioco leggibile, non solo una progressione numerica.</p>
-      <ul>
-        <li><strong>Pugnali</strong>: <em>Daga, Stiletto, Kryss</em>. Precisione alta, danno basso, ottimi per opportunismo, critico e finisher.</li>
-        <li><strong>Lame a 1 mano</strong>: <em>Spada, Gladio, Scimitarra</em>. Famiglia versatile, precisa, compatibile con scudo, con ritmo stabile.</li>
-        <li><strong>Lame a 2 mani</strong>: <em>Zweihander, Flamberga, Claymore</em>. Forte danno di pressione, niente scudo, pi&ugrave; impegno offensivo.</li>
-        <li><strong>Archi</strong>: famiglia da apertura. Molto buona nei primi round, meno efficace se il combattimento si trascina.</li>
-        <li><strong>Mazze a 1 mano</strong>: controllo e logoramento, ottime con scudo, meno eleganti ma pi&ugrave; stabili.</li>
-        <li><strong>Mazze a 2 mani</strong>: impatto pesante, controllo forte, pi&ugrave; rischio se il turno va male.</li>
-        <li><strong>Bastoni</strong>: arma rituale e di supporto. Danno pi&ugrave; basso, ma forte identit&agrave; di sustain, prove e controllo.</li>
-      </ul>
+      <p>Ogni famiglia esiste per produrre un pattern di gioco leggibile, non solo una progressione numerica. La variante nominale cambia il nome; la famiglia decide davvero il modo in cui combatti.</p>
+      <div class="table-wrap">
+        <table class="wiki-table">
+          <thead>
+            <tr>
+              <th>Famiglia</th>
+              <th>Varianti nominali</th>
+              <th>Effetto e identit&agrave;</th>
+              <th>Vantaggi</th>
+              <th>Svantaggi</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Pugnali</strong><small>Daga, Stiletto, Kryss</small></td>
+              <td>Tre varianti dello stesso profilo opportunista. Tutti i tier condividono stat uguali dentro la famiglia.</td>
+              <td>Precisione alta, danno basso, valore forte sui critici. Ai tier alti aggiungono bonus danno e pulizia di <em>Scoperto</em> sul critico.</td>
+              <td>
+                <ul>
+                  <li>Compatibili con scudo</li>
+                  <li>Ottimi per finisher e build mobili</li>
+                  <li>Critici molto redditizi</li>
+                </ul>
+              </td>
+              <td>
+                <ul>
+                  <li>Soffrono bersagli corazzati</li>
+                  <li>Danno grezzo pi&ugrave; basso di tutte le altre armi melee</li>
+                </ul>
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Lame a 1 mano</strong><small>Spada, Gladio, Scimitarra</small></td>
+              <td>Famiglia da equilibrio offensivo. Le stelle alzano il gradino, non cambiano il ruolo.</td>
+              <td>Precisione buona, danno stabile, ritmo affidabile. Al tier alto puliscono <em>Scoperto</em> su critico.</td>
+              <td>
+                <ul>
+                  <li>Compatibili con scudo</li>
+                  <li>Profilo versatile e sempre leggibile</li>
+                  <li>Buona pressione costante</li>
+                </ul>
+              </td>
+              <td>
+                <ul>
+                  <li>Meno burst delle 2 mani</li>
+                  <li>Meno controllo delle mazze</li>
+                </ul>
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Lame a 2 mani</strong><small>Zweih&auml;nder, Flamberga, Claymore</small></td>
+              <td>Famiglia da pressione frontale e chiusura dello scontro.</td>
+              <td>Danno alto, ottimo payoff offensivo. Ai tier alti aggiunge <em>Staggered</em> e bonus danno su colpo.</td>
+              <td>
+                <ul>
+                  <li>Picchi di danno alti</li>
+                  <li>Ottime per chiudere i duelli</li>
+                  <li>Scala bene nei tier alti</li>
+                </ul>
+              </td>
+              <td>
+                <ul>
+                  <li>Niente scudo</li>
+                  <li>Maggiore esposizione difensiva</li>
+                  <li>Poco margine se perdi il ritmo</li>
+                </ul>
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Archi</strong><small>Arco leggero, Arco corto, Arco del cacciatore</small></td>
+              <td>Famiglia da apertura e timing. Forte all'inizio, meno se il round si trascina.</td>
+              <td>Precisione buona e finestra iniziale forte. Al tier alto il critico garantito rende l'apertura molto pericolosa.</td>
+              <td>
+                <ul>
+                  <li>Ottimi nei primi turni</li>
+                  <li>Pattern molto leggibile per build da Ranger</li>
+                </ul>
+              </td>
+              <td>
+                <ul>
+                  <li>Niente scudo</li>
+                  <li>Valore in calo negli scontri lunghi</li>
+                </ul>
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Mazze a 1 mano</strong><small>Randello, Mazza, Martello da guerra</small></td>
+              <td>Famiglia da controllo e logoramento con scudo.</td>
+              <td>Danno solido e accesso crescente a <em>Staggered</em>. Meno elegante, pi&ugrave; disciplinata.</td>
+              <td>
+                <ul>
+                  <li>Compatibili con scudo</li>
+                  <li>Forti contro bersagli resistenti</li>
+                  <li>Controllo del ritmo molto buono</li>
+                </ul>
+              </td>
+              <td>
+                <ul>
+                  <li>Meno precisa del taglio a 1 mano</li>
+                  <li>Meno esplosiva delle 2 mani</li>
+                </ul>
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Mazze a 2 mani</strong><small>Grande mazza, Maglio, Maul</small></td>
+              <td>Famiglia da schiacciamento puro e controllo pesante.</td>
+              <td>Stagger gi&agrave; dal tier 1, poi danno e controllo salgono insieme. Al top aggiunge molto danno per colpo.</td>
+              <td>
+                <ul>
+                  <li>Impatto altissimo</li>
+                  <li>Controllo forte sui bersagli</li>
+                  <li>Identit&agrave; brutalista molto chiara</li>
+                </ul>
+              </td>
+              <td>
+                <ul>
+                  <li>Niente scudo</li>
+                  <li>Meno precisione</li>
+                  <li>Alto rischio se il turno va male</li>
+                </ul>
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Bastoni</strong><small>Bastone da viaggio, Bastone ferrato, Bastone degli Anziani</small></td>
+              <td>Famiglia rituale da supporto e gestione del tempo.</td>
+              <td>Danno pi&ugrave; basso, ma recupero e prove migliori. Ai tier alti aiutano davvero sustain e skill check.</td>
+              <td>
+                <ul>
+                  <li>Ottimi per build utility/control</li>
+                  <li>Supportano recupero e prove</li>
+                </ul>
+              </td>
+              <td>
+                <ul>
+                  <li>Poco burst</li>
+                  <li>Rendono meno se lo scontro chiede chiusura rapida</li>
+                </ul>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="table-note">Compatibili con scudo: <strong>Pugnali</strong>, <strong>Lame a 1 mano</strong>, <strong>Mazze a 1 mano</strong>. Tutte le altre famiglie sacrificano quella sicurezza per specializzarsi di pi&ugrave;.</p>
     </section>
 
     <section class="panel">
       <div class="eyebrow">Armature e scudi</div>
       <h2>Famiglie difensive canoniche</h2>
-      <ul>
-        <li><strong>Armature leggere</strong>: protezione agile, poche penalit&agrave;, ideali per build mobili.</li>
-        <li><strong>Armature medie</strong>: compromesso fra tenuta e mobilit&agrave;.</li>
-        <li><strong>Armature pesanti</strong>: difesa massima, pi&ugrave; costo in ritmo, stamina e libert&agrave; di azione.</li>
-        <li><strong>Scudi leggeri</strong>: difesa agile. Comprendono varianti nominali come <em>Buckler</em> e <em>Scudo rotondo</em>, ma condividono la stessa curva meccanica.</li>
-        <li><strong>Scudi pesanti</strong>: ancoraggio puro, ottimi per reggere pressione e critici, meno fluidi nel gioco offensivo.</li>
-      </ul>
+      <div class="table-wrap">
+        <table class="wiki-table">
+          <thead>
+            <tr>
+              <th>Famiglia</th>
+              <th>Varianti nominali</th>
+              <th>Effetto e progressione</th>
+              <th>Vantaggi</th>
+              <th>Svantaggi</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Armature leggere</strong></td>
+              <td>Cuoio, Giaco di cuoio, Cuoio borchiato</td>
+              <td>Difesa da <strong>+1</strong> a <strong>+3</strong>. Al tier alto danno anche un piccolo bonus alle prove fisiche.</td>
+              <td>
+                <ul>
+                  <li>Massima mobilit&agrave;</li>
+                  <li>Nessuna vera penalit&agrave; di ritmo</li>
+                  <li>Ideali per build mobili</li>
+                </ul>
+              </td>
+              <td>
+                <ul>
+                  <li>Protezione massima pi&ugrave; bassa</li>
+                  <li>Reggono peggio i picchi di danno</li>
+                </ul>
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Armature medie</strong></td>
+              <td>Cotta di maglia, Corazza a scaglie, Brigantina</td>
+              <td>Difesa da <strong>+3</strong> a <strong>+5</strong>. Ai tier alti migliorano la tenuta ai critici e la guardia in difesa.</td>
+              <td>
+                <ul>
+                  <li>Compromesso solido</li>
+                  <li>Buona tenuta generale</li>
+                  <li>Molto adatte a build ibride</li>
+                </ul>
+              </td>
+              <td>
+                <ul>
+                  <li>Piccole penalit&agrave; a stamina e mobilit&agrave;</li>
+                  <li>Non eccellono n&eacute; in agilit&agrave; n&eacute; in muro puro</li>
+                </ul>
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Armature pesanti</strong></td>
+              <td>Armatura a bande, Armatura completa, Corazza di piastre</td>
+              <td>Difesa da <strong>+4</strong> a <strong>+6</strong>. I tier alti assorbono meglio i critici e rendono la guardia molto pi&ugrave; dura.</td>
+              <td>
+                <ul>
+                  <li>Massima protezione</li>
+                  <li>Ottime contro burst e frontliner duri</li>
+                  <li>Fortissima identit&agrave; da tank</li>
+                </ul>
+              </td>
+              <td>
+                <ul>
+                  <li>Penalit&agrave; nette a ritmo, stamina e mobilit&agrave;</li>
+                  <li>Build meno flessibili</li>
+                </ul>
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Scudi leggeri</strong></td>
+              <td>Buckler, Scudo rotondo, Targa</td>
+              <td>Difesa da <strong>+2</strong> a <strong>+4</strong>. Crescono con guardia rinforzata, mitigazione critici e pulizia di <em>Scoperto</em>.</td>
+              <td>
+                <ul>
+                  <li>Difesa agile</li>
+                  <li>Ottimi con armi a 1 mano</li>
+                  <li>Proteggono senza soffocare l'offesa</li>
+                </ul>
+              </td>
+              <td>
+                <ul>
+                  <li>Meno tenuta dei grandi scudi</li>
+                  <li>Assorbono peggio i picchi massimi</li>
+                </ul>
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Scudi pesanti</strong></td>
+              <td>Scudo pesante, Scudo a torre, Pavese</td>
+              <td>Difesa da <strong>+3</strong> a <strong>+5</strong>. Ai tier alti aggiungono guardia massiccia, mitigazione critici e perfino ritorno di danno.</td>
+              <td>
+                <ul>
+                  <li>Ancora difensiva eccellente</li>
+                  <li>Forti contro pressione continua e critici</li>
+                  <li>Ideali per reggere il fronte</li>
+                </ul>
+              </td>
+              <td>
+                <ul>
+                  <li>Pi&ugrave; ingombranti</li>
+                  <li>Pi&ugrave; costo in fluidit&agrave; offensiva</li>
+                </ul>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
       <p>
         Anche qui la regola resta la stessa: la famiglia decide il profilo, la variante decide il nome.
       </p>
@@ -176,6 +407,52 @@
     </section>
 
     <section class="panel">
+      <div class="eyebrow">Consumabili</div>
+      <h2>Come scalano con i tier</h2>
+      <p>I consumabili non usano il tier per imitare le armi. Lo usano per aumentare il valore pratico del singolo uso: pi&ugrave; cura, pi&ugrave; recupero, pi&ugrave; sicurezza tattica.</p>
+      <div class="table-wrap">
+        <table class="wiki-table">
+          <thead>
+            <tr>
+              <th>Famiglia</th>
+              <th>Tier 1</th>
+              <th>Tier 2</th>
+              <th>Tier 3</th>
+              <th>Ruolo pratico</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Pozione curativa</strong></td>
+              <td><strong>&#9733;</strong><small>Cura <strong>6 HP</strong></small></td>
+              <td><strong>&#9733;&#9733;</strong><small>Cura <strong>14 HP</strong></small></td>
+              <td><strong>&#9733;&#9733;&#9733;</strong><small>Cura <strong>24 HP</strong></small></td>
+              <td>Recupero vita puro. Pi&ugrave; il tier sale, pi&ugrave; diventa uno strumento da salvezza vera e non solo da rattoppo.</td>
+            </tr>
+            <tr>
+              <td><strong>Razioni da viaggio</strong></td>
+              <td><strong>&#9733;</strong><small><strong>3 HP</strong> + <strong>2 stamina</strong></small></td>
+              <td><strong>&#9733;&#9733;</strong><small><strong>7 HP</strong> + <strong>3 stamina</strong></small></td>
+              <td><strong>&#9733;&#9733;&#9733;</strong><small><strong>12 HP</strong> + <strong>4 stamina</strong></small></td>
+              <td>Consumabile ibrido. Meno esplosivo della pozione, ma eccellente per tenere il ritmo e non perdere il turno successivo.</td>
+            </tr>
+            <tr>
+              <td><strong>Polvere di guardia</strong></td>
+              <td colspan="3"><small>Versione attuale senza scala a stelle pubblica: genera un picco temporaneo di difesa (<strong>defense_surge</strong>).</small></td>
+              <td>Consumabile tattico da usare quando vuoi sopravvivere a un turno duro o preparare una difesa importante.</td>
+            </tr>
+            <tr>
+              <td><strong>Elisir totale</strong></td>
+              <td colspan="3"><small>Oggetto eccezionale: ripristina completamente corpo e spirito (<strong>restore_all</strong>).</small></td>
+              <td>Non &egrave; un gradino intermedio: &egrave; un salvagente raro, molto pi&ugrave; vicino a una risorsa da tenere che da spammare.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="table-note">In breve: la <strong>Pozione curativa</strong> cresce in cura pura, le <strong>Razioni</strong> crescono in recupero misto, mentre <strong>Polvere di guardia</strong> ed <strong>Elisir totale</strong> oggi restano consumabili speciali senza una linea completa di stelle pubblica.</p>
+    </section>
+
+    <section class="panel">
       <div class="eyebrow">Drop</div>
       <h2>Come va letto il drop</h2>
       <p>
@@ -196,6 +473,63 @@
       <p>
         Il sistema sta anche aprendo la strada ai <strong>materials</strong>, una famiglia separata pensata per il futuro crafting. La base attuale punta a materiali chiari e leggibili come <strong>Legno</strong>, <strong>Ferro grezzo</strong>, <strong>Pelle</strong>, <strong>Stoffa</strong>, <strong>Erbe</strong>, <strong>Cristalli</strong> e <strong>Squame</strong>. Alcuni drop esistenti, come la <strong>Pelle di lupo</strong>, stanno gi&agrave; venendo riallineati in questa direzione.
       </p>
+      <div class="table-wrap">
+        <table class="wiki-table">
+          <thead>
+            <tr>
+              <th>Materiale</th>
+              <th>Varianti o esempi</th>
+              <th>Ruolo previsto</th>
+              <th>Note di sistema</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Legno</strong></td>
+              <td>Fascio di legno</td>
+              <td>Base per utility, strumenti semplici e supporti da esplorazione.</td>
+              <td>Materiale comune, pensato per comparire spesso nei drop base.</td>
+            </tr>
+            <tr>
+              <td><strong>Ferro grezzo</strong></td>
+              <td>Greppo di ferro, frammenti di minerale</td>
+              <td>Base per forgia, attrezzi e componenti metallici semplici.</td>
+              <td>Materia prima da officina, non ancora metallo “nobile”.</td>
+            </tr>
+            <tr>
+              <td><strong>Pelle</strong></td>
+              <td>Pelle, <strong>Pelle di lupo</strong></td>
+              <td>Base per cinghie, rilegature, equip leggero e ricette organiche.</td>
+              <td><strong>Pelle di lupo</strong> &egrave; gi&agrave; trattata come variante diegetica della stessa famiglia.</td>
+            </tr>
+            <tr>
+              <td><strong>Stoffa</strong></td>
+              <td>Brandelli, panni, tessuti grezzi</td>
+              <td>Ricette alchemiche, rilegature, supporti per utility e consumabili.</td>
+              <td>Materiale semplice ma molto trasversale.</td>
+            </tr>
+            <tr>
+              <td><strong>Erbe</strong></td>
+              <td>Fascio d'erbe</td>
+              <td>Base naturale per pozioni, unguenti e miscele di sopravvivenza.</td>
+              <td>Il primo materiale davvero “alchemico” del sistema.</td>
+            </tr>
+            <tr>
+              <td><strong>Cristalli</strong></td>
+              <td>Frammenti, schegge</td>
+              <td>Preparano il lato pi&ugrave; raro o rituale del crafting.</td>
+              <td>Restano materiali base, ma gi&agrave; con un tono pi&ugrave; speciale.</td>
+            </tr>
+            <tr>
+              <td><strong>Squame</strong></td>
+              <td>Frammenti di scaglia</td>
+              <td>Materiale da mostro, utile per ricette organiche o protettive.</td>
+              <td>Serve a far parlare davvero i drop dei mostri la lingua dei materiali.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="table-note">Per ora restano <strong>fuori dai materiali base</strong> reagenti troppo speciali come ghiandole, veleni, gemme rituali o pergamene arcane: funzionano meglio come ingredienti rari o oggetti identitari, non come risorsa comune di forgia.</p>
       <p>
         Questo significa che la wiki degli item non riguarda pi&ugrave; solo armi e armature: ormai &egrave; anche la base del futuro sistema di combinazione e forgia old school.
       </p>

@@ -327,6 +327,74 @@ h2 {
   border-radius: 18px;
 }
 
+.table-wrap {
+  margin-top: 18px;
+  overflow-x: auto;
+  border: 1px solid rgba(124, 100, 71, 0.45);
+  border-radius: 16px;
+  background: rgba(13, 9, 8, 0.35);
+}
+
+.wiki-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.wiki-table th,
+.wiki-table td {
+  padding: 14px 16px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid rgba(124, 100, 71, 0.3);
+}
+
+.wiki-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: linear-gradient(180deg, rgba(44, 34, 29, 0.98), rgba(28, 21, 18, 0.98));
+  color: var(--accent-strong);
+  font-family: var(--display);
+  font-size: 0.86rem;
+  letter-spacing: 0.04em;
+}
+
+.wiki-table tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.wiki-table tbody tr:hover {
+  background: rgba(200, 130, 58, 0.06);
+}
+
+.wiki-table td strong {
+  color: var(--text);
+}
+
+.wiki-table td small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.wiki-table ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.wiki-table li + li {
+  margin-top: 6px;
+}
+
+.table-note {
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
 code {
   background: rgba(255,255,255,0.06);
   border-radius: 8px;

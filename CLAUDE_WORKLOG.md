@@ -569,3 +569,14 @@ Formato consigliato:
 - Nessun cambiamento al modello dati o al compilatore: e un pass UX puro sulla flow board.
 - File toccati: `adventure-studio/app.js`, `adventure-studio/styles.css`.
 - Verifica: `node --check adventure-studio/app.js` passato.
+
+## 2026-04-26 - Wiki loot: tabelle per famiglie, tier, consumabili e materiali
+- Rafforzata `wiki-loot.html` con una struttura piu consultabile e meno solo discorsiva.
+- Aggiunte tabelle vere per:
+  - famiglie arma (`varianti`, `effetto/identita`, `vantaggi`, `svantaggi`)
+  - famiglie difensive (`armature` e `scudi`, con progressione e tradeoff)
+  - consumabili tiered (`Pozione curativa`, `Razioni da viaggio`) e consumabili speciali (`Polvere di guardia`, `Elisir totale`)
+  - materiali base del crafting (`Legno`, `Ferro grezzo`, `Pelle`, `Stoffa`, `Erbe`, `Cristalli`, `Squame`, con `Pelle di lupo` come variante)
+- Aggiunto anche uno strato CSS condiviso per tavole wiki leggibili su desktop e mobile (`.table-wrap`, `.wiki-table`, note e hover states) in `styles.css`.
+- Obiettivo del pass: trasformare la pagina da overview a mini-manuale consultabile al volo.
+- Nessun cambio runtime o Studio in questo step; solo sito pubblico e diario di continuita.
