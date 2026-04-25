@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="it">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>.txt-Master | Wiki del Combattimento</title>
-  <meta name="description" content="Sistema di combattimento di .txt-Master: iniziativa, turni, attacco, difesa, danno, effetti e logica del combattimento testuale.">
+  <meta name="description" content="Manuale del combattimento di .txt-Master: azioni, stamina, stili arma, stati, talenti e logica tattica del sistema a turni.">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="stylesheet" href="./styles.css">
 </head>
@@ -24,7 +24,7 @@
       <div class="eyebrow">Combattimento</div>
       <h1>Sistema di combattimento</h1>
       <p class="hero__copy">
-        La prima incarnazione del combattimento in <strong>.txt-Master</strong> è pensata come un sistema <strong>testuale a turni</strong>, leggibile, rapido da risolvere e adatto sia alle avventure authored sia a quelle generate proceduralmente.
+        Il combattimento di <strong>.txt-Master</strong> &egrave; un sistema <strong>testuale a turni</strong> costruito per essere leggibile nel log, rapido da risolvere e abbastanza profondo da creare scelte vere: quando premere, quando difendersi, quando respirare e quando rischiare un talento.
       </p>
       <div class="hero__actions">
         <a class="button button--primary" href="./wiki.html">Torna alla wiki</a>
@@ -34,90 +34,162 @@
 
   <main class="page">
     <section class="panel">
-      <div class="eyebrow">Stato del sistema</div>
-      <h2>Che cosa è già deciso</h2>
+      <div class="eyebrow">Stato attuale</div>
+      <h2>Che cosa descrive questa pagina</h2>
       <p>
-        Il combattimento base del progetto prevede: <strong>iniziativa</strong>, <strong>attacco</strong>, <strong>difesa o armatura passiva</strong>, <strong>danno</strong>, <strong>effetti di stato base</strong> e <strong>log completo delle azioni</strong>.
-        L'obiettivo dichiarato è mantenere il sistema semplice nella prima versione e aggiungere in seguito armi con velocità, magie, colpi critici, morale nemici e posizionamento astratto.
+        Questa pagina descrive soprattutto il <strong>combat system reale gi&agrave; presente oggi nel runtime</strong>. Dove una meccanica &egrave; gi&agrave; attiva viene spiegata come regola viva; dove invece &egrave; solo prevista o dichiarata nel catalogo ma non ancora agganciata del tutto, viene segnalata come tale.
+      </p>
+      <p>
+        Il combattimento ruota intorno a tre assi: <strong>vita</strong>, <strong>stamina</strong> e <strong>tempo tattico</strong>. La vita decide quanto puoi reggere. La stamina decide quante azioni efficaci puoi ancora permetterti. Il tempo tattico decide se in quel round conviene spingere, assorbire o preparare il turno successivo.
       </p>
     </section>
 
     <section class="panel">
       <div class="eyebrow">Struttura di un incontro</div>
-      <h2>Sequenza di combattimento</h2>
+      <h2>Come si svolge uno scontro</h2>
+      <p>Uno scontro si apre quando una scena o una scelta richiama un incontro ostile. Il motore prepara i partecipanti, applica eventuali modificatori iniziali e poi entra in una sequenza a round.</p>
+      <ul>
+        <li><strong>Ingresso nel combattimento</strong>: il personaggio e il nemico entrano con i loro valori attuali di HP, stamina, equipaggiamento e stati.</li>
+        <li><strong>Apertura del round</strong>: vengono letti eventuali effetti che si attivano a inizio turno, come danni periodici o recuperi.</li>
+        <li><strong>Azione del giocatore</strong>: scegli una delle azioni base o, se disponibile, un talento di classe o un consumabile.</li>
+        <li><strong>Risposta del nemico</strong>: il nemico agisce secondo il suo profilo offensivo e i suoi stati attivi.</li>
+        <li><strong>Chiusura del round</strong>: il sistema aggiorna log, HP, stamina, stati e verifica vittoria, sconfitta o fuga.</li>
+      </ul>
       <p>
-        Un combattimento si apre quando una scena o una scelta attiva un incontro ostile. A quel punto il motore crea i partecipanti, legge i loro valori rilevanti e determina l'ordine di azione.
-      </p>
-      <p>
-        La sequenza minima prevista è la seguente: <strong>ingresso nel combattimento</strong>, <strong>determinazione dell'iniziativa</strong>, <strong>esecuzione dei turni</strong>, <strong>applicazione dei danni e degli effetti</strong>, <strong>verifica di morte, fuga o fine scontro</strong>, <strong>ritorno alla scena successiva o al nodo di ricompensa</strong>.
-      </p>
-    </section>
-
-    <section class="panel">
-      <div class="eyebrow">Turni</div>
-      <h2>Ordine di iniziativa</h2>
-      <p>
-        L'iniziativa stabilisce chi agisce per primo nel round. Nella forma MVP la wiki la tratta come una risoluzione basata su caratteristiche del personaggio e del nemico, eventualmente modificate da equipaggiamento, stato o sorpresa.
-      </p>
-      <p>
-        Anche se la formula definitiva non è ancora esposta pubblicamente, la funzione di design è chiara: permettere scontri leggibili, premiare certi archetipi più rapidi e gestire in modo coerente l'apertura del round.
+        La vera tensione del sistema nasce dal fatto che le azioni non sono equivalenti: alcune fanno male subito, altre migliorano il round successivo, altre ti salvano da una situazione brutta ma ti espongono nel momento in cui le usi.
       </p>
     </section>
 
     <section class="panel">
-      <div class="eyebrow">Azioni</div>
-      <h2>Che cosa puoi fare nel tuo turno</h2>
+      <div class="eyebrow">Azioni base</div>
+      <h2>Le sei azioni che definiscono il ritmo</h2>
+      <p>Nel runtime attuale il cuore del combattimento &egrave; formato da sei azioni. Sono poche apposta: devono essere facili da leggere, ma abbastanza diverse da creare decisioni vere.</p>
+      <ul>
+        <li><strong>Attacca</strong>: esegue il tiro offensivo contro la difesa del nemico. Costa normalmente <strong>1 stamina</strong>, ma con armi pesanti pu&ograve; costarne <strong>2</strong>. Su fumble ti lascia spesso <strong>Scoperto</strong>. Su buoni colpi pu&ograve; applicare stati come <strong>Indebolito</strong> o <strong>Sbilanciato</strong>.</li>
+        <li><strong>Difendi</strong>: &egrave; la tua azione di muro. Aumenta molto la difesa del turno, recupera un po' di stamina, rimuove spesso <strong>Scoperto</strong> e applica <strong>Guardia salda</strong>. Non fa danno, ma ti rimette in asse.</li>
+        <li><strong>Riprendi fiato</strong>: serve a recuperare stamina in modo pi&ugrave; netto. Il problema &egrave; che mentre respiri il nemico ha una finestra migliore per punirti. Se usata al momento giusto &egrave; fortissima; se usata tardi pu&ograve; aprire il round peggiore.</li>
+        <li><strong>Ritirata</strong>: confronta il tuo potere di fuga con la difficolt&agrave; di uscita dallo scontro. Se riesce, il combattimento finisce. Se fallisce, resti in campo e spesso ti ritrovi <strong>Scoperto</strong>.</li>
+        <li><strong>Usa consumabile</strong>: attiva il vero effetto dell'oggetto. Non &egrave; un comando cosmetico: alcune pozioni curano, altri oggetti infliggono danno diretto, altri ancora ti danno difesa o puliscono stati.</li>
+        <li><strong>Usa talento di classe</strong>: ogni talento attivo &egrave; pensato come una mossa speciale <strong>una volta per combattimento</strong>. Costa stamina, ma in cambio ti sposta davvero lo scontro.</li>
+      </ul>
+    </section>
+
+    <section class="panel">
+      <div class="eyebrow">Attacco e difesa</div>
+      <h2>Che cosa succede quando colpisci</h2>
       <p>
-        Nel combattimento base il turno del personaggio dovrebbe ruotare attorno a un piccolo set di azioni leggibili. Il nucleo minimo comprende <strong>attaccare</strong>, <strong>usare un oggetto</strong>, <strong>attivare un effetto o potere consentito dal contesto</strong> e, quando previsto, <strong>tentare una fuga</strong> o una <strong>scelta tattica speciale</strong>.
+        Un attacco non &egrave; solo “fa danno o non fa danno”. Nel sistema attuale ci sono almeno quattro strati importanti: <strong>precisione</strong>, <strong>danno</strong>, <strong>mitigazione difensiva</strong> e <strong>effetti secondari</strong>.
       </p>
+      <ul>
+        <li><strong>Precisione</strong>: dipende da arma, stati, fatica, focus e contesto del round.</li>
+        <li><strong>Danno base</strong>: &egrave; definito soprattutto dall'arma e dal suo tier, non soltanto dalla rarit&agrave;.</li>
+        <li><strong>Mitigazione</strong>: difesa, armatura, scudo e stati difensivi possono abbassare l'impatto del colpo.</li>
+        <li><strong>Effetti di stato</strong>: un colpo ben riuscito pu&ograve; anche lasciare il bersaglio <strong>Indebolito</strong>, <strong>Sbilanciato</strong> o altri stati che alterano il round dopo.</li>
+      </ul>
       <p>
-        La filosofia di .txt-Master non è quella del tattico da griglia, ma di un RPG testuale in cui ogni opzione deve essere chiara, leggibile nel log e coerente con il tono dell'avventura.
+        Questo significa che <strong>non esiste solo il danno grezzo</strong>. Una build che colpisce meno ma ti lascia il nemico sbilanciato pu&ograve; essere pi&ugrave; forte, nel medio periodo, di una build che infligge solo numeri alti senza controllo.
       </p>
     </section>
 
     <section class="panel">
-      <div class="eyebrow">Risoluzione</div>
-      <h2>Attacco, difesa e danno</h2>
+      <div class="eyebrow">Stili arma</div>
+      <h2>Come cambiano i combattimenti in base all'arma</h2>
+      <p>Ogni famiglia e stile di arma modifica il feeling dello scontro. Nel runtime attuale esistono gi&agrave; differenze concrete.</p>
+      <ul>
+        <li><strong>Balanced</strong>: stile neutro, senza bonus estremi. &Egrave; la base affidabile.</li>
+        <li><strong>Light</strong>: pi&ugrave; precisa, pi&ugrave; economica nel ritmo, ma meno esplosiva. Ottima per build veloci e opportuniste.</li>
+        <li><strong>Heavy</strong>: picchia pi&ugrave; forte ma costa pi&ugrave; stamina e si espone di pi&ugrave; se il turno va male.</li>
+        <li><strong>Ranged</strong>: molto forte nei primi round, poi cala. &Egrave; un'arma di apertura, non di attrito lungo.</li>
+        <li><strong>Mythic</strong>: stile reliquia. Pu&ograve; abbassare la soglia critico e aumentare in modo sensibile il valore del colpo.</li>
+      </ul>
       <p>
-        Quando un attacco viene dichiarato, il motore confronta la capacità offensiva dell'attaccante con la capacità difensiva del bersaglio o con la sua armatura passiva. Se il colpo supera la soglia richiesta, viene calcolato il danno e applicato alle risorse del bersaglio.
-      </p>
-      <p>
-        In questa fase la wiki dovrà poi dettagliare con precisione tre livelli distinti: <strong>probabilità di colpire</strong>, <strong>quantità di danno inflitto</strong> e <strong>mitigazione o resistenza</strong>. Tenerli separati è importante per evitare descrizioni confuse del sistema.
-      </p>
-    </section>
-
-    <section class="panel">
-      <div class="eyebrow">Stati</div>
-      <h2>Effetti di stato</h2>
-      <p>
-        Il sistema base contempla effetti di stato essenziali, destinati a modificare temporaneamente le prestazioni di chi combatte. Nella documentazione ufficiale questa sezione dovrà chiarire per ogni stato almeno quattro elementi: <strong>durata</strong>, <strong>effetto meccanico</strong>, <strong>condizione di rimozione</strong> e <strong>interazione con il turno</strong>.
-      </p>
-      <p>
-        Questa struttura renderà il combattimento molto più leggibile sia per il giocatore sia per gli autori che costruiscono incontri in Adventure Studio.
+        Per questo due armi della stessa rarit&agrave; possono giocarsi in modo completamente diverso. Il tier ti dice quanto sono forti. La famiglia e lo stile ti dicono <strong>come</strong> vincono.
       </p>
     </section>
 
     <section class="panel">
-      <div class="eyebrow">Esito dello scontro</div>
-      <h2>Fine del combattimento</h2>
+      <div class="eyebrow">Status reali</div>
+      <h2>Gli stati che esistono davvero oggi</h2>
+      <p>Gli effetti di stato non sono decorazione. Sono uno dei modi principali con cui il sistema crea profondit&agrave; senza moltiplicare i pulsanti.</p>
+      <ul>
+        <li><strong>Guardia salda</strong>: aumenta la tua tenuta difensiva. Arriva soprattutto da Difendi, da alcuni talenti warrior e da certi item.</li>
+        <li><strong>Scoperto</strong>: ti rende vulnerabile. Pu&ograve; arrivare da fumble, ritirata fallita o recupero fatto nel momento sbagliato.</li>
+        <li><strong>Messa a fuoco</strong>: migliora precisione e sinergie di classe. Premia il turno preparato bene.</li>
+        <li><strong>Indebolito</strong>: abbassa la resa offensiva e difensiva del nemico.</li>
+        <li><strong>Sbilanciato</strong>: riduce la qualit&agrave; del turno, soprattutto sul bersaglio che lo subisce.</li>
+        <li><strong>Sanguinante</strong> e <strong>In fiamme</strong>: sono danni nel tempo, quindi valgono anche dopo il colpo iniziale.</li>
+        <li><strong>Second Wind</strong>, <strong>Hunter Breath</strong> e <strong>Closed Wounds</strong>: sono stati positivi di sustain, diversi per classe e talento.</li>
+        <li><strong>Smarrito</strong>: riduce l'efficacia del nemico e crea spazio tattico per l'adept.</li>
+      </ul>
+      <p><strong>Nota importante</strong>: oggi nel runtime non esiste un vero stato “stordito”. L'equivalente operativo &egrave; <strong>Sbilanciato</strong>.</p>
+    </section>
+
+    <section class="panel">
+      <div class="eyebrow">Talenti</div>
+      <h2>Che cosa fanno davvero i talenti attivi</h2>
       <p>
-        Uno scontro termina quando tutti i nemici sono sconfitti, il personaggio viene abbattuto, una condizione di scena impone la cessazione del conflitto o una fuga riesce con successo. Alla fine dell'incontro il gioco deve poter restituire un risultato leggibile: vittoria, sconfitta, fuga, esito speciale, accesso a una nuova scena o attivazione del loot.
+        I talenti sono la parte pi&ugrave; caratterizzante del combattimento di classe. Ogni talento forte non serve a fare “un attacco diverso”, ma a spostare l'inerzia dello scontro in un modo leggibile.
+      </p>
+      <ul>
+        <li><strong>Warrior</strong>: tiene il fronte, crea guardia, applica pressione pesante, apre sbilanciamento e indebolimento.</li>
+        <li><strong>Ranger / Explorer</strong>: lavora di ritmo, focus, bleed, predator step e apertura del round.</li>
+        <li><strong>Cultist / Adept</strong>: gioca molto sul controllo mentale, sustain oscuro, confusione e marchi di sangue.</li>
+      </ul>
+      <p>
+        Non tutti i talenti dichiarati nel catalogo sono gi&agrave; cablati nel motore. La wiki qui documenta il principio forte: <strong>i talenti reali sono quelli che oggi producono davvero status, danni o sustain nel log di combattimento</strong>.
+      </p>
+    </section>
+
+    <section class="panel">
+      <div class="eyebrow">Oggetti in combattimento</div>
+      <h2>Effetti che incidono davvero sul turno</h2>
+      <p>Nel combattimento attuale gli item non sono solo numeri di attacco o difesa. Alcuni effetti hanno gi&agrave; un comportamento vivo e riconoscibile.</p>
+      <ul>
+        <li><strong>restore_hp</strong>: cura HP.</li>
+        <li><strong>restore_all</strong>: riporta al massimo HP e stamina.</li>
+        <li><strong>direct_damage</strong>: infligge danno diretto in combat.</li>
+        <li><strong>defense_surge</strong>: alza temporaneamente la difesa.</li>
+        <li><strong>bonus_damage</strong>: aumenta l'impatto dei colpi riusciti.</li>
+        <li><strong>recover_boost</strong>: migliora il valore di Riprendi fiato o di altri momenti di sustain.</li>
+        <li><strong>crit_guard</strong>: aiuta a reggere i picchi e i critici.</li>
+        <li><strong>escape</strong>: aiuta la ritirata.</li>
+        <li><strong>apply_staggered</strong>: applica Sbilanciato.</li>
+        <li><strong>cleanse_exposed</strong>: pulisce Scoperto.</li>
+      </ul>
+      <p>
+        Qui &egrave; importante una distinzione: la wiki del combattimento spiega <strong>gli effetti reali nel turno</strong>; la wiki del loot spiega invece <strong>come questi effetti vengono distribuiti tra famiglie, tier, set e drop</strong>.
+      </p>
+    </section>
+
+    <section class="panel">
+      <div class="eyebrow">Lettura tattica</div>
+      <h2>Come si prende una decisione buona</h2>
+      <p>Una buona lettura del combat system di .txt-Master oggi somiglia a questa:</p>
+      <ul>
+        <li>Se sei ancora pieno di stamina e hai finestra offensiva, <strong>premi</strong>.</li>
+        <li>Se il nemico ha appena aperto la tua guardia o ti ha lasciato <strong>Scoperto</strong>, spesso conviene <strong>Difendere</strong> prima di insistere.</li>
+        <li>Se la stamina sta collassando, <strong>Riprendi fiato</strong> prima che il turno diventi morto.</li>
+        <li>Se hai un talento disponibile, chiediti se serve a chiudere lo scontro o a evitare che il round successivo ti travolga.</li>
+        <li>Se il nemico &egrave; gi&agrave; sotto bleed, stagger o weakened, il tuo round offensivo vale di pi&ugrave;.</li>
+      </ul>
+      <p>
+        In altre parole: il sistema funziona bene quando il giocatore non pensa solo a “fare danno”, ma a <strong>preparare il turno successivo</strong>.
       </p>
     </section>
 
     <section class="panel">
       <div class="eyebrow">Esempio</div>
-      <h2>Esempio di round</h2>
+      <h2>Esempio leggibile di round</h2>
       <p>
-        Il personaggio entra in una cripta e viene assalito da un guardiano scheletrico. Il motore determina l'iniziativa: il personaggio agisce per primo. Sceglie di attaccare con una lama corta. Il colpo va a segno, il danno viene applicato e lo scheletro perde parte dei propri punti vita. Nel turno del nemico, il guardiano contrattacca: l'armatura del personaggio mitiga parte dell'impatto ma non tutto il danno. Il round si chiude, il log registra le azioni e il combattimento prosegue nel round successivo.
+        Il personaggio entra in una cappella invasa da un custode del bronzo. Nel primo round sceglie <strong>Attacca</strong> con una lama a una mano: il colpo entra, infligge danno e lascia il nemico leggermente sotto pressione. Il custode risponde con un colpo pesante. Il danno non &egrave; mortale, ma il personaggio resta a corto di stamina. Nel secondo round ha due strade: continuare a forzare il colpo sperando di chiudere, oppure <strong>Difendere</strong> per ripulire lo stato e recuperare tempo. Se sceglie di difendere, sacrifica danno immediato ma rende molto pi&ugrave; sicuro il round seguente. Questa &egrave; esattamente la grammatica del sistema.
       </p>
     </section>
 
     <section class="panel">
-      <div class="eyebrow">Sviluppi futuri</div>
-      <h2>Espansioni previste</h2>
+      <div class="eyebrow">In sviluppo</div>
+      <h2>Che cosa non va dato ancora per definitivo</h2>
       <p>
-        Il progetto prevede di poter estendere il combattimento con <strong>armi con velocità</strong>, <strong>magie</strong>, <strong>colpi critici</strong>, <strong>morale dei nemici</strong> e <strong>posizionamento astratto</strong>. Queste estensioni andranno documentate in sottosezioni dedicate, ma senza compromettere la leggibilità del nucleo base.
+        Il nucleo base &egrave; solido, ma alcune estensioni sono ancora da considerare in crescita: altri talenti dichiarati ma non agganciati, supporto pi&ugrave; ricco a multi-enemy fight, maggiore variet&agrave; di pattern nemici, critici speciali, e una lettura ancora pi&ugrave; chiara dei breakdown nel log. Per questo la wiki distingue sempre tra <strong>combattimento reale oggi</strong> e <strong>spazio di espansione</strong>.
       </p>
     </section>
   </main>

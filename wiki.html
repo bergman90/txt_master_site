@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="it">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>.txt-Master | Wiki del Gioco</title>
-  <meta name="description" content="Wiki ufficiale di .txt-Master: sistemi di gioco, personaggio, combattimento, loot, rarità, tier e struttura delle avventure.">
+  <meta name="description" content="Wiki ufficiale di .txt-Master: sistemi di gioco, personaggio, combattimento, item, tier, effetti e struttura delle avventure.">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="stylesheet" href="./styles.css">
 </head>
@@ -24,8 +24,7 @@
       <div class="eyebrow">Wiki ufficiale</div>
       <h1>Le regole di .txt-Master</h1>
       <p class="hero__copy">
-        Questa wiki raccoglie i sistemi di gioco di <strong>.txt-Master</strong>: struttura del personaggio, prove, combattimento, equipaggiamento, loot e logiche di progressione.
-        Dove una regola è già consolidata viene presentata come <strong>ufficiale</strong>; dove invece il sistema è ancora in definizione viene indicato come <strong>in sviluppo</strong>.
+        Questa wiki raccoglie i sistemi di gioco di <strong>.txt-Master</strong>: struttura del personaggio, prove, combattimento, equipaggiamento, loot, effetti, progressione e formato delle avventure. Le pagine pi&ugrave; tecniche sono pensate come un <strong>manuale di sistema</strong>, non come una semplice panoramica.
       </p>
       <div class="hero__actions">
         <a class="button button--primary" href="./wiki-combattimento.html">Vai al combattimento</a>
@@ -46,7 +45,7 @@
         <article class="adventure-card">
           <div>
             <h3>Come si gioca</h3>
-            <p>Panoramica del ciclo di gioco: scena, scelta, verifica regole, conseguenze e salvataggio.</p>
+            <p>Panoramica del ciclo di gioco: scena, scelta, verifica regole, conseguenze, salvataggio e avanzamento dell'avventura.</p>
           </div>
           <div class="adventure-meta"><span class="tag">Ufficiale</span></div>
           <div class="card-actions">
@@ -57,7 +56,7 @@
         <article class="adventure-card">
           <div>
             <h3>Combattimento</h3>
-            <p>Sistema di combattimento testuale a turni con iniziativa, attacco, difesa, danno ed effetti.</p>
+            <p>Manuale del combat system a turni: azioni, stamina, stati, stili arma, talenti ed effetti che incidono davvero nel runtime.</p>
           </div>
           <div class="adventure-meta"><span class="tag">MVP ufficiale</span></div>
           <div class="card-actions">
@@ -68,7 +67,7 @@
         <article class="adventure-card">
           <div>
             <h3>Attributi</h3>
-            <p>Ruolo degli attributi nel personaggio, nelle prove e nelle statistiche derivate.</p>
+            <p>Ruolo degli attributi nel personaggio, nelle prove, nel combattimento e nelle statistiche derivate.</p>
           </div>
           <div class="adventure-meta"><span class="tag">Struttura definita</span></div>
           <div class="card-actions">
@@ -78,8 +77,8 @@
 
         <article class="adventure-card">
           <div>
-            <h3>Abilità</h3>
-            <p>Competenze, skill check, difficoltà e ruolo delle prove nelle scene narrative.</p>
+            <h3>Abilit&agrave;</h3>
+            <p>Competenze, skill check, difficolt&agrave; e ruolo delle prove nelle scene narrative e nei nodi di Adventure Studio.</p>
           </div>
           <div class="adventure-meta"><span class="tag">Struttura definita</span></div>
           <div class="card-actions">
@@ -89,10 +88,10 @@
 
         <article class="adventure-card">
           <div>
-            <h3>Loot, rarità e tier</h3>
-            <p>Glossario e struttura del sistema di ricompense, drop casuali, qualità degli oggetti e potenza.</p>
+            <h3>Loot, item, tier ed effetti</h3>
+            <p>Manuale del sistema oggetti: famiglie, tier, rarit&agrave;, set accessori, effetti runtime e logica dei drop.</p>
           </div>
-          <div class="adventure-meta"><span class="tag">In sviluppo</span></div>
+          <div class="adventure-meta"><span class="tag">Struttura viva</span></div>
           <div class="card-actions">
             <a class="button button--primary" href="./wiki-loot.html">Leggi</a>
           </div>
@@ -101,7 +100,7 @@
         <article class="adventure-card">
           <div>
             <h3>Classi e razze</h3>
-            <p>Archivio delle opzioni di creazione del personaggio e delle loro identità ludiche.</p>
+            <p>Archivio delle opzioni di creazione del personaggio e delle loro identit&agrave; ludiche.</p>
           </div>
           <div class="adventure-meta"><span class="tag">In sviluppo</span></div>
           <div class="card-actions">
@@ -112,7 +111,7 @@
         <article class="adventure-card">
           <div>
             <h3>Formato avventure</h3>
-            <p>Come Adventure Studio e l'app descrivono scene, scelte, nemici, oggetti e check nel formato dati.</p>
+            <p>Come Adventure Studio e l'app descrivono scene, scelte, nemici, oggetti, check e struttura dei contenuti.</p>
           </div>
           <div class="adventure-meta"><span class="tag">Ufficiale</span></div>
           <div class="card-actions">
@@ -126,11 +125,10 @@
       <div class="eyebrow">Sistema base</div>
       <h2>Come si gioca</h2>
       <p>
-        In <strong>.txt-Master</strong> il gioco ruota intorno a un ciclo semplice: si carica un personaggio, si avvia o importa un'avventura, si legge una scena, si compie una scelta e il motore applica regole e conseguenze.
-        Il risultato può essere una nuova scena, un controllo di abilità, un combattimento, un cambio di stato, l'acquisizione di un oggetto o l'avanzamento della storia.
+        In <strong>.txt-Master</strong> il gioco ruota intorno a un ciclo chiaro: si carica un personaggio, si apre un'avventura, si legge una scena, si compie una scelta e il motore applica regole e conseguenze. Il risultato pu&ograve; essere una nuova scena, un controllo di abilit&agrave;, un combattimento, un nodo requisito, un nodo loot, un cambio di stato o un avanzamento della storia.
       </p>
       <p>
-        Il progetto nasce come motore per campagne e avventure testuali con focus su testo, scelte, regole, combattimento e progressione del personaggio.
+        La wiki segue questa logica reale: prima il personaggio, poi le prove e il combattimento, poi il sistema oggetti e infine il formato dati con cui Adventure Studio costruisce tutto il resto.
       </p>
     </section>
 
@@ -138,7 +136,7 @@
       <div class="eyebrow">Navigazione consigliata</div>
       <h2>Da dove iniziare</h2>
       <p>
-        Per comprendere il sistema nell'ordine giusto, è consigliabile partire dalla struttura del personaggio, passare a prove e combattimento e solo dopo affrontare loot, progressione e formati dei contenuti. In questo modo la wiki segue la logica reale del gioco: prima il personaggio, poi la risoluzione, infine il contenuto.
+        Se vuoi capire il gioco nell'ordine giusto, il percorso consigliato &egrave; questo: <strong>Attributi</strong> -&gt; <strong>Abilit&agrave;</strong> -&gt; <strong>Combattimento</strong> -&gt; <strong>Loot e item</strong> -&gt; <strong>Formato avventure</strong>. In questo modo la wiki accompagna davvero il funzionamento del sistema, invece di presentare regole isolate.
       </p>
     </section>
 
@@ -146,7 +144,7 @@
       <div class="eyebrow">Stato editoriale</div>
       <h2>Come leggere questa wiki</h2>
       <p>
-        Alcune pagine descrivono sistemi già previsti in modo esplicito dalla documentazione del progetto. Altre fissano invece il lessico tecnico e la struttura concettuale di meccaniche che non risultano ancora pubblicate in forma definitiva. Questo approccio consente di costruire una documentazione pubblica solida senza anticipare come “canone” elementi ancora in evoluzione.
+        Alcune pagine descrivono sistemi gi&agrave; vivi nel runtime. Altre fissano invece il <strong>lessico tecnico e la struttura canonica</strong> di meccaniche che il progetto ha ormai definito bene, ma che potrebbero essere ancora in espansione. Questo approccio tiene la wiki onesta: chi legge capisce sia il gioco di oggi sia la sua direzione.
       </p>
     </section>
   </main>

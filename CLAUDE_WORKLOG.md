@@ -537,4 +537,25 @@ Formato consigliato:
 - Il portale carica ora dventure-studio/runtime-compiler.js prima di pp.js.
 - JSON preview ed export nello Studio puntano al payload runtime compilato, non piu al solo modello editoriale v2.
 - Documento di supporto sincronizzato: docs/adventure-runtime-compiler-v1.md.
-- Questo pass e soprattutto architetturale: prepara la migrazione dal nuovo modello a nodi dello Studio al formato runtime che l'app sa gia leggere.
+- Questo pass e soprattutto architetturale: prepara la migrazione dal nuovo modello a nodi dello Studio al formato runtime che l'app sa gia leggere.## 2026-04-25 - Wiki sito: pass manuale combattimento e item
+- Riscritta `wiki-combattimento.html` in chiave molto piu concreta e meno generica.
+- La pagina combattimento ora spiega in dettaglio:
+  - struttura del round
+  - sei azioni base (`Attacca`, `Difendi`, `Riprendi fiato`, `Ritirata`, consumabili, talenti)
+  - relazione fra precisione, danno, mitigazione ed effetti di stato
+  - ruolo degli stili arma
+  - stati reali e filosofia tattica del sistema
+  - distinzione fra meccaniche gia vive nel runtime e spazio ancora in sviluppo
+- Riscritta `wiki-loot.html` come vero manuale del sistema item.
+- La pagina loot ora chiarisce:
+  - differenza fra loot, drop chance, rarita, tier, famiglia e variante nominale
+  - modello `familyId + tier + variantId`
+  - famiglie canoniche di armi, armature e scudi
+  - lettura delle stelle tier
+  - rarita principali del sistema
+  - set accessori, bonus 3+ pezzi e logica effetti
+  - effetti item gia rilevanti nel runtime
+  - fondazione materiali/crafting spiegata in chiave pubblica ma sintetica
+- Rifinita anche `wiki.html` per riallineare l'indice wiki al tono nuovo: meno overview generica, piu manuale di sistema.
+- Questo pass riguarda il sito pubblico. Nessun cambio runtime app in questo step.
+- Prossimo step naturale lato wiki: portare lo stesso livello di precisione anche su `wiki-attributi.html`, `wiki-abilita.html` e `wiki-classi-razze.html`.

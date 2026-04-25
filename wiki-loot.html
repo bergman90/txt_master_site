@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="it">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>.txt-Master | Wiki di Loot, Rarità e Tier</title>
-  <meta name="description" content="Loot system di .txt-Master: tipi di ricompensa, drop, rarità, tier di potenza e struttura del sistema oggetti.">
+  <title>.txt-Master | Wiki di Loot, Item, Tier ed Effetti</title>
+  <meta name="description" content="Manuale del sistema oggetti di .txt-Master: loot, famiglie, rarita, tier, set accessori ed effetti reali del runtime.">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="stylesheet" href="./styles.css">
 </head>
@@ -22,9 +22,9 @@
   <header class="hero">
     <div class="hero__inner">
       <div class="eyebrow">Ricompense e oggetti</div>
-      <h1>Loot, rarità e tier</h1>
+      <h1>Loot, item, tier ed effetti</h1>
       <p class="hero__copy">
-        Questa pagina definisce il linguaggio comune del sistema di ricompense di <strong>.txt-Master</strong>: che cosa significa trovare un oggetto, da che cosa dipende la sua qualità e come distinguere probabilità di drop, rarità e livello di potenza.
+        La struttura degli oggetti di <strong>.txt-Master</strong> non si basa su una lista piatta di equipaggiamenti tutti diversi, ma su un sistema pi&ugrave; ordinato: <strong>famiglia meccanica</strong>, <strong>tier</strong>, <strong>variante nominale</strong>, <strong>rarit&agrave;</strong> ed <strong>effetti</strong>.
       </p>
       <div class="hero__actions">
         <a class="button button--primary" href="./wiki.html">Torna alla wiki</a>
@@ -34,53 +34,186 @@
 
   <main class="page">
     <section class="panel">
-      <div class="eyebrow">Definizioni</div>
-      <h2>Quattro concetti da non confondere</h2>
+      <div class="eyebrow">Glossario</div>
+      <h2>Le parole da tenere separate</h2>
+      <ul>
+        <li><strong>Loot</strong>: qualsiasi ricompensa ottenibile in scena, da nemici, eventi o cache.</li>
+        <li><strong>Drop chance</strong>: probabilit&agrave; che quel loot compaia davvero.</li>
+        <li><strong>Rarit&agrave;</strong>: quanto un oggetto sia inconsueto nel mondo di gioco.</li>
+        <li><strong>Tier</strong>: fascia di potenza dell'oggetto. Dice quanto &egrave; forte, non quanto &egrave; raro.</li>
+        <li><strong>Famiglia</strong>: identit&agrave; meccanica dell'oggetto. Decide il pattern di gioco.</li>
+        <li><strong>Variante nominale</strong>: il nome che il giocatore vede. Cambia il flavour, non necessariamente le statistiche.</li>
+      </ul>
       <p>
-        Nel lessico della wiki, <strong>loot</strong> indica l'insieme delle ricompense ottenibili. <strong>Drop chance</strong> indica la probabilità che una ricompensa venga rilasciata. <strong>Rarità</strong> indica quanto un oggetto sia inconsueto nel mondo di gioco. <strong>Tier</strong> indica invece la fascia di potenza o valore meccanico a cui l'oggetto appartiene.
-      </p>
-      <p>
-        Tenere distinti questi concetti è essenziale: un oggetto può essere raro ma poco potente, oppure comune ma appartenere a una fascia utile in un preciso momento della progressione.
-      </p>
-    </section>
-
-    <section class="panel">
-      <div class="eyebrow">Loot</div>
-      <h2>Che cosa può contenere il sistema di ricompense</h2>
-      <p>
-        In <strong>.txt-Master</strong> il loot non dovrebbe limitarsi alle armi. Una ricompensa può includere denaro, consumabili, materiali, chiavi narrative, equipaggiamento, reliquie, pergamene, risorse di crafting o oggetti speciali legati a una specifica avventura.
+        Questa distinzione &egrave; centrale. In .txt-Master due oggetti possono essere della stessa famiglia e dello stesso tier, quindi <strong>meccanicamente equivalenti</strong>, ma avere nomi diversi per dare variet&agrave; narrativa e visiva.
       </p>
     </section>
 
     <section class="panel">
-      <div class="eyebrow">Drop chance</div>
-      <h2>Probabilità di ottenimento</h2>
+      <div class="eyebrow">Regola base</div>
+      <h2>Come funziona davvero il sistema item</h2>
+      <p>Il modello attuale va letto cosi:</p>
+      <ul>
+        <li><strong>familyId</strong>: definisce il profilo meccanico.</li>
+        <li><strong>tier</strong>: definisce la fascia di potenza.</li>
+        <li><strong>variantId</strong>: definisce il nome concreto dell'oggetto.</li>
+        <li><strong>displayName</strong>: &egrave; il nome mostrato al giocatore, spesso con stelle.</li>
+        <li><strong>statsProfile</strong>: deriva da <strong>famiglia + tier</strong>, non dalla variante nominale.</li>
+      </ul>
       <p>
-        La probabilità di drop dovrebbe essere trattata come una variabile indipendente, modificabile da tipo di nemico, scena, evento, contenitore, boss, difficoltà o regole speciali dell'avventura. La wiki userà questo termine solo per descrivere la probabilità di comparsa, non il valore o la forza dell'oggetto ottenuto.
+        Esempio: <strong>Spada ★</strong>, <strong>Gladio ★</strong> e <strong>Scimitarra ★</strong> condividono lo stesso profilo di <strong>lame a 1 mano tier 1</strong>. Cambia il nome, non cambia la sostanza meccanica.
       </p>
     </section>
 
     <section class="panel">
-      <div class="eyebrow">Rarità</div>
-      <h2>Che cosa descrive davvero la rarità</h2>
+      <div class="eyebrow">Armi</div>
+      <h2>Famiglie arma canoniche</h2>
+      <p>Ogni famiglia esiste per produrre un pattern di gioco leggibile, non solo una progressione numerica.</p>
+      <ul>
+        <li><strong>Pugnali</strong>: <em>Daga, Stiletto, Kryss</em>. Precisione alta, danno basso, ottimi per opportunismo, critico e finisher.</li>
+        <li><strong>Lame a 1 mano</strong>: <em>Spada, Gladio, Scimitarra</em>. Famiglia versatile, precisa, compatibile con scudo, con ritmo stabile.</li>
+        <li><strong>Lame a 2 mani</strong>: <em>Zweihander, Flamberga, Claymore</em>. Forte danno di pressione, niente scudo, pi&ugrave; impegno offensivo.</li>
+        <li><strong>Archi</strong>: famiglia da apertura. Molto buona nei primi round, meno efficace se il combattimento si trascina.</li>
+        <li><strong>Mazze a 1 mano</strong>: controllo e logoramento, ottime con scudo, meno eleganti ma pi&ugrave; stabili.</li>
+        <li><strong>Mazze a 2 mani</strong>: impatto pesante, controllo forte, pi&ugrave; rischio se il turno va male.</li>
+        <li><strong>Bastoni</strong>: arma rituale e di supporto. Danno pi&ugrave; basso, ma forte identit&agrave; di sustain, prove e controllo.</li>
+      </ul>
+    </section>
+
+    <section class="panel">
+      <div class="eyebrow">Armature e scudi</div>
+      <h2>Famiglie difensive canoniche</h2>
+      <ul>
+        <li><strong>Armature leggere</strong>: protezione agile, poche penalit&agrave;, ideali per build mobili.</li>
+        <li><strong>Armature medie</strong>: compromesso fra tenuta e mobilit&agrave;.</li>
+        <li><strong>Armature pesanti</strong>: difesa massima, pi&ugrave; costo in ritmo, stamina e libert&agrave; di azione.</li>
+        <li><strong>Scudi leggeri</strong>: difesa agile. Comprendono varianti nominali come <em>Buckler</em> e <em>Scudo rotondo</em>, ma condividono la stessa curva meccanica.</li>
+        <li><strong>Scudi pesanti</strong>: ancoraggio puro, ottimi per reggere pressione e critici, meno fluidi nel gioco offensivo.</li>
+      </ul>
       <p>
-        La rarità deve servire soprattutto a comunicare eccezionalità, identità e aspettativa del giocatore. Una gerarchia di rarità ben costruita aiuta l'interfaccia, la leggibilità del loot e la percezione del premio, ma non deve sostituire il tier di potenza.
+        Anche qui la regola resta la stessa: la famiglia decide il profilo, la variante decide il nome.
       </p>
     </section>
 
     <section class="panel">
       <div class="eyebrow">Tier</div>
-      <h2>La fascia di potenza</h2>
+      <h2>Che cosa significano le stelle</h2>
+      <p>Le stelle sono la lettura pi&ugrave; semplice del tier:</p>
+      <ul>
+        <li><strong>&#9733;</strong> = tier 1</li>
+        <li><strong>&#9733;&#9733;</strong> = tier 2</li>
+        <li><strong>&#9733;&#9733;&#9733;</strong> = tier 3</li>
+      </ul>
       <p>
-        Il tier esprime il collocamento di un oggetto all'interno della curva di progressione. È il concetto più utile per bilanciare combattimento, economia e avanzamento del personaggio. Due oggetti della stessa rarità possono appartenere a tier diversi e quindi avere impatti molto differenti sul gioco.
+        Il tier dice quanto l'oggetto &egrave; forte nella sua famiglia. Non va confuso con la rarit&agrave;, anche se spesso i due piani dialogano. In generale, nei profili canonici del gioco, il tier 1 occupa la base del sistema, il tier 2 la fascia di consolidamento e il tier 3 la fascia di punta della famiglia.
+      </p>
+      <p>
+        Esempio semplice: una <strong>Spada ★★★</strong> e una <strong>Scimitarra ★★★</strong> condividono il profilo di taglio a 1 mano tier 3. Non &egrave; una “pi&ugrave; rara” dell'altra per forza: sono due varianti dello stesso gradino meccanico.
       </p>
     </section>
 
     <section class="panel">
-      <div class="eyebrow">Stato attuale</div>
-      <h2>Che cosa è già pronto e che cosa no</h2>
+      <div class="eyebrow">Rarit&agrave;</div>
+      <h2>Come va letta la rarit&agrave;</h2>
       <p>
-        La struttura concettuale è già pronta per essere documentata, ma nella repo analizzata non risulta ancora pubblicata una tabella ufficiale definitiva di drop, rarità o tier. Per questo la pagina fissa la terminologia e la logica del sistema, lasciando la tassonomia numerica a una fase successiva.
+        La rarit&agrave; comunica eccezionalit&agrave;, attesa del giocatore e valore percepito. Non sostituisce il tier. Nel sistema attuale esistono diversi livelli in base alla categoria, ma le etichette principali da tenere in mente sono queste:
+      </p>
+      <ul>
+        <li><strong>common</strong></li>
+        <li><strong>uncommon</strong></li>
+        <li><strong>rare</strong></li>
+        <li><strong>epic</strong></li>
+        <li><strong>mythic</strong></li>
+        <li><strong>legendary</strong></li>
+        <li><strong>unique</strong></li>
+      </ul>
+      <p>
+        Non tutte le categorie usano l'intera scala nello stesso modo. Per esempio gli accessori di set generici entrano spesso nel loop da <strong>rare</strong> in su, mentre i materiali e molti consumabili stanno nelle fasce basse e comuni.
+      </p>
+    </section>
+
+    <section class="panel">
+      <div class="eyebrow">Set accessori</div>
+      <h2>Elmi, anelli, mantelli e stivali non sono pi&ugrave; una lista piatta</h2>
+      <p>
+        Gli accessori seguono una logica diversa dal resto dell'equipaggiamento: sono costruiti come <strong>set a effetto condiviso</strong>. Lo stesso set pu&ograve; comparire su pi&ugrave; slot e mantenere la stessa identit&agrave;.
+      </p>
+      <ul>
+        <li><strong>Slot coperti</strong>: elmo, anello, mantello, stivali.</li>
+        <li><strong>Set generici principali</strong>: Guardia, Baluardo, Mente, Respiro, Ombra, Fuga, Passo, Difesa, Lama, Sapere.</li>
+        <li><strong>Set speciali</strong>: Preda, Impatto, Brace, Sigillo, Mercato.</li>
+        <li><strong>Regola del bonus set</strong>: con <strong>3 o pi&ugrave; pezzi</strong> dello stesso set si attiva un bonus che porta l'effetto principale a circa <strong>x1.5</strong>, anche se i pezzi hanno tier diversi.</li>
+      </ul>
+      <p>
+        Esempio: <strong>Elmo della Guardia</strong>, <strong>Mantello della Guardia</strong> e <strong>Anello della Guardia</strong> attivano il set anche se uno &egrave; tier 1, uno tier 2 e uno tier 3.
+      </p>
+    </section>
+
+    <section class="panel">
+      <div class="eyebrow">Effetti</div>
+      <h2>Che cosa fanno davvero gli item</h2>
+      <p>Gli effetti nel sistema oggetti non sono un testo ornamentale. Molti hanno gi&agrave; un ruolo operativo nel runtime.</p>
+      <ul>
+        <li><strong>restore_hp</strong>: cura HP.</li>
+        <li><strong>restore_all</strong>: ripristina HP e stamina.</li>
+        <li><strong>direct_damage</strong>: danno diretto, tipico di certi consumabili offensivi.</li>
+        <li><strong>defense_surge</strong>: crea un picco difensivo temporaneo.</li>
+        <li><strong>bonus_damage</strong>: aumenta l'impatto dei colpi riusciti.</li>
+        <li><strong>recover_boost</strong>: migliora il recupero di stamina.</li>
+        <li><strong>fatigue_relief</strong>: alleggerisce il costo del combattimento prolungato.</li>
+        <li><strong>crit_guard</strong>: aiuta a reggere i colpi pi&ugrave; pericolosi.</li>
+        <li><strong>escape</strong>: migliora la ritirata.</li>
+        <li><strong>apply_staggered</strong>: sbilancia il bersaglio.</li>
+        <li><strong>cleanse_exposed</strong>: pulisce lo stato Scoperto.</li>
+        <li><strong>focus_surge</strong>: rinforza il focus e il turno di preparazione.</li>
+        <li><strong>guarded_surge</strong>: migliora la guardia.</li>
+        <li><strong>trade_value</strong>: aumenta il valore di vendita.</li>
+        <li><strong>check_bonus</strong>: esiste nella tassonomia, ma oggi va trattato con cautela: &egrave; definito pi&ugrave; chiaramente del suo uso runtime pieno.</li>
+      </ul>
+      <p>
+        In breve: la wiki del loot non spiega soltanto “cosa trovi”, ma <strong>come quell'oggetto cambia il comportamento del tuo personaggio</strong>.
+      </p>
+    </section>
+
+    <section class="panel">
+      <div class="eyebrow">Drop</div>
+      <h2>Come va letto il drop</h2>
+      <p>
+        La probabilit&agrave; di drop &egrave; un asse indipendente. Un oggetto pu&ograve; essere comune da vedere ma poco forte, oppure raro da ottenere ma meccanicamente collocato in una famiglia che il tuo personaggio non sfrutta bene. Per questo la lettura corretta di un drop &egrave; sempre a pi&ugrave; livelli:
+      </p>
+      <ul>
+        <li><strong>Tipo di ricompensa</strong>: oro, consumabile, materiale, equipaggiamento, chiave, quest item, reliquia.</li>
+        <li><strong>Famiglia</strong>: pattern di gioco dell'oggetto.</li>
+        <li><strong>Tier</strong>: quanto &egrave; forte in quella famiglia.</li>
+        <li><strong>Rarit&agrave;</strong>: quanto &egrave; eccezionale o speciale.</li>
+        <li><strong>Effetto</strong>: che cosa fa davvero sul personaggio o nel combattimento.</li>
+      </ul>
+    </section>
+
+    <section class="panel">
+      <div class="eyebrow">Materiali</div>
+      <h2>Fondamenta del crafting</h2>
+      <p>
+        Il sistema sta anche aprendo la strada ai <strong>materials</strong>, una famiglia separata pensata per il futuro crafting. La base attuale punta a materiali chiari e leggibili come <strong>Legno</strong>, <strong>Ferro grezzo</strong>, <strong>Pelle</strong>, <strong>Stoffa</strong>, <strong>Erbe</strong>, <strong>Cristalli</strong> e <strong>Squame</strong>. Alcuni drop esistenti, come la <strong>Pelle di lupo</strong>, stanno gi&agrave; venendo riallineati in questa direzione.
+      </p>
+      <p>
+        Questo significa che la wiki degli item non riguarda pi&ugrave; solo armi e armature: ormai &egrave; anche la base del futuro sistema di combinazione e forgia old school.
+      </p>
+    </section>
+
+    <section class="panel">
+      <div class="eyebrow">Lettura pratica</div>
+      <h2>Come valutare davvero un oggetto</h2>
+      <p>Quando trovi un oggetto, le domande giuste non sono “&egrave; raro?” o “vale tanto?” ma queste:</p>
+      <ul>
+        <li><strong>A che famiglia appartiene?</strong></li>
+        <li><strong>Quel pattern &egrave; adatto alla mia classe e al mio stile?</strong></li>
+        <li><strong>Che tier &egrave; rispetto a quello che ho addosso?</strong></li>
+        <li><strong>Ha un effetto che cambia davvero i miei turni?</strong></li>
+        <li><strong>Sta entrando in sinergia con un set accessorio o con un'altra parte del build?</strong></li>
+      </ul>
+      <p>
+        In questo senso il sistema item di .txt-Master vuole essere pi&ugrave; da <strong>manuale tattico</strong> che da semplice scala di colori.
       </p>
     </section>
   </main>
