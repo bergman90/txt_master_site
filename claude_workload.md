@@ -5,6 +5,28 @@
 
 ---
 
+## Stato attuale — 2026-04-25
+
+### Ultimo lavoro — RPG_PROJECT (Android)
+
+**UX skill check e scelte** (`AdventureScreens.kt`)
+
+Tre problemi risolti:
+1. **Scelte senza contesto** → ogni scelta mostra ora un chip colorato con icona che indica il tipo di evento:
+   - Dado giallo `Prova [Attributo]  CD X` per skill check
+   - Martello rosso `Combattimento` per combat
+   - Lucchetto blu `Richiede oggetto` per requirement
+   - Stella verde `Ricompensa` per loot
+   - Pulsante contestuale: "Tenta la prova" / "Combatti" / "Prova il requisito" / "Raccogli" / "Scegli"
+2. **Esito skill check invisibile** → aggiunto `CheckResultBanner` prominente verde/rosso sopra le scelte, con dado/modificatore/totale/CD, margine di successo, XP guadagnati
+3. **Log duplicato** → rimosso skill check dal log generico in cima (resta solo per loot)
+
+Nuovo AAB release: `app/build/outputs/bundle/release/app-release.aab` (16 MB, 2026-04-25 17:55)
+
+**Vecchio crash v1/v2** — risolto: APK installato era compilato da Adventure.kt v1. Rebuild ha risolto.
+
+---
+
 ## Stato attuale — 2026-04-24
 
 ### Contesto
