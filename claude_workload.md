@@ -5,6 +5,27 @@
 
 ---
 
+## Stato attuale — 2026-04-25 (aggiornamento 2)
+
+### Roadmap allineamento Studio ↔ App — Step 1 e 2 completati
+
+**`app.js` — costanti aggiornate:**
+- `SKILLS`: aggiunti `guard` (Guardia), `precision` (Precisione), `alchemy` (Alchimia), `constitution` (Costituzione)
+- `EFFECT_FAMILIES`: aggiunta `exploration` (Esplorazione)
+- `EFFECT_TRIGGERS`: aggiunti `on_low_hp` (Con HP bassi), `on_scene_enter` (All'ingresso nella scena)
+- `CONDITION_OPTIONS`: aggiunte 7 condizioni mancanti — `burning`, `bleeding`, `confused`, `second_wind`, `hunter_breath`, `closed_wounds`, `predator_step`
+
+**`EquipmentCatalog.kt` — fix rarity tier:**
+- Rimossa sovrascrittura `rarity` dal LootDrop per accessori tier — la rarity è ora sempre quella del catalog (tier 1=rare, tier 2=mythic, tier 3=legendary)
+
+**Prossimi step roadmap:**
+- [ ] **Step 3** — Branch fields UI nell'editor: `loot`, `condition`, `unlockChoiceId`
+- [ ] **Step 4** — `Event.Condition.text` esposto in editor
+- [ ] **Step 5** — Dialogue runtime: `once`, `hiddenUntilUnlocked`, `gateType`
+- [ ] **Crafting system** — separato (da affrontare dopo il resto)
+
+---
+
 ## Stato attuale — 2026-04-25
 
 ### Ultimo lavoro — RPG_PROJECT (Android)

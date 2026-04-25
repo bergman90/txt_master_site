@@ -6,10 +6,14 @@ const SKILLS = [
   { value: "perception", label: "Percezione" },
   { value: "deception", label: "Arte dell'inganno" },
   { value: "melee", label: "Mischia" },
+  { value: "guard", label: "Guardia" },
+  { value: "precision", label: "Precisione" },
+  { value: "alchemy", label: "Alchimia" },
   { value: "strength", label: "Forza" },
   { value: "dexterity", label: "Destrezza" },
   { value: "intelligence", label: "Intelligenza" },
   { value: "wisdom", label: "Saggezza" },
+  { value: "constitution", label: "Costituzione" },
   { value: "charisma", label: "Carisma" }
 ];
 
@@ -48,6 +52,7 @@ const EFFECT_FAMILIES = [
   { value: "combat_tempo", label: "Tempo di combattimento" },
   { value: "combat_control", label: "Controllo in combattimento" },
   { value: "survival_recovery", label: "Recupero e sopravvivenza" },
+  { value: "exploration", label: "Esplorazione" },
   { value: "skill_check", label: "Prove / skill check" },
   { value: "economy_loot", label: "Economia e bottino" },
   { value: "narrative_key", label: "Chiave narrativa" }
@@ -63,7 +68,9 @@ const EFFECT_TRIGGERS = [
   { value: "on_crit", label: "Su critico" },
   { value: "on_defend", label: "Quando difende" },
   { value: "on_recover", label: "Quando recupera fiato" },
-  { value: "on_choice", label: "Su scelta/evento" }
+  { value: "on_low_hp", label: "Con HP bassi" },
+  { value: "on_choice", label: "Su scelta/evento" },
+  { value: "on_scene_enter", label: "All'ingresso nella scena" }
 ];
 
 const EFFECT_PRESETS = [
@@ -10293,11 +10300,18 @@ function hydrateEncounterSelect(select, value = "") {
 
 const CONDITION_OPTIONS = [
   { value: "", label: "— Nessuna —" },
-  { value: "focused",   label: "Concentrato (focused)" },
-  { value: "guarded",   label: "In Guardia (guarded)" },
-  { value: "staggered", label: "Stordito (staggered)" },
-  { value: "exposed",   label: "Scoperto (exposed)" },
-  { value: "weakened",  label: "Indebolito (weakened)" },
+  { value: "focused",        label: "Concentrato (focused)" },
+  { value: "guarded",        label: "In Guardia (guarded)" },
+  { value: "staggered",      label: "Stordito (staggered)" },
+  { value: "exposed",        label: "Scoperto (exposed)" },
+  { value: "weakened",       label: "Indebolito (weakened)" },
+  { value: "burning",        label: "In fiamme (burning)" },
+  { value: "bleeding",       label: "Sanguinante (bleeding)" },
+  { value: "confused",       label: "Smarrito (confused)" },
+  { value: "second_wind",    label: "Secondo Respiro Nero (second_wind)" },
+  { value: "hunter_breath",  label: "Respiro del Cacciatore (hunter_breath)" },
+  { value: "closed_wounds",  label: "Ferita Chiusa (closed_wounds)" },
+  { value: "predator_step",  label: "Passo del Predone (predator_step)" },
 ];
 
 function hydrateConditionSelect(select, value = "") {
