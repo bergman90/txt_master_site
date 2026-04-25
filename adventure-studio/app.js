@@ -7691,7 +7691,95 @@ function buildBranchRow(labelText, branch, desc, choice, options = {}) {
     },
     tone: "burn"
   });
-  wrap.append(textInput, burnToggle);
+  // ── extras: condition / unlockChoiceId / loot ───────────────────────────────
+  const hasExtras = !!(branch.condition || branch.unlockChoiceId || (branch.loot && branch.loot.length > 0));
+
+  const extrasToggle = document.createElement("button");
+  extrasToggle.type = "button";
+  extrasToggle.className = "branch-extras-toggle";
+  extrasToggle.textContent = hasExtras ? "⚙ Opzioni branch ▲" : "⚙ Opzioni branch ▼";
+
+  const extrasPanel = document.createElement("div");
+  extrasPanel.className = "branch-extras-panel";
+  if (!hasExtras) extrasPanel.hidden = true;
+
+  // — condition
+  const condRow = document.createElement("div");
+  condRow.className = "branch-extras-row";
+  const condLabel = document.createElement("span");
+  condLabel.className = "branch-extras-label";
+  condLabel.textContent = "Condizione pre-combattimento:";
+  const condSel = document.createElement("select");
+  condSel.className = "ctp-scene-select";
+  hydrateConditionSelect(condSel, branch.condition || "");
+  condSel.addEventListener("change", (e) => {
+    branch.condition = e.target.value || null;
+    onChoiceChange(desc, choice);
+  });
+  condRow.append(condLabel, condSel);
+
+  // — unlockChoiceId
+  const unlockRow = document.createElement("div");
+  unlockRow.className = "branch-extras-row";
+  const unlockLabel = document.createElement("span");
+  unlockLabel.className = "branch-extras-label";
+  unlockLabel.textContent = "Sblocca scelta nascosta:";
+  const unlockSel = document.createElement("select");
+  unlockSel.className = "ctp-scene-select";
+  const noUnlockOpt = document.createElement("option");
+  noUnlockOpt.value = "";
+  noUnlockOpt.textContent = "— Nessuna —";
+  unlockSel.appendChild(noUnlockOpt);
+  (state.adventure.descriptions || []).forEach((d) => {
+    (d.choices || []).filter((c) => c.hidden).forEach((c) => {
+      const opt = document.createElement("option");
+      opt.value = c.id;
+      opt.textContent = `[${d.title || d.id}] ${c.text || c.id}`;
+      unlockSel.appendChild(opt);
+    });
+  });
+  unlockSel.value = branch.unlockChoiceId || "";
+  unlockSel.addEventListener("change", (e) => {
+    branch.unlockChoiceId = e.target.value || null;
+    onChoiceChange(desc, choice);
+  });
+  unlockRow.append(unlockLabel, unlockSel);
+
+  // — loot
+  const lootHeaderRow = document.createElement("div");
+  lootHeaderRow.className = "branch-extras-row branch-extras-loot-header";
+  const lootSpanLabel = document.createElement("span");
+  lootSpanLabel.className = "branch-extras-label";
+  lootSpanLabel.textContent = "Loot sul branch:";
+  const addBranchLootBtn = document.createElement("button");
+  addBranchLootBtn.type = "button";
+  addBranchLootBtn.className = "small";
+  addBranchLootBtn.textContent = "+ Oggetto";
+  addBranchLootBtn.addEventListener("click", () => {
+    branch.loot = branch.loot || [];
+    branch.loot.push(createLootFromPreset("coins"));
+    rerenderBranchLoot();
+    onChoiceChange(desc, choice);
+  });
+  lootHeaderRow.append(lootSpanLabel, addBranchLootBtn);
+
+  const branchLootList = document.createElement("div");
+  function rerenderBranchLoot() {
+    renderLootList(branchLootList, branch.loot || [], {
+      rerender: rerenderBranchLoot,
+      onChange: () => onChoiceChange(desc, choice)
+    });
+  }
+  rerenderBranchLoot();
+
+  extrasPanel.append(condRow, unlockRow, lootHeaderRow, branchLootList);
+
+  extrasToggle.addEventListener("click", () => {
+    extrasPanel.hidden = !extrasPanel.hidden;
+    extrasToggle.textContent = extrasPanel.hidden ? "⚙ Opzioni branch ▼" : "⚙ Opzioni branch ▲";
+  });
+
+  wrap.append(textInput, burnToggle, extrasToggle, extrasPanel);
   if (options.caption) {
     const caption = makeHint(options.caption);
     caption.classList.add("branch-row-caption");
@@ -12569,19 +12657,33 @@ function buildConditionConfig(container, ev, desc, choice) {
     onChoiceChange(desc, choice);
   });
 
+  const textArea = document.createElement("textarea");
+  textArea.rows = 2;
+  textArea.placeholder = "Testo narrativo mostrato prima di applicare la condizione (opzionale)";
+  textArea.value = ev.text || "";
+  textArea.addEventListener("input", (e) => {
+    ev.text = e.target.value || null;
+    onChoiceChange(desc, choice);
+  });
+
   container.append(
     buildEventSection(
-      "Condizione richiesta",
-      "Usa questo nodo per verificare un flag o uno stato gia ottenuto dal lettore.",
+      "Condizione da applicare",
+      "Applica una condizione di combattimento al personaggio. Viene attivata prima del prossimo scontro.",
       buildEventFieldRow(
-        "Condition ID",
-        "Scegli la condizione che deve risultare attiva nel runtime.",
+        "Condizione",
+        "Scegli la condizione da applicare al lettore.",
         conditionSelect
+      ),
+      buildEventFieldRow(
+        "Testo narrativo",
+        "Testo opzionale mostrato al lettore prima che la condizione venga applicata.",
+        textArea
       )
     ),
     buildEventSection(
       "Uscita del nodo",
-      "Se la condizione e soddisfatta, il lettore prosegue lungo questo ramo.",
+      "Dopo aver applicato la condizione, il lettore prosegue lungo questo ramo.",
       buildBranchRow("Destinazione continua", ev.branch, desc, choice)
     )
   );

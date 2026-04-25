@@ -5,6 +5,30 @@
 
 ---
 
+## Stato attuale — 2026-04-25 (aggiornamento 3)
+
+### Roadmap allineamento Studio ↔ App — Step 3 e 4 completati
+
+**`app.js` — `buildBranchRow` esteso (Step 3):**
+- Aggiunto pannello collassabile "⚙ Opzioni branch" su ogni branch row
+- `Branch.condition`: select condizione pre-combattimento (riusa `hydrateConditionSelect`)
+- `Branch.unlockChoiceId`: select che lista tutte le scelte `hidden: true` dell'avventura
+- `Branch.loot`: lista loot con `renderLootList` + pulsante "+ Oggetto"
+- Il pannello si apre automaticamente se uno dei tre campi è già valorizzato
+
+**`styles.css` — nuovi stili branch extras:**
+- `.branch-extras-toggle`, `.branch-extras-panel`, `.branch-extras-row`, `.branch-extras-label`
+
+**`app.js` — `buildConditionConfig` aggiornato (Step 4):**
+- Aggiunto campo textarea per `Event.Condition.text` (testo narrativo opzionale)
+- Aggiornata la descrizione del pannello: "Applica una condizione di combattimento al personaggio"
+
+**Prossimi step roadmap:**
+- [ ] **Step 5** — Dialogue runtime: `once`, `hiddenUntilUnlocked`, `gateType` (mezzo giorno+)
+- [ ] **Crafting system** — separato
+
+---
+
 ## Stato attuale — 2026-04-25 (aggiornamento 2)
 
 ### Roadmap allineamento Studio ↔ App — Step 1 e 2 completati
