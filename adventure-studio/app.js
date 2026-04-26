@@ -2393,13 +2393,27 @@ function buildCollapsedChapterPortMaps(bounds = getCurrentFlowBoardBounds()) {
     if (targetGroup && (!sourceGroup || sourceGroup.id !== targetGroup.id)) {
       const bucket = ensure(targetGroup.id);
       if (!bucket.entries.some((port) => port.nodeId === edge.targetId)) {
-        bucket.hiddenIncomingCount += 1;
+        // Auto-aggiungi come port visibile (non solo contatore nascosto)
+        bucket.entries.push({
+          key: `entry:${edge.targetId}`,
+          nodeId: edge.targetId,
+          label: `IN ${bucket.entries.length + 1}`,
+          title: nodeLabelForChapter(edge.targetId),
+          color: "#5f86c9"
+        });
       }
     }
     if (sourceGroup && (!targetGroup || targetGroup.id !== sourceGroup.id)) {
       const bucket = ensure(sourceGroup.id);
       if (!bucket.exits.some((port) => port.nodeId === edge.sourceNodeId)) {
-        bucket.hiddenOutgoingCount += 1;
+        // Auto-aggiungi come port visibile (non solo contatore nascosto)
+        bucket.exits.push({
+          key: `exit:${edge.sourceNodeId}`,
+          nodeId: edge.sourceNodeId,
+          label: `OUT ${bucket.exits.length + 1}`,
+          title: nodeLabelForChapter(edge.sourceNodeId),
+          color: "#c8823a"
+        });
       }
     }
   });
@@ -3569,7 +3583,7 @@ function addChoice() {
   desc.choices = desc.choices || [];
   desc.choices.push({
     id: createUniqueChoiceId(desc),
-    text: `Scelta ${desc.choices.length + 1}`,
+    text: "Prosegui...",
     hidden: false,
     burnAfterUse: false,
     targetId: null,
@@ -6978,7 +6992,7 @@ function addChoiceAndPickEvent(descId) {
   desc.choices = desc.choices || [];
   const newChoice = {
     id: createUniqueChoiceId(desc),
-    text: `Scelta ${desc.choices.length + 1}`,
+    text: "Prosegui...",
     hidden: false,
     burnAfterUse: false,
     targetId: null,
@@ -10577,7 +10591,7 @@ function addLinkedTarget(desc, targetId) {
   } else {
     desc.choices.push({
       id: createUniqueChoiceId(desc),
-      text: `Scelta ${desc.choices.length + 1}`,
+      text: "Prosegui...",
       hidden: false,
       burnAfterUse: false,
       targetId,
