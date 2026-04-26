@@ -57,11 +57,11 @@
 
 ---
 
-### Prossimi passi pre-release 0.1.7-alpha
+### Release 0.1.7-alpha — COMPLETATA (2026-04-26)
 
-- [ ] Build AAB versionCode 12 / 0.1.7-alpha
-- [ ] Push txt_master_site (crafting.html + wiki.html aggiornata)
-- [ ] Rimuovere dead code: `GameAppState.craft()` a riga ~415 (non più chiamata)
+- [x] Build AAB versionCode 12 / 0.1.7-alpha — `app/build/outputs/bundle/release/app-release.aab` (16 MB)
+- [x] Push txt_master_site (crafting.html + wiki.html aggiornata) — commit `34b1161`
+- [x] Dead code `GameAppState.craft()` rimosso
 
 ---
 
