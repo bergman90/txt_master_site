@@ -443,8 +443,8 @@ const FLOW_EVENT_NODE_WIDTH = 138;
 const FLOW_EVENT_NODE_HEIGHT = 34;
 const FLOW_EVENT_ADD_NODE_WIDTH = 82;
 const FLOW_EVENT_ADD_NODE_HEIGHT = 28;
-const CHAPTER_GROUP_CARD_WIDTH = 168;
-const CHAPTER_GROUP_CARD_HEIGHT = 56;
+const CHAPTER_GROUP_CARD_WIDTH = 200;
+const CHAPTER_GROUP_CARD_HEIGHT = 72;
 const CREATE_MONSTER_OPTION = "__create_new__";
 const SCENE_IMAGE_ASPECT_RATIO = 2.48;
 const SCENE_IMAGE_TARGET_WIDTH = 1200;
@@ -2289,10 +2289,12 @@ function chapterGroupBounds(group, bounds = getCurrentFlowBoardBounds()) {
 
 function chapterGroupCollapsedFrame(group, bounds = getCurrentFlowBoardBounds()) {
   const point = logicalToBoardPoint(group.position || { x: 0, y: 0 }, bounds);
+  const titleLen = (group.title || "Nuovo capitolo").length;
+  const width = Math.max(160, Math.min(340, titleLen * 8 + 88));
   return {
     left: point.x,
     top: point.y,
-    width: CHAPTER_GROUP_CARD_WIDTH,
+    width,
     height: CHAPTER_GROUP_CARD_HEIGHT
   };
 }
@@ -2457,25 +2459,16 @@ function renderChapterGroupFrames(bounds = getCurrentFlowBoardBounds()) {
       card.style.left = `${frame.left}px`;
       card.style.top = `${frame.top}px`;
       card.style.width = `${frame.width}px`;
-      card.style.height = `${frame.height}px`;
+      card.title = `${(group.nodeIds || []).length} nodi | ${ports.entries.length} in | ${ports.exits.length} fin`;
       card.innerHTML = `
         <div class="chapter-group-card__header">
-          <div class="chapter-group-card__titles">
-            <strong>${esc(group.title || "Nuovo capitolo")}</strong>
-            <span>${(group.nodeIds || []).length} nodi | ${ports.entries.length} in | ${ports.exits.length} fin${(ports.hiddenIncomingCount || ports.hiddenOutgoingCount) ? ` | !${ports.hiddenIncomingCount + ports.hiddenOutgoingCount}` : ""}</span>
-          </div>
           <div class="chapter-group-card__actions">
             <button type="button" class="chapter-group-card__delete" data-action="delete-chapter" title="Elimina solo il capitolo">Elimina</button>
             <button type="button" class="chapter-group-card__toggle" data-action="toggle-collapse" title="Espandi capitolo">Apri</button>
           </div>
         </div>
+        <div class="chapter-group-card__name">${esc(group.title || "Nuovo capitolo")}</div>
       `;
-      if (ports.hiddenIncomingCount || ports.hiddenOutgoingCount) {
-        const chunks = [];
-        if (ports.hiddenIncomingCount) chunks.push(`${ports.hiddenIncomingCount} ingressi non marcati`);
-        if (ports.hiddenOutgoingCount) chunks.push(`${ports.hiddenOutgoingCount} uscite non marcate`);
-        card.title = chunks.join(" | ");
-      }
       ports.entries.forEach((port) => {
         const wrap = document.createElement("div");
         wrap.className = "chapter-group-port-wrap chapter-group-port-wrap--entry";

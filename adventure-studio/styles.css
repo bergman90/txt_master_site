@@ -1998,24 +1998,18 @@ button.small {
 
 .chapter-group-card__header {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 10px 12px 8px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 7px 10px 6px;
   cursor: grab;
   border-radius: 10px 10px 0 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.07);
 }
 .chapter-group-card__header:active { cursor: grabbing; }
 
-.chapter-group-card__titles {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  flex: 1;
-  min-width: 0;
-}
-.chapter-group-card__titles strong {
+.chapter-group-card__name {
+  padding: 7px 12px 8px;
   font-size: 0.82rem;
   font-weight: 700;
   color: var(--text);
@@ -2023,20 +2017,15 @@ button.small {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.chapter-group-card__titles span {
-  font-size: 0.7rem;
-  color: var(--muted);
-}
 
 .chapter-group-card__actions {
   display: flex;
   gap: 4px;
-  flex-shrink: 0;
 }
 .chapter-group-card__delete,
 .chapter-group-card__toggle {
-  padding: 3px 8px;
-  font-size: 0.7rem;
+  padding: 3px 9px;
+  font-size: 0.72rem;
   border-radius: 6px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.06);
