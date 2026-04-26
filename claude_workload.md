@@ -5,6 +5,129 @@
 
 ---
 
+## Stato attuale — 2026-04-26 (aggiornamento 6)
+
+### Feature batch "0.1.7-alpha" — completate (RPG_PROJECT)
+
+**Tutto implementato, build NON ancora rilasciata.**
+
+#### 1. Stash system
+- `HeroProfile.stash`, `completedAdventureIds`, `adventureCompletionCounts`
+- `GameState.runStartLoadout`
+- `GameAppState.stashOnCompletion()` / `stashOnDeath()` — meccanica tabella sopra
+- `GameAppState.confirmLoadoutAndStart()` — rimuove item dallo stash al lancio
+
+#### 2. Hero Screen estesa
+- `HeroStashScreen` — lista stash con categoria/rarità/peso/quantità
+- `HeroForgeScreen` — atmosfera UO/RPG medievale; `ForgePalette` dedicata; griglia 3×3; ricette scoperte; `ForgeSlot` composable
+- Accessible da `AdventureLibraryScreen` tramite bottoni "Stash" e "Fornace"
+
+#### 3. Loadout selection pre-avventura
+- `LoadoutSelectionScreen` — checkbox + quantity per ogni item
+- `AppScreen.LoadoutSelection`; `initiateAdventureStart()` → routing stash vuoto / stash pieno
+
+#### 4. Weight system
+- `EncumbranceLevel` enum, `totalCarryWeight()`, penalità difesa/skill progressive in `GameEngine`
+- Auto-weight in `EquipmentCatalog.item()` builder
+
+#### 5. Rimozione forge dall'avventura
+- Nessun bottone "Fucina" in `AdventureBottomBar`
+- `CraftingPanelContent` eliminato da `AdventureScreens.kt`
+
+#### 6. Anti-farm XP (replay multiplier)
+- `adventureCompletionCounts` in `HeroProfile`; `adventureCompletionCount` + `newXpNodesThisRun` in `GameState`
+- `completionReplayMultiplier()` in `GameEngine`: 1.0 / 0.5 / 0.25 / 0.1 + bonus +0.25 per ≥3 nodi nuovi
+- Microcopy atmosferico nel log
+
+#### 7. Fix UX narrative
+- Badge "Combattimento" rimosso dalle ChoiceCard (no spoiler evento)
+- Testo scena nascosto durante combattimento attivo (mostra solo CombatCard)
+
+#### 8. Hardcore save behavior
+- Dialog uscita dual-mode: normale → "Salva e torna" / "Esci senza salvare"; hardcore → "Torna" / "Abbandona run"
+- `returnToGatewayFromAdventure()` in `GameAppState` — nessun save esplicito, usa autosave esistente
+- Autosave cancellato alla morte hardcore già implementato in `confirmDeathAfterScene()`
+
+#### 9. Max 3 slot salvataggio per eroe
+- `SaveGameRepository`: secondo pass in `enforceHeroSaveLimit` — `MAX_SAVES_PER_HERO = 3`
+
+#### 10. crafting.html (txt_master_site)
+- Nuova pagina pubblica con tutte le ricette: griglia 3×3 visuale per ogni ricetta, tabella materiali/famiglie, note per autori avventure
+- Link aggiunto in `wiki.html`
+
+---
+
+### Prossimi passi pre-release 0.1.7-alpha
+
+- [ ] Build AAB versionCode 12 / 0.1.7-alpha
+- [ ] Push txt_master_site (crafting.html + wiki.html aggiornata)
+- [ ] Rimuovere dead code: `GameAppState.craft()` a riga ~415 (non più chiamata)
+
+---
+
+## Stato attuale — 2026-04-25 (aggiornamento 5)
+
+### Crafting system implementato (RPG_PROJECT) — non ancora rilasciato
+
+**Cosa è stato fatto:**
+- `CraftingCatalog.kt`: griglia 3×3 (GRID_ROWS=3, GRID_SIZE=9)
+- `CraftingRecipe.kt`: gridRows default → 3
+- `GameState.kt`: aggiunto `discoveredRecipeIds: Set<String>`
+- `GameEngine.kt`: `craft()` con matching strict + 30% distruzione su failure
+- `GameAppState.kt`: `fun craft()` wiring
+- `AdventureScreens.kt`: `CraftingPanelContent` (griglia tap-to-assign, picker materiali, ricette scoperte) + bottone "Fucina" nella bottom bar
+
+**Fix UX in AdventureScreens.kt:**
+- Scroll to top ad ogni cambio scena
+- Flash "Prova riuscita!" centrato (1.5s) su skill check success
+- `lastCheckResult` ora sopravvive alla navigazione verso la scena di successo (threading via `resolveBranch` → `navigateToTarget` → `enterDescription`)
+- XP loggati da `enterDescription` (non più duplicati in `stateForBranch`)
+- Testo default scelte in `app.js`: "Scelta X" → "Prosegui..."
+
+**Build:** versionCode 11 / versionName 0.1.6-alpha — NON ancora rilasciato (in attesa del sistema stash)
+
+---
+
+### Design sistema stash — DA IMPLEMENTARE
+
+**Meccaniche di fine run:**
+| Scenario | Loadout iniziale | Item trovati in run |
+|---|---|---|
+| Morte normale | Torna nello stash (meno consumabili usati) | Persi |
+| Morte hardcore | 50% distruzione per ogni item (incluso loadout) | Persi |
+| Completamento (prima volta) | Tutto → stash | Tutto → stash |
+| Completamento (già completata) | Torna nello stash (meno consumabili usati) | Persi |
+
+**Altre decisioni:**
+- Hardcore: nessun salvataggio manuale, autosave cancellato alla morte
+- Normale: salvataggi invariati
+- Weight system sugli item (penalità soglia progressiva — valori da definire)
+- Forge spostata nella Hero Screen (usa materiali da stash, output → stash)
+- Hero Screen: nuove sezioni "Stash" e "Forge"
+- Loadout selection prima di ogni avventura (item escono dallo stash, rientrano a fine run)
+- Cap 3 save slot per personaggio
+- `runStartLoadout` nel GameState per tracciare loadout portato
+- `completedAdventureIds` nel HeroProfile per bloccare stash su adventure già completate
+
+**Ordine implementazione:**
+1. Modello (HeroProfile + GameState: stash, completedAdventureIds, runStartLoadout)
+2. Logica fine run in GameEngine
+3. Hero Screen (stash + forge)
+4. Loadout selection pre-avventura
+5. Weight system
+6. Rimozione forge dall'avventura
+
+---
+
+### Ultimo pass Codex — Adventure Studio UX flowboard
+Commit pubblico: `edbf7a3+` | Commit privato: `b9617a6`
+- Marquee selection con preview live dei nodi intercettati
+- Badge conteggio nella selection box
+- Chapter group evidenziati quando i loro nodi sono selezionati o sotto marquee
+- Click sul capitolo = selezione di tutti i nodi contenuti
+
+---
+
 ## Stato attuale — 2026-04-25 (aggiornamento 4)
 
 ### Release build 11 — versionCode 11 / versionName 0.1.6-alpha

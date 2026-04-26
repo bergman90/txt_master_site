@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>.txt-Master | La Fornace — Ricette di Forgiatura</title>
+  <meta name="description" content="Tutte le ricette della Fornace di .txt-Master: combinazioni di materiali, risultati e meccanica di crafting.">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./styles.css">
+  <style>
+    /* ── Griglia Fornace 3×3 ─────────────────────────────── */
+    .forge-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 56px);
+      grid-template-rows: repeat(3, 56px);
+      gap: 6px;
+      margin: 0 auto;
+    }
+    .forge-cell {
+      width: 56px;
+      height: 56px;
+      border: 1px solid rgba(124,100,71,0.4);
+      border-radius: 8px;
+      background: rgba(255,255,255,0.03);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.72rem;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.2;
+      padding: 4px;
+    }
+    .forge-cell--filled {
+      border-color: rgba(184,134,11,0.6);
+      background: rgba(212,168,83,0.08);
+      color: var(--accent);
+      font-weight: 600;
+    }
+    /* ── Tabella materiali ───────────────────────────────── */
+    .materials-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.92rem;
+    }
+    .materials-table th {
+      text-align: left;
+      padding: 8px 10px;
+      color: var(--accent);
+      border-bottom: 1px solid rgba(124,100,71,0.4);
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+    }
+    .materials-table td {
+      padding: 8px 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      color: var(--muted);
+      vertical-align: top;
+    }
+    .materials-table tr:last-child td { border-bottom: none; }
+    /* ── Ricette list ────────────────────────────────────── */
+    .recipe-list {
+      display: grid;
+      gap: 24px;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    }
+    .recipe-card {
+      background: var(--panel);
+      border: 1px solid rgba(124,100,71,0.55);
+      border-radius: 14px;
+      padding: 20px 20px 20px 20px;
+    }
+    .recipe-card__head {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .recipe-card__result {
+      flex: 1;
+    }
+    .recipe-card__name {
+      font-weight: 700;
+      color: var(--text);
+      margin: 0 0 4px;
+    }
+    .recipe-card__hint {
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+    .recipe-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      background: rgba(212,168,83,0.12);
+      color: var(--accent);
+      border: 1px solid rgba(212,168,83,0.25);
+    }
+    .recipe-tag--hidden {
+      background: rgba(107,90,144,0.12);
+      color: #9d88cc;
+      border-color: rgba(107,90,144,0.3);
+    }
+    .forge-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+    .forge-legend {
+      font-size: 0.78rem;
+      color: var(--muted);
+      text-align: center;
+    }
+    .slot-index {
+      font-size: 0.65rem;
+      opacity: 0.5;
+      display: block;
+    }
+    /* ── Note meccanica ─────────────────────────────────── */
+    .info-box {
+      background: rgba(184,134,11,0.06);
+      border: 1px solid rgba(184,134,11,0.25);
+      border-radius: 10px;
+      padding: 14px 16px;
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+    .info-box strong { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <nav class="site-nav">
+    <a class="site-nav__brand" href="./index.html">.txt-Master</a>
+    <div class="site-nav__links">
+      <a href="./index.html" class="site-nav__link">Portale</a>
+      <a href="./wiki.html" class="site-nav__link site-nav__link--active">Wiki</a>
+      <a href="./grimorio.html" class="site-nav__link">Grimorio</a>
+      <a href="./adventure-studio/index.html" class="site-nav__link">Adventure Studio</a>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div class="hero__inner">
+      <div class="eyebrow">Forgiatura</div>
+      <h1>La Fornace</h1>
+      <p class="hero__copy">
+        La <strong>Fornace</strong> è il banco da lavoro del tuo eroe tra una run e l'altra.
+        Combina materiali trovati in avventura per creare oggetti consumabili e strumenti da portare nella prossima run.
+        Le ricette si dispongono su una griglia 3&times;3: ogni casella ha un indice (0&ndash;8, riga per riga).
+      </p>
+      <div class="hero__actions">
+        <a class="button button--primary" href="./wiki.html">Torna alla wiki</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+
+    <!-- Meccanica base -->
+    <section class="panel">
+      <div class="eyebrow">Meccanica</div>
+      <h2>Come funziona la Fornace</h2>
+      <p>
+        La Fornace si trova nella schermata dell'eroe, accessibile dalla libreria avventure. Opera sullo <strong>stash</strong> permanente del personaggio, non sull'inventario di run.
+      </p>
+      <div class="info-box" style="margin-top:14px">
+        <strong>Successo</strong> — i materiali vengono consumati e l'oggetto risultante appare nello stash.<br>
+        <strong>Fallimento</strong> — la combinazione non è valida. Ogni materiale nella griglia ha il <strong>30% di probabilità di essere distrutto</strong> nella fornace.<br>
+        <strong>Scoperta</strong> — alcune ricette sono visibili dal primo accesso; altre richiedono di essere scoperte in gioco prima di comparire nella lista.
+      </div>
+
+      <!-- Indice griglia -->
+      <h3 style="margin-top:24px">Indice caselle griglia 3&times;3</h3>
+      <p>Ogni ricetta specifica quali caselle occupare. Eccola riferita a slot 0–8:</p>
+      <div style="display:flex; justify-content:center; padding:16px 0">
+        <div class="forge-grid">
+          <div class="forge-cell forge-cell--filled">0</div>
+          <div class="forge-cell forge-cell--filled">1</div>
+          <div class="forge-cell forge-cell--filled">2</div>
+          <div class="forge-cell forge-cell--filled">3</div>
+          <div class="forge-cell forge-cell--filled">4</div>
+          <div class="forge-cell forge-cell--filled">5</div>
+          <div class="forge-cell forge-cell--filled">6</div>
+          <div class="forge-cell forge-cell--filled">7</div>
+          <div class="forge-cell forge-cell--filled">8</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Materiali -->
+    <section class="panel">
+      <div class="eyebrow">Ingredienti</div>
+      <h2>Materiali e famiglie</h2>
+      <p>I materiali sono raggruppati in <strong>famiglie</strong>. Le ricette richiedono una famiglia, non un materiale specifico — qualunque materiale della famiglia corretta può occupare quello slot.</p>
+      <table class="materials-table" style="margin-top:14px">
+        <thead>
+          <tr>
+            <th>Materiale</th>
+            <th>Famiglia</th>
+            <th>Come si trova</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Fascio di Legno</td>
+            <td><code>wood</code></td>
+            <td>Loot in scene con alberi, rovi, costruzioni abbandonate</td>
+          </tr>
+          <tr>
+            <td>Ferro Grezzo</td>
+            <td><code>raw_iron</code></td>
+            <td>Loot da nemici armati, miniere, fabbri</td>
+          </tr>
+          <tr>
+            <td>Striscia di Cuoio</td>
+            <td><code>leather</code></td>
+            <td>Loot da bestie, mercanti, equipaggiamento smontato</td>
+          </tr>
+          <tr>
+            <td>Straccio di Tessuto</td>
+            <td><code>cloth</code></td>
+            <td>Loot comune: cadaveri, bauli, armature leggere</td>
+          </tr>
+          <tr>
+            <td>Fascio d'Erbe</td>
+            <td><code>herbs</code></td>
+            <td>Loot in aree naturali, erboristi, forzieri di alchimista</td>
+          </tr>
+          <tr>
+            <td>Scheggia di Cristallo</td>
+            <td><code>crystals</code></td>
+            <td>Loot raro da creature magiche, rovine antiche, altari</td>
+          </tr>
+          <tr>
+            <td>Frammento di Squama</td>
+            <td><code>scales</code></td>
+            <td>Loot da rettili, draghi, creature corazzate</td>
+          </tr>
+          <tr>
+            <td>Pelliccia di Lupo</td>
+            <td><code>scales</code> / materiale grezzo</td>
+            <td>Loot da lupi e canidi selvatici</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Ricette -->
+    <section class="panel">
+      <div class="eyebrow">Ricettario</div>
+      <h2>Ricette conosciute</h2>
+      <p>Le ricette segnate come <span class="recipe-tag">Visibile</span> sono disponibili dalla prima apertura della Fornace. Le ricette <span class="recipe-tag recipe-tag--hidden">Nascosta</span> si sbloccano dopo aver completato almeno una volta un'avventura che contiene quella formula.</p>
+
+      <div class="recipe-list" style="margin-top:20px">
+
+        <!-- Pozione curativa T1 -->
+        <div class="recipe-card">
+          <div class="recipe-card__head">
+            <div class="recipe-card__result">
+              <p class="recipe-card__name">Pozione Curativa</p>
+              <p class="recipe-card__hint">Ripristina punti ferita. Consumabile da zaino.</p>
+              <span class="recipe-tag" style="margin-top:6px">Visibile</span>
+            </div>
+          </div>
+          <div class="forge-wrap">
+            <div class="forge-grid">
+              <div class="forge-cell forge-cell--filled">Erbe<span class="slot-index">[0]</span></div>
+              <div class="forge-cell">—</div>
+              <div class="forge-cell forge-cell--filled">Erbe<span class="slot-index">[2]</span></div>
+              <div class="forge-cell">—</div>
+              <div class="forge-cell forge-cell--filled">Tessuto<span class="slot-index">[4]</span></div>
+              <div class="forge-cell">—</div>
+              <div class="forge-cell">—</div>
+              <div class="forge-cell">—</div>
+              <div class="forge-cell">—</div>
+            </div>
+            <p class="forge-legend">Erbe [0] · Erbe [2] · Tessuto [4]</p>
+          </div>
+        </div>
+
+        <!-- Torcia -->
+        <div class="recipe-card">
+          <div class="recipe-card__head">
+            <div class="recipe-card__result">
+              <p class="recipe-card__name">Torcia</p>
+              <p class="recipe-card__hint">Fonte di luce. Utile in dungeon e percorsi notturni.</p>
+              <span class="recipe-tag recipe-tag--hidden" style="margin-top:6px">Nascosta</span>
+            </div>
+          </div>
+          <div class="forge-wrap">
+            <div class="forge-grid">
+              <div class="forge-cell forge-cell--filled">Legno<span class="slot-index">[0]</span></div>
+              <div class="forge-cell">—</div>
+              <div class="forge-cell">—</div>
+              <div class="forge-cell forge-cell--filled">Tessuto<span class="slot-index">[3]</span></div>
+              <div class="forge-cell">—</div>
+              <div class="forge-cell">—</div>
+              <div class="forge-cell">—</div>
+              <div class="forge-cell">—</div>
+              <div class="forge-cell">—</div>
+            </div>
+            <p class="forge-legend">Legno [0] · Tessuto [3]</p>
+          </div>
+        </div>
+
+        <!-- Corda -->
+        <div class="recipe-card">
+          <div class="recipe-card__head">
+            <div class="recipe-card__result">
+              <p class="recipe-card__name">Corda</p>
+              <p class="recipe-card__hint">Strumento di esplorazione. Sblocca percorsi verticali in alcune avventure.</p>
+              <span class="recipe-tag recipe-tag--hidden" style="margin-top:6px">Nascosta</span>
+            </div>
+          </div>
+          <div class="forge-wrap">
+            <div class="forge-grid">
+              <div class="forge-cell forge-cell--filled">Tessuto<span class="slot-index">[0]</span></div>
+              <div class="forge-cell forge-cell--filled">Tessuto<span class="slot-index">[1]</span></div>
+              <div class="forge-cell">—</div>
+              <div class="forge-cell">—</div>
+              <div class="forge-cell forge-cell--filled">Cuoio<span class="slot-index">[4]</span></div>
+              <div class="forge-cell">—</div>
+              <div class="forge-cell">—</div>
+              <div class="forge-cell">—</div>
+              <div class="forge-cell">—</div>
+            </div>
+            <p class="forge-legend">Tessuto [0] · Tessuto [1] · Cuoio [4]</p>
+          </div>
+        </div>
+
+        <!-- Polvere di Guardia T1 -->
+        <div class="recipe-card">
+          <div class="recipe-card__head">
+            <div class="recipe-card__result">
+              <p class="recipe-card__name">Polvere di Guardia</p>
+              <p class="recipe-card__hint">Consumabile difensivo. Aumenta la difesa per una durata limitata.</p>
+              <span class="recipe-tag recipe-tag--hidden" style="margin-top:6px">Nascosta</span>
+            </div>
+          </div>
+          <div class="forge-wrap">
+            <div class="forge-grid">
+              <div class="forge-cell forge-cell--filled">Cristallo<span class="slot-index">[0]</span></div>
+              <div class="forge-cell forge-cell--filled">Erbe<span class="slot-index">[1]</span></div>
+              <div class="forge-cell">—</div>
+              <div class="forge-cell">—</div>
+              <div class="forge-cell forge-cell--filled">Tessuto<span class="slot-index">[4]</span></div>
+              <div class="forge-cell">—</div>
+              <div class="forge-cell">—</div>
+              <div class="forge-cell">—</div>
+              <div class="forge-cell">—</div>
+            </div>
+            <p class="forge-legend">Cristallo [0] · Erbe [1] · Tessuto [4]</p>
+          </div>
+        </div>
+
+        <!-- Acciarino e Pietra Focaia -->
+        <div class="recipe-card">
+          <div class="recipe-card__head">
+            <div class="recipe-card__result">
+              <p class="recipe-card__name">Acciarino e Pietra Focaia</p>
+              <p class="recipe-card__hint">Strumento. Necessario per accendere fuochi; sblocca opzioni narrative in alcune scene.</p>
+              <span class="recipe-tag recipe-tag--hidden" style="margin-top:6px">Nascosta</span>
+            </div>
+          </div>
+          <div class="forge-wrap">
+            <div class="forge-grid">
+              <div class="forge-cell">—</div>
+              <div class="forge-cell forge-cell--filled">Ferro<span class="slot-index">[1]</span></div>
+              <div class="forge-cell">—</div>
+              <div class="forge-cell">—</div>
+              <div class="forge-cell forge-cell--filled">Cristallo<span class="slot-index">[4]</span></div>
+              <div class="forge-cell">—</div>
+              <div class="forge-cell">—</div>
+              <div class="forge-cell">—</div>
+              <div class="forge-cell">—</div>
+            </div>
+            <p class="forge-legend">Ferro [1] · Cristallo [4]</p>
+          </div>
+        </div>
+
+        <!-- Rampino -->
+        <div class="recipe-card">
+          <div class="recipe-card__head">
+            <div class="recipe-card__result">
+              <p class="recipe-card__name">Rampino</p>
+              <p class="recipe-card__hint">Strumento di esplorazione avanzato. Apre accessi alternativi in dungeon e pareti.</p>
+              <span class="recipe-tag recipe-tag--hidden" style="margin-top:6px">Nascosta</span>
+            </div>
+          </div>
+          <div class="forge-wrap">
+            <div class="forge-grid">
+              <div class="forge-cell forge-cell--filled">Ferro<span class="slot-index">[0]</span></div>
+              <div class="forge-cell forge-cell--filled">Ferro<span class="slot-index">[1]</span></div>
+              <div class="forge-cell">—</div>
+              <div class="forge-cell forge-cell--filled">Legno<span class="slot-index">[3]</span></div>
+              <div class="forge-cell forge-cell--filled">Tessuto<span class="slot-index">[4]</span></div>
+              <div class="forge-cell">—</div>
+              <div class="forge-cell">—</div>
+              <div class="forge-cell">—</div>
+              <div class="forge-cell">—</div>
+            </div>
+            <p class="forge-legend">Ferro [0] · Ferro [1] · Legno [3] · Tessuto [4]</p>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Note autore avventure -->
+    <section class="panel">
+      <div class="eyebrow">Per gli autori</div>
+      <h2>Fornace e avventure personalizzate</h2>
+      <p>
+        Se stai creando un'avventura con Adventure Studio, puoi distribuire materiali come loot nelle scene.
+        I materiali vengono automaticamente riconosciuti dalla Fornace grazie alla loro <code>familyId</code>.
+        Non è necessario dichiarare le ricette nell'avventura: il sistema di crafting è globale e condiviso tra tutte le run.
+      </p>
+      <p>
+        Le ricette <strong>nascoste</strong> si sbloccano nella lista della Fornace solo dopo che l'eroe ha completato almeno una avventura in cui compare quella formula. Questo crea una progressione organica della conoscenza artigianale senza spoilerare le combinazioni ai nuovi giocatori.
+      </p>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    <p>.txt-Master | Ricette della Fornace — aggiornato al runtime v2.</p>
+  </footer>
+</body>
+</html>
