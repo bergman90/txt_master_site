@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>.txt-Master | Wiki delle Abilità</title>
-  <meta name="description" content="Abilità e skill check in .txt-Master: ruolo, prove, difficoltà e differenza tra capacità innate e competenze acquisite.">
+  <title>.txt-Master | Wiki delle Abilita</title>
+  <meta name="description" content="Manuale delle abilita di .txt-Master: skill di avventura, discipline di combattimento, formula iniziale, penalita e uso nei nodi dell'avventura.">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="stylesheet" href="./styles.css">
 </head>
@@ -21,10 +21,10 @@
 
   <header class="hero">
     <div class="hero__inner">
-      <div class="eyebrow">Prove e risoluzione</div>
-      <h1>Abilità</h1>
+      <div class="eyebrow">Prove e discipline</div>
+      <h1>Abilita</h1>
       <p class="hero__copy">
-        Le abilità esprimono l'addestramento, l'esperienza o la competenza specialistica del personaggio e alimentano i controlli di gioco nelle scene narrative e nei sistemi di supporto al combattimento.
+        Le abilit&agrave; sono il punto in cui il telaio del personaggio diventa pratica. In <strong>.txt-Master</strong> si dividono in due famiglie: <strong>abilit&agrave; di avventura</strong> e <strong>discipline che incidono direttamente sul combattimento</strong>.
       </p>
       <div class="hero__actions">
         <a class="button button--primary" href="./wiki.html">Torna alla wiki</a>
@@ -34,51 +34,179 @@
 
   <main class="page">
     <section class="panel">
-      <div class="eyebrow">Che cosa è verificato</div>
-      <h2>Skill e skill check fanno parte del progetto</h2>
+      <div class="eyebrow">Formula</div>
+      <h2>Come nasce un valore abilita</h2>
       <p>
-        Il progetto prevede esplicitamente prove di caratteristica o abilità e un formato delle avventure in cui una scelta può attivare uno <strong>skill check</strong> con difficoltà, esito positivo ed esito negativo. Le abilità sono quindi una parte nativa sia del rules engine sia del content system.
+        Le abilit&agrave; di avventura nascono da una formula semplice e leggibile:
+      </p>
+      <p><code>2 + modificatore attributo + bonus classe o razza + punti spesi in creazione</code></p>
+      <p>
+        In creazione il personaggio dispone di un piccolo budget iniziale di punti abilit&agrave;, con un tetto per singola voce. Questo impedisce build esplose subito e rende pi&ugrave; importante la direzione generale del personaggio.
       </p>
     </section>
 
     <section class="panel">
-      <div class="eyebrow">Distinzione fondamentale</div>
-      <h2>Attributi e abilità non sono la stessa cosa</h2>
+      <div class="eyebrow">Abilita di avventura</div>
+      <h2>Le cinque skill narrative vere</h2>
+      <div class="table-wrap">
+        <table class="wiki-table">
+          <thead>
+            <tr>
+              <th>Abilita</th>
+              <th>Base attributo</th>
+              <th>Che cosa governa</th>
+              <th>Classi che la spingono</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Atletica</strong></td>
+              <td>Forza</td>
+              <td>Scalate, sforzi, sfondamenti, equilibrio fisico, tenuta del corpo in situazioni dure.</td>
+              <td>Warrior la spinge pi&ugrave; di tutti.</td>
+            </tr>
+            <tr>
+              <td><strong>Sapienza</strong></td>
+              <td>Intelligenza</td>
+              <td>Conoscenze, simboli, storia, cripte, segni rituali, lettura del mondo nascosto.</td>
+              <td>Cultist &egrave; la classe che la specializza di pi&ugrave;.</td>
+            </tr>
+            <tr>
+              <td><strong>Sopravvivenza</strong></td>
+              <td>Saggezza</td>
+              <td>Orientamento, pericolo, pista, resistenza ai contesti ostili, gestione della frontiera.</td>
+              <td>Ranger la spinge molto, Warrior la tiene comunque viva.</td>
+            </tr>
+            <tr>
+              <td><strong>Percezione</strong></td>
+              <td>Saggezza</td>
+              <td>Indizi, imboscate, dettagli, trappole, lettura immediata del rischio.</td>
+              <td>Ranger la spinge in modo netto.</td>
+            </tr>
+            <tr>
+              <td><strong>Arte dell'inganno</strong></td>
+              <td>Carisma</td>
+              <td>Menzogna, ambiguit&agrave;, pressione sociale obliqua, sopravvivenza verbale sporca.</td>
+              <td>Cultist la spinge molto, Mezzelfo la orienta gi&agrave; dalla stirpe.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="eyebrow">Discipline</div>
+      <h2>Le abilita che parlano la lingua del combattimento</h2>
+      <div class="table-wrap">
+        <table class="wiki-table">
+          <thead>
+            <tr>
+              <th>Disciplina</th>
+              <th>Ruolo</th>
+              <th>Chi la spinge</th>
+              <th>Lettura pratica</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Mischia</strong></td>
+              <td>Base offensiva diretta del personaggio.</td>
+              <td>Tutte le classi la usano; Warrior parte pi&ugrave; robusto.</td>
+              <td>&egrave; la disciplina pi&ugrave; trasversale del lato offensivo.</td>
+            </tr>
+            <tr>
+              <td><strong>Guardia</strong></td>
+              <td>Stabilit&agrave; difensiva, resa della postura, tenuta nel turno di difesa.</td>
+              <td>Warrior &egrave; la classe che la governa davvero.</td>
+              <td>Trasforma la difesa in identit&agrave; di build, non solo in ripiego.</td>
+            </tr>
+            <tr>
+              <td><strong>Precisione</strong></td>
+              <td>Qualit&agrave; del colpo, pulizia tecnica, lettura del momento giusto.</td>
+              <td>Ranger la porta in alto pi&ugrave; facilmente.</td>
+              <td>Si sente molto con armi leggere e a distanza.</td>
+            </tr>
+            <tr>
+              <td><strong>Alchimia</strong></td>
+              <td>Uso tecnico e tattico di preparati, sostegni e strumenti da campo.</td>
+              <td>Cultist la spinge di pi&ugrave;.</td>
+              <td>&egrave; la disciplina pi&ugrave; "strumentale" del sistema.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="eyebrow">Creazione</div>
+      <h2>Budget iniziale e orientamento delle classi</h2>
       <p>
-        Gli attributi descrivono le qualità di base del personaggio. Le abilità descrivono invece il livello di competenza con cui quel personaggio affronta una famiglia di compiti. In termini pratici, un personaggio può essere forte ma poco addestrato, oppure fisicamente mediocre ma molto abile in una disciplina specifica.
+        In creazione c'&egrave; un piccolo budget iniziale di punti abilit&agrave;. Questo fa due cose: evita personaggi troppo caricati subito e rende molto chiara la direzione delle classi.
+      </p>
+      <div class="table-wrap">
+        <table class="wiki-table">
+          <thead>
+            <tr>
+              <th>Classe</th>
+              <th>Abilita favorite</th>
+              <th>Discipline favorite</th>
+              <th>Idea di build iniziale</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Warrior</strong></td>
+              <td>Atletica, Sopravvivenza</td>
+              <td>Mischia, Guardia</td>
+              <td>Frontliner da pressione e tenuta.</td>
+            </tr>
+            <tr>
+              <td><strong>Ranger</strong></td>
+              <td>Percezione, Sopravvivenza</td>
+              <td>Precisione</td>
+              <td>Predatore da timing, apertura e mobilit&agrave;.</td>
+            </tr>
+            <tr>
+              <td><strong>Cultist</strong></td>
+              <td>Sapienza, Arte dell'inganno</td>
+              <td>Alchimia</td>
+              <td>Classe rituale, sporca, pi&ugrave; tecnica che frontale.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="eyebrow">Check</div>
+      <h2>Come funzionano nelle avventure</h2>
+      <p>
+        Una scelta pu&ograve; attivare uno <strong>skill check</strong> con difficolt&agrave;, esito positivo ed esito negativo. Il check non &egrave; solo un numero: instrada la scena verso ricompense, rami diversi, combattimenti, informazioni o chiusure sbagliate.
+      </p>
+      <p>
+        Questo &egrave; importante anche per Adventure Studio: una prova ben scelta &egrave; un bivio narrativo meccanizzato, non un interruttore astratto.
       </p>
     </section>
 
     <section class="panel">
-      <div class="eyebrow">Uso nel gioco</div>
-      <h2>Come funzionano le prove</h2>
+      <div class="eyebrow">Penalita</div>
+      <h2>Le abilita non esistono in un vuoto</h2>
       <p>
-        Quando una scena richiede una verifica, il gioco seleziona l'abilità pertinente e la confronta con una <strong>difficoltà</strong>. L'esito della prova non dovrebbe limitarsi a “successo” o “fallimento”, ma servire a instradare il giocatore verso esiti diversi della narrazione: nuove scene, informazioni nascoste, ricompense, danni, allarmi o combattimenti.
-      </p>
-      <p>
-        Questo approccio è particolarmente adatto a un RPG testuale, perché mantiene il legame fra regola e racconto: una prova non è solo un controllo numerico, ma un bivio narrativo regolato dal sistema.
+        Alcune abilit&agrave; soffrono davvero l'equipaggiamento pesante. Le armature medie e pesanti, per esempio, applicano penalit&agrave; a <strong>Atletica</strong>, <strong>Sopravvivenza</strong>, <strong>Precisione</strong> e anche alla <strong>Destrezza</strong>. Questo rende il sistema pi&ugrave; coerente: la protezione non &egrave; gratis.
       </p>
     </section>
 
     <section class="panel">
-      <div class="eyebrow">Documentazione futura</div>
-      <h2>Che cosa dovrà contenere il catalogo ufficiale delle abilità</h2>
+      <div class="eyebrow">Lettura pratica</div>
+      <h2>Come scegliere cosa far crescere</h2>
       <p>
-        Ogni abilità dovrà essere descritta con una scheda uniforme: ambito d'uso, scene tipiche, effetti di successo, effetti di fallimento, eventuale collegamento a un attributo e note di bilanciamento. Questo renderà la wiki utile sia ai giocatori sia agli autori che costruiscono eventi in Adventure Studio.
-      </p>
-    </section>
-
-    <section class="panel">
-      <div class="eyebrow">Stato attuale</div>
-      <h2>Che cosa manca ancora</h2>
-      <p>
-        Il set definitivo delle abilità, i nomi canonici, le soglie e l'eventuale formula di risoluzione non risultano ancora formalizzati pubblicamente nella repo analizzata. Per questo motivo la presente pagina fissa il quadro logico del sistema senza attribuire valori o liste ancora non ufficializzate.
+        Se vuoi leggere bene una build, dividila cos&igrave;: le <strong>abilit&agrave; di avventura</strong> decidono come attraversi il mondo; le <strong>discipline</strong> decidono come reggi e colpisci nello scontro. Una build forte non alza tutto: sceglie una lingua principale e una lingua di supporto.
       </p>
     </section>
   </main>
 
   <footer class="footer">
-    <p>.txt-Master | Wiki delle abilità e delle prove.</p>
+    <p>.txt-Master | Wiki delle abilita e delle prove.</p>
   </footer>
 </body>
 </html>

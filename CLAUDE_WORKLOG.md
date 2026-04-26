@@ -580,3 +580,22 @@ Formato consigliato:
 - Aggiunto anche uno strato CSS condiviso per tavole wiki leggibili su desktop e mobile (`.table-wrap`, `.wiki-table`, note e hover states) in `styles.css`.
 - Obiettivo del pass: trasformare la pagina da overview a mini-manuale consultabile al volo.
 - Nessun cambio runtime o Studio in questo step; solo sito pubblico e diario di continuita.
+
+## 2026-04-26 - Wiki pubblica: attributi, abilita, classi e razze portati a livello manuale
+- Riscritte `wiki-attributi.html`, `wiki-abilita.html` e `wiki-classi-razze.html` in chiave molto piu concreta.
+- `wiki-attributi.html` ora include:
+  - set canonico dei 6 attributi
+  - lettura del modificatore
+  - tabella attributo -> impatto -> skill collegate
+  - formule derivate per HP, stamina e base skill
+- `wiki-abilita.html` ora distingue chiaramente:
+  - 5 skill narrative vere (`Atletica`, `Sapienza`, `Sopravvivenza`, `Percezione`, `Arte dell'inganno`)
+  - discipline da combattimento (`Mischia`, `Guardia`, `Precisione`, `Alchimia`)
+  - formula iniziale e ruolo delle classi
+  - rapporto con skill check e penalita da armature
+- `wiki-classi-razze.html` ora include:
+  - le 4 stirpi canoniche con bonus attributi/abilita
+  - le 3 classi giocabili con identita, focus e loadout iniziale
+  - i 9 edge iniziali attuali
+  - la crescita passiva di classe al level up
+- Obiettivo del pass: allineare davvero la wiki pubblica al sistema attuale dell'app, non a una visione generica futura.

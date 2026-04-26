@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>.txt-Master | Wiki degli Attributi</title>
-  <meta name="description" content="Attributi del personaggio in .txt-Master: funzione, ruolo sistemico e relazione con prove, combattimento e progressione.">
+  <meta name="description" content="Manuale degli attributi di .txt-Master: sei attributi canonici, modificatori, statistiche derivate e legame con classi, razze e prove.">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="stylesheet" href="./styles.css">
 </head>
@@ -24,7 +24,7 @@
       <div class="eyebrow">Scheda personaggio</div>
       <h1>Attributi</h1>
       <p class="hero__copy">
-        Gli attributi rappresentano le qualità fondamentali del personaggio e costituiscono il livello base su cui si appoggiano combattimento, prove, resistenze e progressione.
+        In <strong>.txt-Master</strong> gli attributi non sono un colore di sfondo: sono la base numerica da cui nascono modificatori, HP, stamina, parte delle prove e l'identit&agrave; grezza del personaggio.
       </p>
       <div class="hero__actions">
         <a class="button button--primary" href="./wiki.html">Torna alla wiki</a>
@@ -34,48 +34,182 @@
 
   <main class="page">
     <section class="panel">
-      <div class="eyebrow">Stato del sistema</div>
-      <h2>Che cosa è verificato</h2>
+      <div class="eyebrow">Regola base</div>
+      <h2>Il set canonico oggi</h2>
+      <p>Gli attributi canonici attuali del personaggio sono sei:</p>
+      <ul>
+        <li><strong>Forza</strong></li>
+        <li><strong>Destrezza</strong></li>
+        <li><strong>Intelligenza</strong></li>
+        <li><strong>Saggezza</strong></li>
+        <li><strong>Costituzione</strong></li>
+        <li><strong>Carisma</strong></li>
+      </ul>
       <p>
-        Il progetto prevede espressamente un rules engine basato anche su <strong>attributi</strong>, oltre a skill, HP, stamina, equipaggiamento, tiri di dado, iniziativa, danni e magie. Questa pagina definisce quindi il ruolo degli attributi nel sistema, pur senza imporre ancora un set numerico definitivo.
+        Non sono competenze. Descrivono il telaio del personaggio. Le abilit&agrave; e le discipline li trasformano poi in risultati pi&ugrave; specifici.
       </p>
     </section>
 
     <section class="panel">
-      <div class="eyebrow">Funzione</div>
-      <h2>A cosa servono gli attributi</h2>
+      <div class="eyebrow">Formula</div>
+      <h2>Come si leggono i punteggi</h2>
       <p>
-        In <strong>.txt-Master</strong> gli attributi dovrebbero svolgere tre compiti distinti: descrivere il potenziale grezzo del personaggio, influenzare le sue probabilità di successo nelle situazioni chiave e fungere da base per statistiche derivate come punti vita, iniziativa o capacità di carico.
+        Il sistema usa il modificatore classico derivato dal punteggio: in pratica il valore utile in gioco nasce dal rapporto con il 10. Un attributo sopra il 10 spinge il personaggio avanti; sotto il 10 lo frena.
       </p>
-      <p>
-        Separare gli attributi dalle abilità è importante: gli attributi descrivono ciò che il personaggio <em>è</em>, mentre le abilità descrivono ciò che il personaggio <em>sa fare</em> o quanto sia addestrato in un ambito specifico.
-      </p>
+      <div class="table-wrap">
+        <table class="wiki-table">
+          <thead>
+            <tr>
+              <th>Punteggio</th>
+              <th>Modificatore tipico</th>
+              <th>Lettura rapida</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>8-9</strong></td>
+              <td><strong>-1</strong></td>
+              <td>Debolezza percepibile, ma non invalidante.</td>
+            </tr>
+            <tr>
+              <td><strong>10-11</strong></td>
+              <td><strong>0</strong></td>
+              <td>Media funzionale, nessun vantaggio n&eacute; freno netto.</td>
+            </tr>
+            <tr>
+              <td><strong>12-13</strong></td>
+              <td><strong>+1</strong></td>
+              <td>Buona inclinazione, si sente gi&agrave; nelle prove.</td>
+            </tr>
+            <tr>
+              <td><strong>14-15</strong></td>
+              <td><strong>+2</strong></td>
+              <td>Vera specializzazione naturale.</td>
+            </tr>
+            <tr>
+              <td><strong>16+</strong></td>
+              <td><strong>+3 o pi&ugrave;</strong></td>
+              <td>Tratto dominante del personaggio.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="table-note">In creazione i valori vengono generati dentro una fascia contenuta, cos&igrave; gli attributi restano importanti senza schiacciare del tutto abilit&agrave;, classe ed equipaggiamento.</p>
     </section>
 
     <section class="panel">
-      <div class="eyebrow">Design</div>
-      <h2>Linee guida per il set ufficiale</h2>
+      <div class="eyebrow">Atlante</div>
+      <h2>Che cosa governa ogni attributo</h2>
+      <div class="table-wrap">
+        <table class="wiki-table">
+          <thead>
+            <tr>
+              <th>Attributo</th>
+              <th>Che cosa racconta</th>
+              <th>Impatto diretto</th>
+              <th>Abilit&agrave; collegate</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Forza</strong></td>
+              <td>Potenza fisica, impeto, capacit&agrave; di reggere il peso dello scontro.</td>
+              <td>Alimenta <strong>Atletica</strong>, contribuisce alla stamina iniziale e sostiene il profilo da frontliner.</td>
+              <td>Atletica</td>
+            </tr>
+            <tr>
+              <td><strong>Destrezza</strong></td>
+              <td>Rapidit&agrave;, precisione corporea, equilibrio.</td>
+              <td>Incide sulla difesa e su alcuni penalizzatori da armatura; &egrave; il lato "fine" del combattimento.</td>
+              <td>Si sente soprattutto attraverso Precisione e difesa.</td>
+            </tr>
+            <tr>
+              <td><strong>Intelligenza</strong></td>
+              <td>Memoria, studio, ragionamento e lettura dei segni.</td>
+              <td>Base di <strong>Sapienza</strong> e dell'approccio pi&ugrave; rituale o tecnico.</td>
+              <td>Sapienza</td>
+            </tr>
+            <tr>
+              <td><strong>Saggezza</strong></td>
+              <td>Istinto, prudenza, lettura del pericolo, disciplina interiore.</td>
+              <td>Alimenta <strong>Sopravvivenza</strong> e <strong>Percezione</strong>, entra nella stamina iniziale.</td>
+              <td>Sopravvivenza, Percezione</td>
+            </tr>
+            <tr>
+              <td><strong>Costituzione</strong></td>
+              <td>Tenuta, resistenza, capacit&agrave; di assorbire sforzo e ferite.</td>
+              <td>Base principale degli <strong>HP</strong> e anche opzione valida per alcuni skill check diretti.</td>
+              <td>Non ha una skill gemella: incide soprattutto sulla sopravvivenza grezza.</td>
+            </tr>
+            <tr>
+              <td><strong>Carisma</strong></td>
+              <td>Presenza, inganno, autorit&agrave;, forza sociale.</td>
+              <td>Base di <strong>Arte dell'inganno</strong> e del lato pi&ugrave; manipolativo o ambiguo del personaggio.</td>
+              <td>Arte dell'inganno</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="eyebrow">Statistiche derivate</div>
+      <h2>Che cosa nasce dagli attributi</h2>
+      <div class="table-wrap">
+        <table class="wiki-table">
+          <thead>
+            <tr>
+              <th>Statistica</th>
+              <th>Formula attuale</th>
+              <th>Lettura pratica</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>HP iniziali</strong></td>
+              <td><code>10 + mod Costituzione</code>, con bonus di classe per il Warrior</td>
+              <td>Costituzione &egrave; il primo asse di sopravvivenza vera.</td>
+            </tr>
+            <tr>
+              <td><strong>Stamina iniziale</strong></td>
+              <td><code>10 + mod Forza + mod Saggezza</code></td>
+              <td>La stamina nasce da corpo e disciplina insieme, non solo dal fisico.</td>
+            </tr>
+            <tr>
+              <td><strong>Abilit&agrave; di avventura</strong></td>
+              <td><code>2 + modificatore attributo + bonus classe/razza + punti iniziali</code></td>
+              <td>Le skill non sono arbitrarie: ogni una ha una base numerica coerente.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="eyebrow">Razze e classi</div>
+      <h2>Come gli attributi vengono orientati in creazione</h2>
       <p>
-        Il set definitivo degli attributi dovrà restare contenuto e leggibile, per non appesantire un RPG testuale. La soluzione più coerente è usare un numero ridotto di attributi primari, ciascuno con impatto chiaro su prove, combattimento e interazioni di scena.
+        Razza e classe non rimpiazzano gli attributi: li orientano. La razza modifica soprattutto la predisposizione naturale; la classe decide il modo in cui quei numeri verranno spesi in gioco.
       </p>
+      <ul>
+        <li><strong>Nano</strong>: spinge Forza e Costituzione.</li>
+        <li><strong>Elfo</strong>: spinge Destrezza e Intelligenza.</li>
+        <li><strong>Mezzelfo</strong>: spinge Saggezza e Carisma.</li>
+        <li><strong>Umano</strong>: profilo pi&ugrave; equilibrato, con enfasi pratica su Costituzione e Saggezza.</li>
+      </ul>
       <p>
-        Quando il sistema sarà chiuso, ogni attributo dovrà avere una scheda standard con: definizione, effetti meccanici, prove collegate, statistiche derivate influenzate ed esempi di utilizzo in gioco.
+        Questo significa che gli attributi non sono mai neutrali: portano gi&egrave; il marchio della stirpe e della vocazione scelta.
       </p>
     </section>
 
     <section class="panel">
       <div class="eyebrow">Uso pratico</div>
-      <h2>Attributi e prove</h2>
+      <h2>Come vanno letti al tavolo</h2>
       <p>
-        Le prove basate su attributo permettono al gioco di risolvere rapidamente ostacoli fisici, mentali o percettivi anche in assenza di una specializzazione precisa. Questo è particolarmente utile nelle avventure testuali, dove il flusso deve rimanere rapido e la regola non deve interrompere la narrazione più del necessario.
+        In .txt-Master gli attributi vanno letti come <strong>fondamento</strong>, non come unico motore. Un buon punteggio ti apre la strada, ma &egrave; la combinazione con skill, equipaggiamento, classe e stato del combattimento a produrre il vero rendimento.
       </p>
-    </section>
-
-    <section class="panel">
-      <div class="eyebrow">Sviluppo</div>
-      <h2>Prossimo ampliamento della pagina</h2>
       <p>
-        La versione successiva di questa pagina dovrà elencare gli attributi canonici del gioco, spiegare come influenzano combattimento e skill check e introdurre eventuali soglie, modificatori e statistiche derivate.
+        Questo rende il personaggio pi&ugrave; leggibile: non basta essere forte, intelligente o carismatico. Conta anche come hai trasformato quella base in competenze, stile di gioco e tenuta nei momenti critici.
       </p>
     </section>
   </main>
