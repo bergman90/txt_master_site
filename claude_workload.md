@@ -5,6 +5,27 @@
 
 ---
 
+## Stato attuale — 2026-04-26 (aggiornamento 7)
+
+### Fix post-release 0.1.7-alpha (RPG_PROJECT)
+
+#### Event node text fix — completato
+- `AdventureScreens.kt`: `else {` → `else if (state.combatState == null) {` nella sezione scelte
+- Le scelte non vengono mostrate durante un combattimento attivo (event node combat non espone più il testo della scena precedente)
+- Dialogue e Shop esclusi per ora (fuori scope)
+- Commit: `07f9619`
+
+### Adventure Studio — chapter group card redesign (txt_master_site)
+
+#### Completato — commit `59e2fde`
+- Card header: solo bottoni "Elimina"/"Apri" (niente titolo in linea)
+- Nome capitolo nella riga sotto, stile `.chapter-group-card__name`
+- Larghezza card dinamica in base alla lunghezza del titolo (160–340px), altezza 72px
+- Exit ports auto-popolate da tutti i cross-group edges
+- Marquee selection visibile (CSS aggiunto nella sessione precedente)
+
+---
+
 ## Stato attuale — 2026-04-26 (aggiornamento 6)
 
 ### Feature batch "0.1.7-alpha" — completate (RPG_PROJECT)
