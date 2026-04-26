@@ -5,6 +5,34 @@
 
 ---
 
+## Stato attuale — 2026-04-26 (aggiornamento 8)
+
+### Release 0.1.8-alpha — versionCode 13 (RPG_PROJECT)
+
+**Commit: `9528e8a` — BUILD AAB 16 MB**
+
+#### Fix 1 — Forge griglia sempre visibile
+- `HeroForgeScreen`: rimossa branching if/else per stash vuoto
+- Griglia 3×3 sempre mostrata; messaggio "Nessun materiale" appare solo nella sezione MATERIALI
+
+#### Fix 2 — Home button spaziatura
+- `UiShared.kt — ScreenHomeBar`: aggiunto `statusBarsPadding() + padding(top=4.dp)` al Row
+- Applicato automaticamente a tutte le schermate che usano `ScreenHomeBar`
+
+#### Fix 3 — XP display bug
+- `AdventureScreens.kt` e `HeroScreens.kt`: formula corretta
+- `experience` è XP within-level (si azzera ad ogni level up), NON cumulativo
+- Threshold = `level * level * 25` (25/100/225/400/625) invece di `level * 100`
+- Eliminato il `- currentLevelBaseXp` che causava valori negativi sul display
+
+#### Fix 4 — Stash flow redesign
+- `stashOnCompletion()`: sempre stasha TUTTO (equip + zaino) indipendentemente da prima/replica
+- `initiateAdventureStart()`: va sempre al LoadoutSelection se `allowCarryOverLoadout=true`, skip altrimenti
+- `LoadoutSelectionScreen`: indicatore peso (Libero/Appesantito/Sovraccarico!/Impedito!), titolo rinnovato
+- `AdventureLibraryScreen`: dialog semplificato — no più "Continua equip/Fresh start", solo "Scegli loadout"/"Inizia"
+
+---
+
 ## Stato attuale — 2026-04-26 (aggiornamento 7)
 
 ### Fix post-release 0.1.7-alpha (RPG_PROJECT)
