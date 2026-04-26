@@ -827,12 +827,8 @@ const els = {
   loadExampleBtn: document.getElementById("load-example-btn"),
   importJsonBtn: document.getElementById("import-json-btn"),
   importJsonInput: document.getElementById("import-json-input"),
-  adventureCarryOver: document.getElementById("adventure-carry-over"),
-  adventureFreshStart: document.getElementById("adventure-fresh-start"),
-  adventureForceLoadout: document.getElementById("adventure-force-loadout"),
-  adventureRestoreLoadout: document.getElementById("adventure-restore-loadout"),
-  restoreLoadoutRow: document.getElementById("restore-loadout-row"),
-  loadoutModeSummary: document.getElementById("loadout-mode-summary"),
+  adventureForceEquipStart: document.getElementById("adventure-force-equip-start"),
+  starterKitDetails: document.getElementById("starter-kit-details"),
   alphaStrictValidation: document.getElementById("alpha-strict-validation"),
   restoreLocalBtn: document.getElementById("restore-local-btn"),
   resetProjectBtn: document.getElementById("reset-project-btn"),
@@ -1041,22 +1037,10 @@ function bindMeta() {
     state.adventure.adaptivePowerMultiplier = normalizeAdaptiveMultiplier(e.target.value);
     scheduleJsonRender(220, { syncScene: false });
   });
-  els.adventureCarryOver.addEventListener("change", (e) => {
-    state.adventure.allowCarryOverLoadout = Boolean(e.target.checked);
-    scheduleJsonRender(90, { syncScene: false });
-  });
-  els.adventureFreshStart.addEventListener("change", (e) => {
-    state.adventure.allowFreshStart = Boolean(e.target.checked);
-    scheduleJsonRender(90, { syncScene: false });
-  });
-  els.adventureForceLoadout.addEventListener("change", (e) => {
-    state.adventure.forceLoadout = Boolean(e.target.checked);
-    syncForceLoadoutUI();
-    scheduleJsonRender(90, { syncScene: false });
-  });
-  els.adventureRestoreLoadout.addEventListener("change", (e) => {
-    state.adventure.restoreLoadoutOnEnd = Boolean(e.target.checked);
-    syncForceLoadoutUI();
+  els.adventureForceEquipStart.addEventListener("change", (e) => {
+    const forced = Boolean(e.target.checked);
+    state.adventure.allowCarryOverLoadout = !forced;
+    syncForceEquipStartUI();
     scheduleJsonRender(90, { syncScene: false });
   });
   els.alphaStrictValidation.addEventListener("change", (e) => {
@@ -3608,35 +3592,14 @@ function renderWorkspace({ skipJson = false } = {}) {
   if (!skipJson) renderJson();
 }
 
+function syncForceEquipStartUI() {
+  const forced = !state.adventure.allowCarryOverLoadout;
+  if (els.starterKitDetails) els.starterKitDetails.open = forced;
+}
+
+/** @deprecated — kept for any remaining call sites, delegates to syncForceEquipStartUI */
 function syncForceLoadoutUI() {
-  const forced = Boolean(state.adventure.forceLoadout);
-  const restore = forced && Boolean(state.adventure.restoreLoadoutOnEnd);
-  els.restoreLoadoutRow.classList.toggle("hidden", !forced);
-  if (!forced) {
-    state.adventure.restoreLoadoutOnEnd = false;
-    els.adventureRestoreLoadout.checked = false;
-  }
-
-  let icon, label, body, mod;
-  if (!forced) {
-    icon = "+";
-    label = "Kit aggiuntivo";
-    body = "Gli oggetti del kit vengono dati al giocatore in aggiunta al suo equipaggiamento pregresso (se consentito dalle impostazioni dell'avventura).";
-    mod = "";
-  } else if (restore) {
-    icon = "+";
-    label = "Loadout forzato + ripristino";
-    body = "All'avvio zaino ed equip vengono azzerati: il giocatore parte solo con il kit. Al termine dell'avventura l'equipaggiamento originale viene restituito automaticamente.";
-    mod = "loadout-mode-summary--restore";
-  } else {
-    icon = "?️";
-    label = "Loadout forzato";
-    body = "All'avvio zaino ed equip vengono azzerati: il giocatore parte solo con il kit. L'equipaggiamento originale non viene salvato: assicurati che sia intenzionale.";
-    mod = "loadout-mode-summary--warn";
-  }
-
-  els.loadoutModeSummary.className = `loadout-mode-summary${mod ? " " + mod : ""}`;
-  els.loadoutModeSummary.innerHTML = `<span class="loadout-mode-icon">${icon}</span><span><strong>${label}</strong><br><span class="loadout-mode-body">${body}</span></span>`;
+  syncForceEquipStartUI();
 }
 
 function renderAdventureSetup() {
@@ -3646,11 +3609,8 @@ function renderAdventureSetup() {
   els.adventureTag2.value = state.adventure.tags?.[1] || "";
   els.adventureTag3.value = state.adventure.tags?.[2] || "";
   els.adventureAdaptiveMultiplier.value = Number(state.adventure.adaptivePowerMultiplier ?? 0.12).toFixed(2);
-  els.adventureCarryOver.checked = Boolean(state.adventure.allowCarryOverLoadout);
-  els.adventureFreshStart.checked = Boolean(state.adventure.allowFreshStart);
-  els.adventureForceLoadout.checked = Boolean(state.adventure.forceLoadout);
-  els.adventureRestoreLoadout.checked = Boolean(state.adventure.restoreLoadoutOnEnd);
-  syncForceLoadoutUI();
+  els.adventureForceEquipStart.checked = !state.adventure.allowCarryOverLoadout;
+  syncForceEquipStartUI();
   els.alphaStrictValidation.checked = Boolean(state.ui.strictAlpha);
   updateFlowZoomLabel();
   els.autosaveIndicator.textContent = state.ui.currentProjectId
