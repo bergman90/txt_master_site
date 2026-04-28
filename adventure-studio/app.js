@@ -7228,7 +7228,7 @@ function renderEventEditor(eventContext) {
 
   setSceneTypeBadge(visual.label, choice.event?.type || "transition");
 
-  const supportsImage = Boolean(choice.event && ["combat", "loot", "shop", "transition", "dialogue"].includes(choice.event.type));
+  const supportsImage = Boolean(choice.event && ["combat", "loot", "shop", "transition", "dialogue", "skillcheck", "requirement"].includes(choice.event.type));
   if (!supportsImage) {
     els.sceneImagePreview.classList.add("hidden");
     els.sceneImageThumb.removeAttribute("src");
@@ -13015,3 +13015,255 @@ bootstrap();
 
 
 
+
+// ── PORTRAIT ARCHIVE — IndexedDB layer ───────────────────────────────────────
+
+const PORTRAIT_DB_NAME   = "adventure_studio_portraits";
+const PORTRAIT_DB_VER    = 1;
+const PORTRAIT_STORE     = "portraits";
+
+function openPortraitDb() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(PORTRAIT_DB_NAME, PORTRAIT_DB_VER);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(PORTRAIT_STORE)) {
+        const store = db.createObjectStore(PORTRAIT_STORE, { keyPath: "id" });
+        store.createIndex("name", "name", { unique: false });
+      }
+    };
+    req.onsuccess = (e) => resolve(e.target.result);
+    req.onerror   = (e) => reject(e.target.error);
+  });
+}
+
+async function portraitDbGetAll() {
+  const db = await openPortraitDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(PORTRAIT_STORE, "readonly");
+    const req = tx.objectStore(PORTRAIT_STORE).getAll();
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror   = () => reject(req.error);
+  });
+}
+
+async function portraitDbAdd(portrait) {
+  const db = await openPortraitDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(PORTRAIT_STORE, "readwrite");
+    const req = tx.objectStore(PORTRAIT_STORE).put(portrait);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror   = () => reject(req.error);
+  });
+}
+
+async function portraitDbDelete(id) {
+  const db = await openPortraitDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(PORTRAIT_STORE, "readwrite");
+    const req = tx.objectStore(PORTRAIT_STORE).delete(id);
+    req.onsuccess = () => resolve();
+    req.onerror   = () => reject(req.error);
+  });
+}
+
+// ── PORTRAIT PICKER — UI ─────────────────────────────────────────────────────
+
+(function initPortraitPicker() {
+  const modal       = document.getElementById("portrait-modal");
+  const closeBtn    = document.getElementById("portrait-modal-close");
+  const confirmBtn  = document.getElementById("portrait-confirm-btn");
+  const removeBtn   = document.getElementById("portrait-remove-btn");
+  const grid        = document.getElementById("portrait-grid");
+  const emptyMsg    = document.getElementById("portrait-empty");
+  const countEl     = document.getElementById("portrait-archive-count");
+  const tabs        = document.querySelectorAll(".portrait-tab");
+  const tabArchive  = document.getElementById("portrait-tab-archive");
+  const tabUpload   = document.getElementById("portrait-tab-upload");
+  const fileInput   = document.getElementById("portrait-file-input");
+  const nameInput   = document.getElementById("portrait-name-input");
+  const saveBtn     = document.getElementById("portrait-save-btn");
+  const uploadHint  = document.getElementById("portrait-upload-hint");
+  const uploadZone  = document.getElementById("portrait-upload-zone");
+
+  let selectedPortraitId = null;
+  let pendingFileDataUrl  = null;
+
+  // ── Apri picker ──
+  const addImageBtn = document.getElementById("add-scene-image-btn");
+  const replaceBtn  = document.getElementById("replace-scene-image-btn");
+  if (addImageBtn)  addImageBtn.addEventListener("click",  openPortraitPicker);
+  if (replaceBtn)   replaceBtn.addEventListener("click",   openPortraitPicker);
+
+  // Fix supportsImage — aggiungi skillcheck e requirement
+  // (patch monkey-patch renderEventEditor per aggiornare la lista)
+  const _origRenderEventEditor = window.renderEventEditor || null;
+
+  async function openPortraitPicker() {
+    selectedPortraitId = null;
+    confirmBtn.disabled = true;
+    removeBtn.disabled  = true;
+    switchTab("archive");
+    await refreshArchiveGrid();
+    modal.classList.remove("hidden");
+  }
+
+  // ── Chiudi ──
+  closeBtn.addEventListener("click", () => modal.classList.add("hidden"));
+  modal.addEventListener("click", (e) => { if (e.target === modal) modal.classList.add("hidden"); });
+
+  // ── Tab switch ──
+  tabs.forEach(tab => {
+    tab.addEventListener("click", () => switchTab(tab.dataset.tab));
+  });
+
+  function switchTab(name) {
+    tabs.forEach(t => t.classList.toggle("active", t.dataset.tab === name));
+    tabArchive.classList.toggle("hidden", name !== "archive");
+    tabUpload.classList.toggle("hidden",  name !== "upload");
+    if (name === "upload") {
+      pendingFileDataUrl = null;
+      nameInput.value = "";
+      uploadHint.textContent = "";
+      fileInput.value = "";
+    }
+  }
+
+  // ── Griglia archivio ──
+  async function refreshArchiveGrid() {
+    grid.innerHTML = "";
+    const portraits = await portraitDbGetAll();
+    countEl.textContent = portraits.length > 0 ? `${portraits.length} ritratt${portraits.length === 1 ? "o" : "i"}` : "";
+    if (portraits.length === 0) {
+      emptyMsg.classList.remove("hidden");
+      return;
+    }
+    emptyMsg.classList.add("hidden");
+    portraits.forEach(p => {
+      const thumb = document.createElement("div");
+      thumb.className = "portrait-thumb" + (p.id === selectedPortraitId ? " selected" : "");
+      thumb.dataset.id = p.id;
+      thumb.innerHTML = `
+        <img src="${p.dataUrl}" alt="${p.name}" loading="lazy">
+        <span class="portrait-thumb-label">${p.name}</span>
+        <button class="portrait-thumb-del" title="Rimuovi dall'archivio" data-del="${p.id}">✕</button>
+      `;
+      thumb.addEventListener("click", (e) => {
+        if (e.target.dataset.del) return;
+        selectPortrait(p.id);
+      });
+      thumb.querySelector("[data-del]").addEventListener("click", async (e) => {
+        e.stopPropagation();
+        if (!confirm(`Rimuovere "${p.name}" dall'archivio?`)) return;
+        await portraitDbDelete(p.id);
+        if (selectedPortraitId === p.id) {
+          selectedPortraitId = null;
+          confirmBtn.disabled = true;
+          removeBtn.disabled  = true;
+        }
+        await refreshArchiveGrid();
+      });
+      grid.appendChild(thumb);
+    });
+  }
+
+  function selectPortrait(id) {
+    selectedPortraitId = id;
+    grid.querySelectorAll(".portrait-thumb").forEach(t => {
+      t.classList.toggle("selected", t.dataset.id === id);
+    });
+    confirmBtn.disabled = false;
+    removeBtn.disabled  = false;
+  }
+
+  // ── Rimuovi selezionato ──
+  removeBtn.addEventListener("click", async () => {
+    if (!selectedPortraitId) return;
+    const portraits = await portraitDbGetAll();
+    const p = portraits.find(x => x.id === selectedPortraitId);
+    if (!p) return;
+    if (!confirm(`Rimuovere "${p.name}" dall'archivio?`)) return;
+    await portraitDbDelete(selectedPortraitId);
+    selectedPortraitId = null;
+    confirmBtn.disabled = true;
+    removeBtn.disabled  = true;
+    await refreshArchiveGrid();
+  });
+
+  // ── Conferma selezione ──
+  confirmBtn.addEventListener("click", async () => {
+    if (!selectedPortraitId) return;
+    const portraits = await portraitDbGetAll();
+    const p = portraits.find(x => x.id === selectedPortraitId);
+    if (!p) return;
+    applyPortraitToCurrentScene(p.dataUrl, p.name);
+    modal.classList.add("hidden");
+  });
+
+  // ── Upload file ──
+  uploadZone.addEventListener("click", () => fileInput.click());
+  fileInput.addEventListener("change", async () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      pendingFileDataUrl = reader.result;
+      if (!nameInput.value) nameInput.value = file.name.replace(/\.[^.]+$/, "");
+      uploadHint.textContent = `Immagine pronta: ${file.name}`;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  saveBtn.addEventListener("click", async () => {
+    if (!pendingFileDataUrl) { uploadHint.textContent = "Scegli prima un'immagine."; return; }
+    const name = nameInput.value.trim() || "Senza nome";
+    const id   = "portrait_" + Date.now() + "_" + Math.random().toString(36).slice(2, 7);
+    await portraitDbAdd({ id, name, dataUrl: pendingFileDataUrl });
+    uploadHint.textContent = `"${name}" salvato nell'archivio.`;
+    pendingFileDataUrl = null;
+    nameInput.value = "";
+    fileInput.value = "";
+    switchTab("archive");
+    await refreshArchiveGrid();
+  });
+
+  // ── Applica il ritratto al nodo corrente ──
+  function applyPortraitToCurrentScene(dataUrl, name) {
+    const scene = (typeof getSelectedEventContext === "function" && getSelectedEventContext()?.choice?.event)
+                  || (typeof getSelectedScene === "function" && getSelectedScene());
+    if (!scene) return;
+    scene.eventImage = { name, sourceDataUrl: dataUrl, dataUrl, zoom: 1, focusX: 50, focusY: 50,
+                         width: null, height: null, sizeKb: null, type: "image/*" };
+    scene.image = dataUrl;
+    if (typeof markSceneDirty    === "function") markSceneDirty();
+    if (typeof renderSceneEditor === "function") renderSceneEditor();
+    if (typeof scheduleJsonRender === "function") scheduleJsonRender(90);
+  }
+
+})();
+
+// ── Fix supportsImage: aggiungi skillcheck e requirement ─────────────────────
+// Patch applicata dopo il caricamento del modulo principale
+document.addEventListener("DOMContentLoaded", () => {
+  // Noop — il fix è inline nell'override di renderEventEditor sotto
+}, { once: true });
+
+// Override di renderEventEditor per aggiungere skillcheck e requirement a supportsImage
+const _origRenderEventEditorFn = window.renderEventEditor;
+if (typeof renderEventEditor === "function") {
+  const _orig = renderEventEditor;
+  window.renderEventEditor = function(eventContext) {
+    _orig(eventContext);
+    // Forza abilitazione bottone immagine anche per skillcheck e requirement
+    const type = eventContext?.choice?.event?.type;
+    const extraSupport = ["skillcheck", "requirement"].includes(type);
+    if (extraSupport) {
+      const addBtn     = document.getElementById("add-scene-image-btn");
+      const replaceBtn = document.getElementById("replace-scene-image-btn");
+      const removeBtn  = document.getElementById("remove-scene-image-btn");
+      if (addBtn)     addBtn.disabled     = false;
+      if (replaceBtn) replaceBtn.disabled = false;
+      if (removeBtn)  removeBtn.disabled  = false;
+    }
+  };
+}

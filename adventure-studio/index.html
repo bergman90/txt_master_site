@@ -190,7 +190,7 @@
               <span id="scene-status-dot" class="scene-status-dot hidden" title="Stato scena"></span>
             </div>
             <div class="button-row">
-              <button id="add-scene-image-btn" type="button">Aggiungi immagine evento</button>
+              <button id="add-scene-image-btn" type="button">Ritratto evento</button>
               <button id="duplicate-scene-btn" type="button">Duplica evento</button>
               <button id="delete-scene-btn" class="danger">Elimina evento</button>
             </div>
@@ -617,6 +617,51 @@
 
   <script src="./runtime-compiler.js"></script>
   <script src="./app.js"></script>
+  <!-- Portrait Picker Modal -->
+  <div id="portrait-modal" class="portrait-modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="portrait-modal-title">
+    <div class="portrait-modal">
+      <div class="portrait-modal-header">
+        <h3 id="portrait-modal-title">Scegli ritratto</h3>
+        <button id="portrait-modal-close" type="button" class="small danger">✕</button>
+      </div>
+      <div class="portrait-modal-tabs">
+        <button class="portrait-tab active" data-tab="archive">Archivio locale</button>
+        <button class="portrait-tab" data-tab="upload">Aggiungi al archivio</button>
+      </div>
+      <div class="portrait-modal-body">
+        <!-- Tab: archivio -->
+        <div id="portrait-tab-archive">
+          <div id="portrait-grid" class="portrait-grid"></div>
+          <p id="portrait-empty" class="portrait-empty hidden">
+            Nessun ritratto nell'archivio.<br>Vai su "Aggiungi all'archivio" per caricare le tue immagini.
+          </p>
+        </div>
+        <!-- Tab: upload -->
+        <div id="portrait-tab-upload" class="hidden">
+          <label class="portrait-upload-zone" id="portrait-upload-zone">
+            <div>Clicca per scegliere un'immagine dal PC</div>
+            <div style="font-size:0.75rem;margin-top:4px;">PNG, JPG, WEBP — consigliato 512×512</div>
+            <input id="portrait-file-input" type="file" accept="image/*">
+          </label>
+          <input id="portrait-name-input" class="portrait-name-input" type="text" placeholder="Nome ritratto (es. Guardia cittadina)">
+          <div style="margin-top:10px;display:flex;gap:8px;">
+            <button id="portrait-save-btn" type="button">Salva nell'archivio</button>
+          </div>
+          <p id="portrait-upload-hint" class="hint" style="margin-top:8px;"></p>
+        </div>
+      </div>
+      <div class="portrait-modal-footer">
+        <div class="portrait-manage-bar">
+          <span id="portrait-archive-count" style="font-size:0.8rem;color:var(--muted)"></span>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button id="portrait-remove-btn" type="button" class="danger small" disabled>Rimuovi selezionato</button>
+          <button id="portrait-confirm-btn" type="button" disabled>Usa ritratto</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>
 
