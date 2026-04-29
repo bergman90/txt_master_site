@@ -169,7 +169,8 @@
       goldReward: Number(group?.goldReward || 0),
       abilityIds: Array.isArray(group?.abilityIds) ? [...group.abilityIds] : [],
       hasBerserkerPhase: group?.hasBerserkerPhase ? true : undefined,
-      loot: cloneLootList(group?.loot || [])
+      loot: cloneLootList(group?.loot || []),
+      ...(nonEmpty(group?.image) ? { image: group.image } : {})
     };
   }
 

@@ -8521,7 +8521,51 @@ function buildCombatGroupRow(group, gi, ev, desc, choice, rerender, refreshOverv
   lootWrap.append(lootHeader, lootList);
 
   advanced.append(lootWrap);
-  card.append(header, summary, sourceGrid, identityGrid, statsGrid, notes, advanced);
+  // ── Portrait row ──
+  const portraitRow = document.createElement("div");
+  portraitRow.className = "combat-group-portrait-row";
+
+  const portraitThumb = document.createElement("img");
+  portraitThumb.className = "combat-group-portrait-thumb" + (group.image ? "" : " hidden");
+  portraitThumb.alt = "Ritratto mostro";
+  if (group.image) portraitThumb.src = group.image;
+
+  const portraitBtnCol = document.createElement("div");
+  portraitBtnCol.className = "combat-group-portrait-btns";
+
+  const choosePortraitBtn = document.createElement("button");
+  choosePortraitBtn.type = "button";
+  choosePortraitBtn.className = "small";
+  choosePortraitBtn.textContent = group.image ? "Cambia ritratto" : "Scegli ritratto";
+  choosePortraitBtn.addEventListener("click", () => {
+    if (typeof window.openPortraitPickerWithCallback !== "function") return;
+    window.openPortraitPickerWithCallback((dataUrl) => {
+      group.image = dataUrl;
+      portraitThumb.src = dataUrl;
+      portraitThumb.classList.remove("hidden");
+      removePortraitBtn.classList.remove("hidden");
+      choosePortraitBtn.textContent = "Cambia ritratto";
+      onChoiceChange(desc, choice);
+    });
+  });
+
+  const removePortraitBtn = document.createElement("button");
+  removePortraitBtn.type = "button";
+  removePortraitBtn.className = "small danger" + (group.image ? "" : " hidden");
+  removePortraitBtn.textContent = "Rimuovi ritratto";
+  removePortraitBtn.addEventListener("click", () => {
+    group.image = null;
+    portraitThumb.src = "";
+    portraitThumb.classList.add("hidden");
+    removePortraitBtn.classList.add("hidden");
+    choosePortraitBtn.textContent = "Scegli ritratto";
+    onChoiceChange(desc, choice);
+  });
+
+  portraitBtnCol.append(choosePortraitBtn, removePortraitBtn);
+  portraitRow.append(portraitThumb, portraitBtnCol);
+
+  card.append(header, summary, sourceGrid, identityGrid, portraitRow, statsGrid, notes, advanced);
   return card;
 }
 
@@ -8555,7 +8599,8 @@ function createDefaultCombatGroup() {
     goldReward: 5,
     abilityIds: [],
     hasBerserkerPhase: false,
-    loot: []
+    loot: [],
+    image: null
   };
 }
 
@@ -13069,6 +13114,9 @@ async function portraitDbDelete(id) {
 
 // ── PORTRAIT PICKER — UI ─────────────────────────────────────────────────────
 
+// Callback opzionale per uso fuori dal picker di scena (es. combatGroup)
+let _portraitPickerCallback = null;
+
 (function initPortraitPicker() {
   const modal       = document.getElementById("portrait-modal");
   const closeBtn    = document.getElementById("portrait-modal-close");
@@ -13109,8 +13157,8 @@ async function portraitDbDelete(id) {
   }
 
   // ── Chiudi ──
-  closeBtn.addEventListener("click", () => modal.classList.add("hidden"));
-  modal.addEventListener("click", (e) => { if (e.target === modal) modal.classList.add("hidden"); });
+  closeBtn.addEventListener("click", () => { modal.classList.add("hidden"); _portraitPickerCallback = null; });
+  modal.addEventListener("click", (e) => { if (e.target === modal) { modal.classList.add("hidden"); _portraitPickerCallback = null; } });
 
   // ── Tab switch ──
   tabs.forEach(tab => {
@@ -13196,7 +13244,12 @@ async function portraitDbDelete(id) {
     const portraits = await portraitDbGetAll();
     const p = portraits.find(x => x.id === selectedPortraitId);
     if (!p) return;
-    applyPortraitToCurrentScene(p.dataUrl, p.name);
+    if (_portraitPickerCallback) {
+      _portraitPickerCallback(p.dataUrl, p.name);
+      _portraitPickerCallback = null;
+    } else {
+      applyPortraitToCurrentScene(p.dataUrl, p.name);
+    }
     modal.classList.add("hidden");
   });
 
@@ -13214,12 +13267,38 @@ async function portraitDbDelete(id) {
     reader.readAsDataURL(file);
   });
 
+  async function compressPortraitImage(dataUrl, maxDim = 256) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(maxDim / img.naturalWidth, maxDim / img.naturalHeight, 1);
+        const w = Math.round(img.naturalWidth * scale);
+        const h = Math.round(img.naturalHeight * scale);
+        const canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+        const type = (typeof canvasSupportsType === "function" && canvasSupportsType("image/webp")) ? "image/webp" : "image/jpeg";
+        resolve(canvas.toDataURL(type, 0.82));
+      };
+      img.onerror = () => resolve(dataUrl);
+      img.src = dataUrl;
+    });
+  }
+
+  // Espone il picker con callback per usi esterni (es. combatGroup)
+  window.openPortraitPickerWithCallback = function(callback) {
+    _portraitPickerCallback = callback || null;
+    openPortraitPicker();
+  };
+
   saveBtn.addEventListener("click", async () => {
     if (!pendingFileDataUrl) { uploadHint.textContent = "Scegli prima un'immagine."; return; }
     const name = nameInput.value.trim() || "Senza nome";
     const id   = "portrait_" + Date.now() + "_" + Math.random().toString(36).slice(2, 7);
-    await portraitDbAdd({ id, name, dataUrl: pendingFileDataUrl });
-    uploadHint.textContent = `"${name}" salvato nell'archivio.`;
+    uploadHint.textContent = "Compressione in corso…";
+    const compressed = await compressPortraitImage(pendingFileDataUrl);
+    await portraitDbAdd({ id, name, dataUrl: compressed });
+    uploadHint.textContent = `"${name}" salvato (${Math.round(compressed.length * 0.75 / 1024)} KB).`;
     pendingFileDataUrl = null;
     nameInput.value = "";
     fileInput.value = "";

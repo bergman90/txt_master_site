@@ -963,6 +963,34 @@ button.small {
   gap: 12px;
 }
 
+.combat-group-portrait-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid var(--border);
+}
+
+.combat-group-portrait-thumb {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+  background: #111;
+}
+
+.combat-group-portrait-thumb.hidden { display: none; }
+
+.combat-group-portrait-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.combat-group-portrait-btns button.hidden { display: none; }
+
 .combat-group-stats-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
