@@ -5,6 +5,19 @@
 
 ---
 
+## Stato attuale — 2026-05-08 (aggiornamento 13)
+
+### RPG_PROJECT — v0.1.32-alpha versionCode 43 (commit `e349751`)
+
+**AAB release buildato e pushato** (versionCode 43 — da usare su Play Console, il 42 è l'AAB corretto per v0.1.31).
+
+- Barre Tempra (Warrior) e Istinto (Ranger): 5 quadratini 14dp con RoundedCornerShape, identici alla barra Corruzione del Cultist
+- Dorati per Tempra, teal per Istinto; sfondo scuro quando vuoto
+- Bottone attivazione (Pelle di Pietra / Istinto Affilato) a larghezza piena, appare solo quando stacks >= 5
+- Quando forma attiva: la barra scompare, appare testo "X attiva"
+
+---
+
 ## Stato attuale — 2026-05-08 (aggiornamento 12)
 
 ### RPG_PROJECT — v0.1.31-alpha versionCode 42 (commit `99916b7`)
