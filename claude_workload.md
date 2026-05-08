@@ -5,6 +5,155 @@
 
 ---
 
+## Stato attuale — 2026-05-08 (aggiornamento 10)
+
+### RPG_PROJECT — v0.1.30 (commit `0c5dd10`)
+
+#### Completato — sistema attacchi di classe Warrior/Ranger
+
+**Warrior — 3 mosse:**
+- `Bash`: STAGGERED 40%+(lv-1)*5% cap65%, +1 Tempra per colpo
+- `Affondo`: EXPOSED automatico, -2 acc, +2 dmg, +1 Tempra per colpo
+- `Turbine`: WEAKENED 40%+(lv-1)*5%, 2 stam, +1 Tempra per colpo
+- **Barra Tempra**: a 5 stacks → attiva `Pelle di Pietra` (+2 DEF, +1 HP/turno, run-persistent)
+
+**Ranger — 3 mosse:**
+- `Taglio Tendini`: BLEEDING 50%+(lv-1)*5% cap70%, +1 Istinto per condizione
+- `Tiro Mirato`: EXPOSED 75%, +2 acc, +1 dmg, 2 stam, +1 Istinto per condizione
+- `Doppio Colpo`: 2 hit separati (BLEEDING 30%+ ciascuno), 1 sola risposta nemica, +1 Istinto per condizione
+- **Barra Istinto**: a 5 stacks → attiva `Istinto Affilato` (-4 soglia critico, min 15, run-persistent)
+
+**Architettura:**
+- `CharacterSheet.kt`: +4 campi (`temprStacks`, `pelleDiPietraActive`, `istintoStacks`, `istintoAffilatoActive`)
+- `GameEngine.kt`: `CLASS_SPECIFIC_ATTACKS_ENABLED=true` disconnette vecchio Attacca e bash/predator; hook `totalDefenseBonus`/`playerCriticalThreshold`/`applyStartOfTurnEffects` aggiornati; `warriorAttack`/`rangerAttack`/`activatePelleDiPietra`/`activateIstintoAffilato` aggiunti
+- `GameAppState.kt`: 4 wrapper aggiunti
+- `AdventureScreens.kt`: `WarriorAttackCard` + `RangerAttackCard`, Ritirata nascosta in dungeon
+- `GameApp.kt`: 4 callback aggiuntivi
+
+#### Prossimo lavoro — Test di bilanciamento (ibrido analitico + Monte Carlo)
+
+Approccio ibrido raccomandato (da passare a Codex):
+
+**Step 1 — Modello analitico (tutte le 189 combo)**
+Per ogni combinazione `(classe, gear tier, nodi tree, stanza dungeon)`:
+- Calcola TTK (turni per uccidere) e TTS (turni per sopravvivere)
+- Margine = TTS - TTK
+- `approxWinRate(margin)`: ≤-3→0.05, -2→0.15, -1→0.30, 0→0.50, +1→0.70, +2→0.85, ≥+3→0.95
+- Identifica combo borderline [0.25, 0.75] e boss room
+
+**Step 2 — Monte Carlo solo per borderline + boss**
+- ~20-30 run (invece di 94500)
+- `buildSimState`: avventura stub minimale, `CombatState` costruito direttamente da `CombatGroup`
+- Test JUnit4 puri (GameEngine non ha dipendenze Android, Robolectric non serve)
+
+**Target win rate:**
+| Stanza | Win rate target |
+|---|---|
+| Dungeon 1-5 | 75-90% |
+| Dungeon boss (10) | ~70% |
+| Torre early (11-20) | 55-75% |
+| Torre boss (20) | ~60% |
+| Torre late (21-30) | 50-65% |
+| Torre boss (30) | ~55% |
+
+---
+
+## Stato attuale — 2026-05-06 (aggiornamento 9)
+
+### RPG_PROJECT — sessione odierna
+
+#### Completato
+
+**Dungeon generator region-aware (Fase 4)**
+- `DungeonMonsterPool`: `regions: List<String>` su `MonsterTemplate`/`BossTemplate`, 5 mostri dungeon-only taggati, 5 boss taggati per regione
+- `DungeonGenerator`: `buildRoomAdventure` usa `regionId`, pool tematici, boss per regione, nomi stanza tematici (40 nomi Torre + 45 nomi Lande)
+- `DungeonRegionCatalog`: aggiunta `rarityForTier(tier)` / `tierForRarity(rarity)`
+- 12 test in `DungeonGeneratorRegionTest.kt`
+
+**Shop region-locked (Fase 5)**
+- `GameEngine.shopItems()`: quando `state.dungeonSession != null`, filtra `allowedShopRarities` tramite `region.shopForbiddenTierMin`
+- Dungeon: max UNCOMMON in negozio. Torre: max RARE. Lande: max MYTHIC.
+
+**Loot region-locked (Fase 6)**
+- `DungeonGenerator.generateLoot`: parametro `regionId` aggiunto, boss garantito usa `bossLootTier` della regione
+- `pickRarity`: parametro `maxTier` filtra rarità oltre il cap regionale
+- `pickItemOfRarity`: fallback gerarchico (tier-1) invece di saltare a COMMON
+- `generateShopItems` in DungeonGenerator rimossa (era dead code)
+- 7 test in `DungeonLootShopRegionTest.kt` — 63 test totali, 0 fallimenti
+
+**Bug fix creazione personaggio (tester feedback)**
+- `CreationScreens.kt`: `imePadding()` + `verticalScroll` sul Column esterno → il contenuto non viene coperto dalla tastiera software
+- `NarrativeNameCard.OutlinedTextField`: aggiunto `ImeAction.Done` + `KeyboardActions(onDone = onConfirm)` → tasto "Fatto" della tastiera salva il nome
+
+**Schema skill tree**
+- `model/SkillTreeNode.kt` creato: `SkillNodeType` enum, `StatRequirement`, `PassiveEffect(id, magnitude)`, `SkillTreeNode` con tutti i campi discussi
+
+#### Prossimo lavoro per Codex — Skill Tree (Fase 7)
+
+Il modello è pronto. Mancano:
+
+**1. `model/ClassDefinition.kt`**
+```kotlin
+@Serializable
+data class ClassDefinition(
+    val id: String,          // "warrior" / "explorer" / "adept"
+    val label: String,
+    val startNodeId: String, // ID del nodo START in SkillTreeCatalog
+    val themeColorHex: String,
+    val mechanicId: String,  // "guard" / "precision" / "ritual"
+    val suggestedTags: List<String> = emptyList()
+)
+```
+
+**2. `engine/PassiveEffectIds.kt`** — costanti per effetti passivi (NON mescolare con ItemTaxonomy):
+```
+str_bonus, dex_bonus, int_bonus, wis_bonus, con_bonus, cha_bonus
+hp_bonus, stamina_bonus
+melee_bonus, lore_bonus, survival_bonus, guard_bonus, precision_bonus, alchemy_bonus
+crit_chance_bonus, hit_bonus, damage_bonus
+ritual_potency, guard_threshold, predator_range
+```
+
+**3. `engine/SkillTreeCatalog.kt`** — oggetto singleton con `val nodes: List<SkillTreeNode>`:
+- 3 nodi START (uno per classe), coordinate suggerite:
+  - Warrior START: (500f, 150f), tag ["melee","armor"]
+  - Explorer START: (150f, 700f), tag ["survival","precision"]
+  - Adept START: (850f, 700f), tag ["lore","ritual"]
+- ~5-6 nodi SMALL/ATTRIBUTE intorno a ogni START (connessi al START e tra loro)
+- 1 NOTABLE per ramo (a ~2-3 hop dal START)
+- 1-2 KEYSTONE nel mid-tree (point cost = 2, requiredMilestone = MILESTONE_COMPLETE_DUNGEON)
+- Connessioni: bidirezionali per dichiarazione (A→B implica B→A, ma si dichiara da entrambi i lati per chiarezza)
+
+**4. `engine/ClassDefinitionCatalog.kt`** — lista delle 3 ClassDefinition
+
+**5. `engine/PassiveNodeResolver.kt`**
+```kotlin
+object PassiveNodeResolver {
+    fun resolve(allocatedNodeIds: Set<String>): Map<String, Int>
+    // Per ogni nodo allocato, somma i PassiveEffect.magnitude per effectId
+    // Ritorna mappa effectId → totale (es. "str_bonus" → 3)
+}
+```
+
+**6. Integrazione in `CharacterFactory.create()`**
+- Aggiungere parametro opzionale `playerProgression: PlayerProgression? = null`
+- Dopo il calcolo base stats, applicare `PassiveNodeResolver.resolve(playerProgression.allocatedPassiveNodeIds)`
+- Mappare i delta: `str_bonus` → aggiunto a `strength`, `hp_bonus` → aggiunto a `hitPoints`, ecc.
+
+**Decisioni architetturali già prese (non riaprire):**
+- Stat delta calcolati on-the-fly (computed) — NON delta stored in CharacterSheet
+- `requiredClass` usato solo per `ritual_potency` (Adept) e meccaniche davvero uniche
+- `KEYSTONE` costa 2 punti, `SOCKET` è placeholder inerte per V2
+- Coordinate in unità logiche 0-1000, 3 entry point a ~350u dal centro
+- `PassiveEffect(id, magnitude)` invece di plain `effectIds: List<String>`
+
+**Test attesi:**
+- `SkillTreeResolverTest`: allocare 3 nodi `str_bonus` → `CharacterSheet.strength` +3
+- Verificare che nodi con `requiredMilestone` non siano allocabili senza milestone
+- Verificare che nodi con `requiredStat` non siano allocabili senza stat sufficiente
+
+---
+
 ## Stato attuale — 2026-04-26 (aggiornamento 8)
 
 ### Release 0.1.8-alpha — versionCode 13 (RPG_PROJECT)
@@ -325,4 +474,4 @@ Cinque commit pushati:
 
 ---
 
-_Ultimo aggiornamento: 2026-04-24 — Claude Sonnet 4.6_
+_Ultimo aggiornamento: 2026-05-08 — Claude Sonnet 4.6_
