@@ -5,6 +5,17 @@
 
 ---
 
+## Stato attuale — 2026-05-08 (aggiornamento 12)
+
+### RPG_PROJECT — v0.1.31-alpha versionCode 42 (commit `99916b7`)
+
+**AAB release buildato e pushato.**
+
+- `AttackTileButton`: nuovo composable identico a `CultistRitualButton` ma con `painterResource` per drawable
+- Warrior/Ranger: tile icona grande + label in basso, bordo dorato (Warrior) o teal (Ranger)
+
+---
+
 ## Stato attuale — 2026-05-08 (aggiornamento 11)
 
 ### RPG_PROJECT — v0.1.30-alpha versionCode 41 (commit `28b3687`)
