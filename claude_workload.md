@@ -5,6 +5,17 @@
 
 ---
 
+## Stato attuale — 2026-05-08 (aggiornamento 11)
+
+### RPG_PROJECT — v0.1.30-alpha versionCode 41 (commit `28b3687`)
+
+**AAB release buildato e pushato.**
+
+- 6 icone attacchi di classe in `drawable-nodpi` (bash, affondo, turbine, taglio_tendini, tiro_mirato, doppio_colpo)
+- Bottoni `WarriorAttackCard`/`RangerAttackCard`: icona 32dp sopra il testo
+
+---
+
 ## Stato attuale — 2026-05-08 (aggiornamento 10)
 
 ### RPG_PROJECT — v0.1.30 (commit `0c5dd10`)
