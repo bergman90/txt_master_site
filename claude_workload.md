@@ -5,6 +5,18 @@
 
 ---
 
+## Stato attuale — 2026-05-08 (aggiornamento 14)
+
+### RPG_PROJECT — v0.1.33-alpha versionCode 44 (commit `0902563`)
+
+**AAB release buildato e pushato** (versionCode 44).
+
+- `AdventureScreens`: banner condizione (es. "Hai sbilanciato il nemico") sparisce immediatamente alla fine del combat
+- `HeroScreens LoadoutSelectionScreen`: click/checkbox su item parte da qty 1, non maxQty
+- `GameAppState.stashOnDeath` hardcore: dopo il filtro 50% distruzione, ogni item del `runStartLoadout` è garantito almeno con qty 1 nello stash — il personaggio non riparte mai da zero
+
+---
+
 ## Stato attuale — 2026-05-08 (aggiornamento 13)
 
 ### RPG_PROJECT — v0.1.32-alpha versionCode 43 (commit `e349751`)
