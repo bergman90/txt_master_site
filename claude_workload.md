@@ -5,6 +5,29 @@
 
 ---
 
+## Stato attuale — 2026-05-10 (aggiornamento 16)
+
+### RPG_PROJECT — commit `eafde2c`
+
+**ClassRunBalanceSimulationTest — modellazione economia oro+pozioni.**
+
+Aggiunto a tutti gli scenari multi-scontro:
+- `goldReward` realistico su ogni CombatGroup (mob 10-20g, boss 40-50g)
+- `shopPhase` ogni 4 stanze: compra `healing_potion` (12g, +6HP) se HP < 60%, `travel_rations` (6g) come fallback
+- Policy universale: usa pozione come `useConsumableAsCombatAction` se HP ≤ 50% e inventario non vuoto
+- Helper `addOrStack()` per stacking item senza dipendere da `withItem` (privato in GameEngine)
+
+**Risultati con economia simulata:**
+| Scenario | Warrior | Ranger | Cultist |
+|---|---|---|---|
+| Dungeon 10 stanze T2 | 1% | 0% | 19% |
+| Torre entry 5 stanze T2+3n | 0% | 0% | 4% |
+| Torre piena 16 stanze T2+8n | 0% | 0% | 0% |
+
+**Conclusione:** il delta rispetto al lower bound (senza risorse) è minimo. La maggior parte degli eroi muore prima di raggiungere la prima shop (stanza 4) — non fanno in tempo ad accumulare oro. Il collo di bottiglia è la durezza per-scontro, non la mancanza di heal post-fight. La simulation resta utile come stress test; i numeri reali sarebbero più alti grazie a rest event, stanze non-combat, drop in-run.
+
+---
+
 ## Stato attuale — 2026-05-08 (aggiornamento 15)
 
 ### RPG_PROJECT — test commit `14296b5`
