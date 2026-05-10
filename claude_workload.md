@@ -5,6 +5,42 @@
 
 ---
 
+## Stato attuale — 2026-05-08 (aggiornamento 15)
+
+### RPG_PROJECT — test commit `14296b5`
+
+**Commit pushato: test bilanciamento multi-scontro.**
+
+#### Aggiornamenti test
+
+**`RegionBalanceSimulationTest` — policy() aggiornata:**
+- Warrior usa ora `warriorAttack(state, "bash/affondo/turbine")` invece del vecchio `engine.attack()` (disconnesso con `CLASS_SPECIFIC_ATTACKS_ENABLED=true`)
+- Ranger usa `rangerAttack(state, "taglio_tendini/doppio_colpo/tiro_mirato")`
+- Logica policy: bash default → affondo su EXPOSED/STAGGERED → turbine se stam≥4 → attiva Pelle di Pietra a 5 stacks
+
+**`ClassRunBalanceSimulationTest` — nuovo file, simulazione multi-scontro:**
+- Porta HP tra stanze (nessun full heal)
+- Stamina ripristinata completamente tra stanze
+- Checkpoint heal ogni 5 stanze (+20% HP max, cap al max)
+- 3 scenari: Dungeon 10 stanze, Torre entry 5 stanze, Torre piena 16 stanze
+
+#### Risultati (100 runs per scenario)
+
+**Singolo scontro (RegionBalanceSimulationTest, T2 vs Torre early):**
+- W: 50%, R: 38%, C: 71% (zero nodi)
+- W: 66%, R: 41%, C: 74% (3 nodi)
+
+**Multi-scontro (ClassRunBalanceSimulationTest):**
+| Scenario | Warrior | Ranger | Cultist |
+|---|---|---|---|
+| Dungeon 10 stanze T2 | 5% | 0% | 17% |
+| Torre entry 5 stanze T2+3n | 5% | 0% | 3% |
+| Torre piena 16 stanze T2+8n | 0% | 0% | 0% |
+
+**Conclusione:** l'attrition è il problema critico, non il singolo scontro. Ranger ha 0% di survival anche in Torre entry. Necessari heal intermedi più generosi, oggetti curativi nel dungeon, o meccaniche di recupero HP tra stanze.
+
+---
+
 ## Stato attuale — 2026-05-08 (aggiornamento 14)
 
 ### RPG_PROJECT — v0.1.33-alpha versionCode 44 (commit `0902563`)
