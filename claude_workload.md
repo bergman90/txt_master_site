@@ -5,6 +5,39 @@
 
 ---
 
+## Stato attuale — 2026-05-10 (aggiornamento 17)
+
+### RPG_PROJECT — commit `59024f1`
+
+**Skill build diversity simulation — fork skill-tree proposal (3 archetipi per classe)**
+
+Aggiunte a `ClassRunBalanceSimulationTest`:
+- `withWarriorBuild(bashN, affondoN, turbineN)` — colonne Bash/Affondo/Turbine
+- `withRangerBuild(taglioN, tiroN, doppioN)` — colonne Taglio/Tiro Mirato/Doppio Colpo
+- `withCultistBuild(marchioN, lanciaN, parolaN)` — colonne Marchio/Lancia/Parola
+- 3 test @Test con 4 archetipi ciascuno (5-0-0 / 0-5-0 / 0-0-5 / 2-2-1) vs Dungeon 10 stanze + Torre 5 stanze
+
+**Risultati Dungeon 10 stanze:**
+| Classe | Build | Surv% | Avg rooms |
+|---|---|---|---|
+| Warrior | bilanciato (2-2-1) | **5%** | 3.1 |
+| Warrior | affondo5 | 2% | **3.6** |
+| Warrior | turbine5 | 2% | 3.1 |
+| Warrior | bash5 | 0% | 2.3 |
+| Cultist | lancia5 | **39%** | **5.9** |
+| Cultist | parola5 | 28% | 5.4 |
+| Cultist | bilanciato | 24% | 5.5 |
+| Cultist | baseline | 21% | 4.5 |
+| Cultist | marchio5 | **10%** | 3.9 ← peggiore |
+| Ranger | tutti | 0% | 1.4-1.9 |
+
+**Conclusioni design:**
+1. **Cultist lancia5 raddoppia la sopravvivenza (21%→39%)** — danno è la chiave, non il sustain. Marchio5 (sustain puro) è il build peggiore. Conferma direttamente la direzione Codex: Marchio=setup, Lancia=payoff.
+2. **Warrior bilanciato batte i specialisti** nel Dungeon — spread 2-2-1 ottimale. Affondo5 aumenta rooms cleared ma non la sopravvivenza (muore comunque per attrition).
+3. **Ranger irrecuperabile con i soli nodi** — 0% in tutti i build. Fix strutturale necessario: HP base più alto, meccanica di recupero HP tra stanze, o scaling difensivo.
+
+---
+
 ## Stato attuale — 2026-05-10 (aggiornamento 16)
 
 ### RPG_PROJECT — commit `eafde2c`
