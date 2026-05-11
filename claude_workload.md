@@ -5,6 +5,32 @@
 
 ---
 
+## Stato attuale — 2026-05-11 (aggiornamento 21)
+
+### RPG_PROJECT — commit `33dc207`
+
+**Countdown visivo condizioni combattimento (v0.1.34-alpha)**
+
+#### Cosa cambia
+- `ConditionSummaryBlock` redesignato: da righe di testo a chip colorati per ogni condizione.
+- Ogni chip mostra: nome condizione (+ magnitude se > 0) + badge numerico countdown a destra.
+- Badge countdown color-coded:
+  - **verde scuro** (`#2A6040`) = 3+ turni rimanenti
+  - **ambra** (`#B8861C`) = 2 turni
+  - **rosso** (`RetroPalette.danger`) = 1 turno (sta per scadere)
+- Chip cromatici per tipo:
+  - Debuff (Fiamme, Sanguina, Scoperto, Sbilanciato, Stordito, Smarrito, Indebolito, RES incrinata): sfondo rossastro, bordo rosso scuro
+  - Buff (Guardia, Secondo Respiro, Respiro Cacciatore, Ferite Chiuse, Messa a fuoco, Passo Predone): sfondo verdastro, bordo verde scuro
+- `FlowRow` per wrap automatico se le condizioni non entrano in una riga.
+- Aggiunta `conditionShortLabel()` (rimpiazza `conditionSummary()` eliminata).
+
+#### File modificati
+- `ui/AdventureScreens.kt` — nuovi composable `ConditionChipRow`, `ConditionChip`, `conditionShortLabel`
+- `ui/SystemScreens.kt` — changelog 0.1.34-alpha
+- `app/build.gradle.kts` — versionCode 45, versionName 0.1.34-alpha
+
+---
+
 ## Stato attuale — 2026-05-11 (aggiornamento 20)
 
 ### RPG_PROJECT — commit `04c1a90`
