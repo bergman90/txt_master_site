@@ -599,3 +599,10 @@ Formato consigliato:
   - i 9 edge iniziali attuali
   - la crescita passiva di classe al level up
 - Obiettivo del pass: allineare davvero la wiki pubblica al sistema attuale dell'app, non a una visione generica futura.
+
+## 2026-05-04 - Diario di continuita: trophy screen dungeon lato app
+- Nella repo privata e stato implementato un pass vero sulla dungeon score card dell'app Android.
+- Nuovo layout deciso e messo a terra: allori laterali, `dungeon_icon` centrale, outcome forte, sottotitolo evocativo, quattro stat da flex.
+- Le metriche esposte sono ora pensate per screenshot/arcade feel e non piu come lista completa del loot.
+- Preparati anche gli slot futuri per `Nuovo titolo sbloccato!` e `Nuovo record personale`, ma il wiring persistente dei titoli non e ancora stato fatto in questo pass.
+- Questo mirror non ha codice runtime Android da aggiornare; qui resta il diario per continuita di handoff.
