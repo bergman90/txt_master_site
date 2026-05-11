@@ -5,315 +5,182 @@
 
 ---
 
-## Stato attuale — 2026-04-26 (aggiornamento 8)
+## Stato attuale — 2026-05-11 (aggiornamento 9)
 
-### Release 0.1.8-alpha — versionCode 13 (RPG_PROJECT)
+### RPG_PROJECT — Sistema Rank Mosse + Passive Tree rifinito
 
-**Commit: `9528e8a` — BUILD AAB 16 MB**
+**Commit da pushare su `main` (non ancora pushato):**
 
-#### Fix 1 — Forge griglia sempre visibile
-- `HeroForgeScreen`: rimossa branching if/else per stash vuoto
-- Griglia 3×3 sempre mostrata; messaggio "Nessun materiale" appare solo nella sezione MATERIALI
+#### 1. Sistema rank mosse (GameEngine.kt)
+- Ogni attacco ha un rank (0–6) che scala gli effetti della mossa
+- **Fonte rank**: `attackRank(level) = (level / 2).coerceIn(0, 3)` → rank 3 raggiunto a lv6, poi NON sale più con i livelli
+- **Bonus nodo**: ogni nodo del ramo giusto nel passive tree aggiunge +1 rank (max +3, per 3 nodi per ramo)
+- **Rank totale** = base livello (0–3) + nodi ramo (0–3), cap a 6
+- `attackRank` aggiunto come private fun in GameEngine
 
-#### Fix 2 — Home button spaziatura
-- `UiShared.kt — ScreenHomeBar`: aggiunto `statusBarsPadding() + padding(top=4.dp)` al Row
-- Applicato automaticamente a tutte le schermate che usano `ScreenHomeBar`
+Scaling per mossa:
 
-#### Fix 3 — XP display bug
-- `AdventureScreens.kt` e `HeroScreens.kt`: formula corretta
-- `experience` è XP within-level (si azzera ad ogni level up), NON cumulativo
-- Threshold = `level * level * 25` (25/100/225/400/625) invece di `level * 100`
-- Eliminato il `- currentLevelBaseXp` che causava valori negativi sul display
+| Mossa | Rank 3 | Rank 5 | Rank 6 (mastery) |
+|---|---|---|---|
+| **Bash** | stagger 64%, durata 3r | — | stagger garantito su hit |
+| **Affondo** | acc -1, danno +3, EXPOSED 3r | acc 0, danno +4 | EXPOSED magnitude 2 |
+| **Turbine** | weaken 64%, durata 3r | stamina 1 | weaken garantito, durata 4r, stamina 0 |
+| **Taglio** | bleed 62%, durata 4r | bleed mag 2 | bleed garantito, durata 5r, mag 2 |
+| **Tiro** | FOCUSED max 4 | FOCUSED max 5 | FOCUSED max 6, "Mira perfetta" +1 danno |
+| **Doppio** | 3 colpi, bleed 45% | bleed 55% | bleed garantito, durata 5r |
+| **Marchio** | bleed/danno +1 ogni 2 rank | — | cap bleed 7, danno cap 9 |
+| **Lancia** | range danno allargato | — | danno max 12 |
+| **Parola** | durata 3r, mag alta | — | durata 4r, magnitude massima |
 
-#### Fix 4 — Stash flow redesign
-- `stashOnCompletion()`: sempre stasha TUTTO (equip + zaino) indipendentemente da prima/replica
-- `initiateAdventureStart()`: va sempre al LoadoutSelection se `allowCarryOverLoadout=true`, skip altrimenti
-- `LoadoutSelectionScreen`: indicatore peso (Libero/Appesantito/Sovraccarico!/Impedito!), titolo rinnovato
-- `AdventureLibraryScreen`: dialog semplificato — no più "Continua equip/Fresh start", solo "Scegli loadout"/"Inizia"
+#### 2. CharacterSheet — 9 nuovi campi rank bonus
+```
+bashRankBonus, affondoRankBonus, turbineRankBonus,
+taglioRankBonus, tiroRankBonus, doppioRankBonus,
+marchioRankBonus, lanciaRankBonus, parolaRankBonus
+```
+Tutti `Int = 0`, calcolati da `PassiveNodeResolver`.
 
----
+#### 3. SkillTreeNode — campo `attackRankId: String?`
+- Ogni nodo di colonna ha `attackRankId` = nome della mossa
+- I nodi extra fuori dal conteggio di 3 per ramo hanno `attackRankId = null`
+- Valori validi: `"bash"`, `"affondo"`, `"turbine"`, `"taglio"`, `"tiro"`, `"doppio"`, `"marchio"`, `"lancia"`, `"parola"`
 
-## Stato attuale — 2026-04-26 (aggiornamento 7)
+#### 4. SkillTreeCatalog — attackRankId sui nodi di colonna
+Ogni ramo ha esattamente **3 nodi con attackRankId** (regola uniforme per tutte le classi):
 
-### Fix post-release 0.1.7-alpha (RPG_PROJECT)
+| Classe | Ramo | Nodi rank (3) | Nodi extra (attackRankId=null) |
+|---|---|---|---|
+| Warrior | Bash | g_bash1, g_bash2, pelle_d_acciaio | bastione_vivente, giuramento_del_ferro |
+| Warrior | Affondo | g_aff1, g_aff2, contrattacco | — |
+| Warrior | Turbine | g_turb1, g_turb2, carne_del_ferro | — |
+| Ranger | Taglio | b_tag1, b_tag2, occhio_del_predatore | traccia_indelebile, passo_fantasma |
+| Ranger | Tiro | b_tiro1, b_tiro2, istinto_di_sopravvivenza | — |
+| Ranger | Doppio | b_dop1, b_dop2, colpo_decisivo | — |
+| Cultist | Marchio | r_mar1, r_mar2, marchio_potenziato | — |
+| Cultist | Lancia | r_lan1, r_lan2, corruzione_amplificata | patto_del_vuoto |
+| Cultist | Parola | r_par1, r_par2, studio_arcano | — |
 
-#### Event node text fix — completato
-- `AdventureScreens.kt`: `else {` → `else if (state.combatState == null) {` nella sezione scelte
-- Le scelte non vengono mostrate durante un combattimento attivo (event node combat non espone più il testo della scena precedente)
-- Dialogue e Shop esclusi per ora (fuori scope)
-- Commit: `07f9619`
+#### 5. PassiveNodeResolver — rank bonus calcolati
+- Conta nodi allocati per `attackRankId` → scrive i 9 campi rank in `CharacterSheet`
+- Il livello nascosto (stat growth: HP, stamina, meleeSkill, ecc.) è separato e indipendente dal rank
 
-### Adventure Studio — chapter group card redesign (txt_master_site)
+#### 6. Correzioni simulazione (sessione precedente)
+- `HEAL_EVERY = 3` (era 5) — 3 incontri = 1 stanza reale = 1 checkpoint
+- `SHOP_EVERY = 3` (era 4) — shop alla stessa cadenza del checkpoint
 
-#### Completato — commit `59e2fde`
-- Card header: solo bottoni "Elimina"/"Apri" (niente titolo in linea)
-- Nome capitolo nella riga sotto, stile `.chapter-group-card__name`
-- Larghezza card dinamica in base alla lunghezza del titolo (160–340px), altezza 72px
-- Exit ports auto-popolate da tutti i cross-group edges
-- Marquee selection visibile (CSS aggiunto nella sessione precedente)
-
----
-
-## Stato attuale — 2026-04-26 (aggiornamento 6)
-
-### Feature batch "0.1.7-alpha" — completate (RPG_PROJECT)
-
-**Tutto implementato, build NON ancora rilasciata.**
-
-#### 1. Stash system
-- `HeroProfile.stash`, `completedAdventureIds`, `adventureCompletionCounts`
-- `GameState.runStartLoadout`
-- `GameAppState.stashOnCompletion()` / `stashOnDeath()` — meccanica tabella sopra
-- `GameAppState.confirmLoadoutAndStart()` — rimuove item dallo stash al lancio
-
-#### 2. Hero Screen estesa
-- `HeroStashScreen` — lista stash con categoria/rarità/peso/quantità
-- `HeroForgeScreen` — atmosfera UO/RPG medievale; `ForgePalette` dedicata; griglia 3×3; ricette scoperte; `ForgeSlot` composable
-- Accessible da `AdventureLibraryScreen` tramite bottoni "Stash" e "Fornace"
-
-#### 3. Loadout selection pre-avventura
-- `LoadoutSelectionScreen` — checkbox + quantity per ogni item
-- `AppScreen.LoadoutSelection`; `initiateAdventureStart()` → routing stash vuoto / stash pieno
-
-#### 4. Weight system
-- `EncumbranceLevel` enum, `totalCarryWeight()`, penalità difesa/skill progressive in `GameEngine`
-- Auto-weight in `EquipmentCatalog.item()` builder
-
-#### 5. Rimozione forge dall'avventura
-- Nessun bottone "Fucina" in `AdventureBottomBar`
-- `CraftingPanelContent` eliminato da `AdventureScreens.kt`
-
-#### 6. Anti-farm XP (replay multiplier)
-- `adventureCompletionCounts` in `HeroProfile`; `adventureCompletionCount` + `newXpNodesThisRun` in `GameState`
-- `completionReplayMultiplier()` in `GameEngine`: 1.0 / 0.5 / 0.25 / 0.1 + bonus +0.25 per ≥3 nodi nuovi
-- Microcopy atmosferico nel log
-
-#### 7. Fix UX narrative
-- Badge "Combattimento" rimosso dalle ChoiceCard (no spoiler evento)
-- Testo scena nascosto durante combattimento attivo (mostra solo CombatCard)
-
-#### 8. Hardcore save behavior
-- Dialog uscita dual-mode: normale → "Salva e torna" / "Esci senza salvare"; hardcore → "Torna" / "Abbandona run"
-- `returnToGatewayFromAdventure()` in `GameAppState` — nessun save esplicito, usa autosave esistente
-- Autosave cancellato alla morte hardcore già implementato in `confirmDeathAfterScene()`
-
-#### 9. Max 3 slot salvataggio per eroe
-- `SaveGameRepository`: secondo pass in `enforceHeroSaveLimit` — `MAX_SAVES_PER_HERO = 3`
-
-#### 10. crafting.html (txt_master_site)
-- Nuova pagina pubblica con tutte le ricette: griglia 3×3 visuale per ogni ricetta, tabella materiali/famiglie, note per autori avventure
-- Link aggiunto in `wiki.html`
+#### 7. PassiveNodeResolver — modello livello nascosto
+- Ogni nodo non-START allocato = +1 livello nascosto sulle **sole stat** (HP, stamina, meleeSkill, ecc.)
+- Il rank delle mosse NON sale con i livelli nascosti
+- `perkGrowthLabel()` esposto per l'UI
 
 ---
 
-### Release 0.1.7-alpha — COMPLETATA (2026-04-26)
+## Istruzioni per Codex — Simulazioni rank mosse
 
-- [x] Build AAB versionCode 12 / 0.1.7-alpha — `app/build/outputs/bundle/release/app-release.aab` (16 MB)
-- [x] Push txt_master_site (crafting.html + wiki.html aggiornata) — commit `34b1161`
-- [x] Dead code `GameAppState.craft()` rimosso
+### Obiettivo
+Verificare che il sistema rank mosse produca progressione significativa e bilanciamento accettabile tra le classi e tra le scelte di build.
 
----
+### File di riferimento
+- Simulazione esistente: `app/src/test/java/com/bergman90/txtmaster/engine/ClassRunBalanceSimulationTest.kt`
+- Engine: `app/src/main/java/com/bergman90/txtmaster/engine/GameEngine.kt`
+- Funzione chiave: `attackRank(level)` e i campi `*RankBonus` in `CharacterSheet`
 
-## Stato attuale — 2026-04-25 (aggiornamento 5)
+### Scenario 1 — Progressione rank per livello (sanity check)
+**File**: aggiungi `AttackRankProgressionTest.kt` in `engine/`
 
-### Crafting system implementato (RPG_PROJECT) — non ancora rilasciato
+Verifica che a parità di build e gear, un personaggio di livello superiore applichi più condizioni in media:
+- Warrior lv1 (rank 0) vs lv6 (rank 3): Bash deve applicare stagger con frequenza significativamente maggiore a lv6
+- Ranger lv1 vs lv6: Taglio deve applicare bleed con frequenza maggiore
+- Simulare 200 combatti per configurazione, contare condizioni applicate
 
-**Cosa è stato fatto:**
-- `CraftingCatalog.kt`: griglia 3×3 (GRID_ROWS=3, GRID_SIZE=9)
-- `CraftingRecipe.kt`: gridRows default → 3
-- `GameState.kt`: aggiunto `discoveredRecipeIds: Set<String>`
-- `GameEngine.kt`: `craft()` con matching strict + 30% distruzione su failure
-- `GameAppState.kt`: `fun craft()` wiring
-- `AdventureScreens.kt`: `CraftingPanelContent` (griglia tap-to-assign, picker materiali, ricette scoperte) + bottone "Fucina" nella bottom bar
+**Assertion**: surv% non deve calare con livelli più alti (ovvio), ma anche: `avgConditionsApplied(lv6) > avgConditionsApplied(lv1) * 1.3`
 
-**Fix UX in AdventureScreens.kt:**
-- Scroll to top ad ogni cambio scena
-- Flash "Prova riuscita!" centrato (1.5s) su skill check success
-- `lastCheckResult` ora sopravvive alla navigazione verso la scena di successo (threading via `resolveBranch` → `navigateToTarget` → `enterDescription`)
-- XP loggati da `enterDescription` (non più duplicati in `stateForBranch`)
-- Testo default scelte in `app.js`: "Scelta X" → "Prosegui..."
+### Scenario 2 — Rank bonus nodi: specializzazione vs generalismo
+**File**: estendi `ClassRunBalanceSimulationTest.kt` con nuovi test
 
-**Build:** versionCode 11 / versionName 0.1.6-alpha — NON ancora rilasciato (in attesa del sistema stash)
+Confronta due build Warrior a lv6 nella Torre (5 stanze early):
+- **Generalista**: 3 nodi distribuiti (1 bash + 1 affondo + 1 turbine) → rank 4 su tutte
+- **Specialista bash**: 3 nodi tutti in bash → rank 6 bash, rank 3 affondo/turbine
+- **Specialista turbine**: 3 nodi tutti in turbine → rank 6 turbine, rank 3 bash/affondo
 
----
+Idem per Ranger (taglio vs tiro vs doppio) e Cultist (marchio vs lancia vs parola).
 
-### Design sistema stash — DA IMPLEMENTARE
+**Assertion**: le tre build devono avere surv% comparabile (±15%) — nessuna dominante in modo schiacciante. Se una supera le altre di oltre 20%, segnalare nei log con `System.out.println`.
 
-**Meccaniche di fine run:**
-| Scenario | Loadout iniziale | Item trovati in run |
-|---|---|---|
-| Morte normale | Torna nello stash (meno consumabili usati) | Persi |
-| Morte hardcore | 50% distruzione per ogni item (incluso loadout) | Persi |
-| Completamento (prima volta) | Tutto → stash | Tutto → stash |
-| Completamento (già completata) | Torna nello stash (meno consumabili usati) | Persi |
+**Come settare il rank bonus**: creare il `CharacterSheet` con i campi `bashRankBonus = 3` ecc. direttamente (non passare per l'allocazione nodi — è una simulazione). Esempio:
+```kotlin
+val warriorBashSpec = CharacterFactory.createCharacter("warrior", "Test").copy(
+    level = 6,
+    bashRankBonus = 3   // 3 nodi bash → rank 6 totale
+)
+```
 
-**Altre decisioni:**
-- Hardcore: nessun salvataggio manuale, autosave cancellato alla morte
-- Normale: salvataggi invariati
-- Weight system sugli item (penalità soglia progressiva — valori da definire)
-- Forge spostata nella Hero Screen (usa materiali da stash, output → stash)
-- Hero Screen: nuove sezioni "Stash" e "Forge"
-- Loadout selection prima di ogni avventura (item escono dallo stash, rientrano a fine run)
-- Cap 3 save slot per personaggio
-- `runStartLoadout` nel GameState per tracciare loadout portato
-- `completedAdventureIds` nel HeroProfile per bloccare stash su adventure già completate
+### Scenario 3 — Rank 6 mastery: effetti speciali attivi
+**File**: aggiungi `AttackRankMasteryTest.kt` in `engine/`
 
-**Ordine implementazione:**
-1. Modello (HeroProfile + GameState: stash, completedAdventureIds, runStartLoadout)
-2. Logica fine run in GameEngine
-3. Hero Screen (stash + forge)
-4. Loadout selection pre-avventura
-5. Weight system
-6. Rimozione forge dall'avventura
+Verifica che gli effetti rank 6 scattino correttamente:
+- **Bash rank 6**: in 100 hit, stagger deve essere applicato ≥ 95 volte (garantito)
+- **Taglio rank 6**: in 100 hit, bleed deve essere applicato ≥ 95 volte (garantito)
+- **Doppio rank 6**: in 100 combat completi, bleed medio per hit deve essere > 80%
+- **Turbine rank 6**: `staminaCost == 0` — verificare che non venga mai consumata stamina
+- **Parola rank 6**: conditionDuration deve essere 4 su CONFUSED e WEAKENED
 
----
+Questi sono test unitari su singola azione, non simulazioni complete. Usare `GameState` con nemico fittizio e chiamare direttamente `rangerAttack(state, "taglio_tendini")`.
 
-### Ultimo pass Codex — Adventure Studio UX flowboard
-Commit pubblico: `edbf7a3+` | Commit privato: `b9617a6`
-- Marquee selection con preview live dei nodi intercettati
-- Badge conteggio nella selection box
-- Chapter group evidenziati quando i loro nodi sono selezionati o sotto marquee
-- Click sul capitolo = selezione di tutti i nodi contenuti
+### Scenario 4 — Cultist: scaling skill vs rank
+Il Cultist scala già con `loreSkill`, `alchemySkill`, `deceptionSkill`. Verificare che il rank non si sovrapponga in modo eccessivo:
+- Cultist lv6, 0 nodi: confronta marchio magnitude con cultist lv6, 3 nodi marchio
+- Differenza attesa: bleedMagnitude dovrebbe differire di ~1-2, non di 5+
 
----
+**Assertion**: `bleedMagWithNodes - bleedMagWithoutNodes <= 3`
 
-## Stato attuale — 2026-04-25 (aggiornamento 4)
+### Come eseguire
+```bash
+JAVA_HOME="C:/Program Files/Android/Android Studio/jbr" ./gradlew test --tests "*.AttackRankProgressionTest" --rerun-tasks
+JAVA_HOME="C:/Program Files/Android/Android Studio/jbr" ./gradlew test --tests "*.AttackRankMasteryTest" --rerun-tasks
+JAVA_HOME="C:/Program Files/Android/Android Studio/jbr" ./gradlew test --rerun-tasks  # tutti
+```
 
-### Release build 11 — versionCode 11 / versionName 0.1.6-alpha
-
-AAB release: `app/build/outputs/bundle/release/app-release.aab` (16 MB, 2026-04-25 18:25)
-
-**Cosa include rispetto alla build precedente:**
-- UX skill check: `CheckResultBanner` prominente + `ChoiceCard` con chip evento contestuale
-- Fix crash v1/v2: APK compilato con Adventure.kt v2
-- Allineamento Studio ↔ App Step 1-4:
-  - SKILLS: +guard, +precision, +alchemy, +constitution
-  - CONDITION_OPTIONS: +7 condizioni mancanti
-  - EFFECT_FAMILIES: +exploration / EFFECT_TRIGGERS: +on_low_hp, +on_scene_enter
-  - Branch extras UI: loot, condition, unlockChoiceId
-  - Condition event: campo testo narrativo
-- Fix rarity tier accessori (tier 2=mythic, tier 3=legendary)
-
----
-
-## Stato attuale — 2026-04-25 (aggiornamento 3)
-
-### Roadmap allineamento Studio ↔ App — Step 3 e 4 completati
-
-**`app.js` — `buildBranchRow` esteso (Step 3):**
-- Aggiunto pannello collassabile "⚙ Opzioni branch" su ogni branch row
-- `Branch.condition`: select condizione pre-combattimento (riusa `hydrateConditionSelect`)
-- `Branch.unlockChoiceId`: select che lista tutte le scelte `hidden: true` dell'avventura
-- `Branch.loot`: lista loot con `renderLootList` + pulsante "+ Oggetto"
-- Il pannello si apre automaticamente se uno dei tre campi è già valorizzato
-
-**`styles.css` — nuovi stili branch extras:**
-- `.branch-extras-toggle`, `.branch-extras-panel`, `.branch-extras-row`, `.branch-extras-label`
-
-**`app.js` — `buildConditionConfig` aggiornato (Step 4):**
-- Aggiunto campo textarea per `Event.Condition.text` (testo narrativo opzionale)
-- Aggiornata la descrizione del pannello: "Applica una condizione di combattimento al personaggio"
-
-**Prossimi step roadmap:**
-- [ ] **Step 5** — Dialogue runtime: `once`, `hiddenUntilUnlocked`, `gateType` (mezzo giorno+)
-- [ ] **Crafting system** — separato
-
----
-
-## Stato attuale — 2026-04-25 (aggiornamento 2)
-
-### Roadmap allineamento Studio ↔ App — Step 1 e 2 completati
-
-**`app.js` — costanti aggiornate:**
-- `SKILLS`: aggiunti `guard` (Guardia), `precision` (Precisione), `alchemy` (Alchimia), `constitution` (Costituzione)
-- `EFFECT_FAMILIES`: aggiunta `exploration` (Esplorazione)
-- `EFFECT_TRIGGERS`: aggiunti `on_low_hp` (Con HP bassi), `on_scene_enter` (All'ingresso nella scena)
-- `CONDITION_OPTIONS`: aggiunte 7 condizioni mancanti — `burning`, `bleeding`, `confused`, `second_wind`, `hunter_breath`, `closed_wounds`, `predator_step`
-
-**`EquipmentCatalog.kt` — fix rarity tier:**
-- Rimossa sovrascrittura `rarity` dal LootDrop per accessori tier — la rarity è ora sempre quella del catalog (tier 1=rare, tier 2=mythic, tier 3=legendary)
-
-**Prossimi step roadmap:**
-- [ ] **Step 3** — Branch fields UI nell'editor: `loot`, `condition`, `unlockChoiceId`
-- [ ] **Step 4** — `Event.Condition.text` esposto in editor
-- [ ] **Step 5** — Dialogue runtime: `once`, `hiddenUntilUnlocked`, `gateType`
-- [ ] **Crafting system** — separato (da affrontare dopo il resto)
-
----
-
-## Stato attuale — 2026-04-25
-
-### Ultimo lavoro — RPG_PROJECT (Android)
-
-**UX skill check e scelte** (`AdventureScreens.kt`)
-
-Tre problemi risolti:
-1. **Scelte senza contesto** → ogni scelta mostra ora un chip colorato con icona che indica il tipo di evento:
-   - Dado giallo `Prova [Attributo]  CD X` per skill check
-   - Martello rosso `Combattimento` per combat
-   - Lucchetto blu `Richiede oggetto` per requirement
-   - Stella verde `Ricompensa` per loot
-   - Pulsante contestuale: "Tenta la prova" / "Combatti" / "Prova il requisito" / "Raccogli" / "Scegli"
-2. **Esito skill check invisibile** → aggiunto `CheckResultBanner` prominente verde/rosso sopra le scelte, con dado/modificatore/totale/CD, margine di successo, XP guadagnati
-3. **Log duplicato** → rimosso skill check dal log generico in cima (resta solo per loot)
-
-Nuovo AAB release: `app/build/outputs/bundle/release/app-release.aab` (16 MB, 2026-04-25 17:55)
-
-**Vecchio crash v1/v2** — risolto: APK installato era compilato da Adventure.kt v1. Rebuild ha risolto.
-
----
-
-## Stato attuale — 2026-04-24
-
-### Contesto
-- Repo: `bergman90/txt_master_site` (GitHub Pages — editor statico)
-- Repo Android: `bergman90/RPG_PROJECT` (Kotlin/Compose, privato)
-- Branch attivo: `main` — deployato su GitHub Pages via GitHub Actions
-
-### Ultimo push (`bda80d2`, 2026-04-24)
-Cinque commit pushati:
-
-| Hash | Descrizione |
-|------|-------------|
-| `80247f5` | fix: crash minicard requisito (`responsesWrap` undefined nel blocco `requirement`) + CSS combobox in `.ctp-row` |
-| `e79a305` | feat: requirement — combobox ricercabile oggetti (`createItemSearchCombobox`) + dual-control lockId chiavi (`buildKeyRequirementControl`) |
-| `14e4dcd` | fix: sentinelle `__retry__` / `__no_escape__` riconosciute in validazione; `trade_value` compatibile con `material` |
-| `d3c11ba` | compiler v2: output `descriptions[]` + eventi inline — allineato con `Adventure.kt` v2 |
-| `3677041` | fix: mojibake + rimozione warning `burnAfterUse` obsoleto dal compilatore |
-
----
-
-## Architettura chiave (Adventure Studio)
-
-- **`app.js`** (~13000 righe, file unico, nessun framework)
-- **Quick menu (minicard)**: pannello floating sulla flowboard — vive dentro la closure `rebuild()` del flow event menu
-- **Pannello avanzato**: `buildRequirementConfig()` — editor proprietà evento completo
-- **Compilatore**: `runtime-compiler.js` → converte grafo editor in JSON v2 compatibile con `Adventure.kt`
-- **Sentinelle targetId valide**: `__death__`, `__stay__`, `__retry__`, `__no_escape__`
-- **Modalità requisito**: `presetItem` | `itemCategory` | `key` | `questItem`
-
----
-
-## Decisioni tecniche recenti
-
-- `valueSlot` (div) separato da `valueLabelText` (span) in `buildRequirementConfig` — evita che `textContent=` distrugga il controllo figlio
-- `createItemSearchCombobox`: navigazione tastiera (frecce/Enter/Esc), filtro per nome+categoria
-- `buildKeyRequirementControl`: select chiavi avventura + input `lockId` sincronizzati bidirezionalmente
-- Chapter groups: solo metadati editor, ignorati dal compilatore runtime
+### Output atteso
+Stampare tabelle comparabili a quelle di `ClassRunBalanceSimulationTest`:
+```
+──────────────────────────────────────────────────
+  RANK PROGRESSION — Bash Warrior
+──────────────────────────────────────────────────
+  Build                    Stagger%   Surv%   Rooms
+  ──────────────────────────────────────────────
+  Warrior lv1 (rank 0)       40%       ...     ...
+  Warrior lv6 (rank 3)       64%       ...     ...
+  Warrior lv6 +3bash (rank6) 100%      ...     ...
+──────────────────────────────────────────────────
+```
 
 ---
 
 ## In sospeso / prossimi passi
 
-- [ ] **1.3** — Verificare che `condition` su `Branch` sia gestito in `GameEngine.kt`
-- [ ] **5.3** — Verificare comportamento shop in `GameEngine.kt`
-- [ ] **5.4** — Test end-to-end Studio → compilatore → Android
-- [ ] **update-in-place** — Estendere su gruppi combattimento e rami esito (flowboard)
-- [ ] **Pulizia editor** — Performance pannelli su avventure grandi
+- [ ] **Simulazioni rank** — Codex deve scrivere i test sopra e riportare i risultati
+- [ ] **Keystone V2** — collegare `combatFlag` al GameEngine (`guard_on_low_hp`, `bleeding_chance_bonus`, `immune_first_round`, `guard_extend`, `ritual_bolt_bonus`)
+- [ ] **Gear T4** — 12 nuovi item (4 per classe) per le Lande del Caos
+- [ ] **Lande del Caos** — stanze 31+
+- [ ] **Grimorio** — togliere le avventure elencate alla prossima release
 
 ---
 
-## File critici
+## File critici (RPG_PROJECT)
+
+| File | Scopo |
+|------|-------|
+| `engine/GameEngine.kt` | Logica combattimento, `warriorAttack`, `rangerAttack`, cultist attacks, `attackRank()` |
+| `engine/PassiveNodeResolver.kt` | Calcola stat bonus + rank bonus dai nodi allocati |
+| `engine/SkillTreeCatalog.kt` | 52 nodi, `attackRankId` sui nodi di colonna |
+| `model/CharacterSheet.kt` | Scheda personaggio, inclusi `*RankBonus` e `passive*Bonus` |
+| `model/SkillTreeNode.kt` | Modello nodo, campo `attackRankId` |
+| `test/.../ClassRunBalanceSimulationTest.kt` | Simulazione bilanciamento classi (500 iter) |
+
+---
+
+## File critici (Adventure Studio)
 
 | File | Scopo |
 |------|-------|
@@ -321,8 +188,7 @@ Cinque commit pushati:
 | `adventure-studio/runtime-compiler.js` | Compilatore grafo → JSON v2 |
 | `adventure-studio/styles.css` | Stili editor |
 | `adventures/catalog.json` | Indice avventure pubblicate |
-| `CLAUDE.md` | Istruzioni progetto per Claude |
 
 ---
 
-_Ultimo aggiornamento: 2026-04-24 — Claude Sonnet 4.6_
+_Ultimo aggiornamento: 2026-05-11 — Claude Sonnet 4.6_
