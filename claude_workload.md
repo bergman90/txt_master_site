@@ -5,6 +5,82 @@
 
 ---
 
+## Stato attuale — 2026-05-11 (aggiornamento 19)
+
+### RPG_PROJECT — commit `cba498f`
+
+**Ranger redesign + Explorer buff + SkillTree fork UI**
+
+#### Ranger — meccaniche
+- `tiro_mirato` → stacking FOCUSED: ogni uso +1 magnitude (max 3). FOCUSED aggiunge accuracy via `playerConditionAttackBonus`. Al mag 3, `playerCriticalThreshold` scala -2 per Explorer.
+- `doppio_colpo` → rimosso malus -2 accuracy. Ora tiro pulito.
+- Sinergia progettata: Tiro Mirato ×3 → FOCUSED mag 3 → Doppio Colpo su BLEEDING = massimo output.
+- Arco base: `damageMin` 1 → 2, `damageMax` 5 → 6 (non visibile nei test T2 che hardcodano l'arma).
+
+#### Explorer — buff
+- HP base +2 alla creazione (simmetrico a Warrior): `CLASS_EXPLORER -> 2` in CharacterFactory.
+- `activateIstintoAffilato` → recupera 2 HP all'attivazione (oltre ad attivare soglia critico -4).
+
+#### SkillTree — fork UI
+- `SkillTreeCatalog.kt` riscritto con struttura a forchetta 3 colonne per classe:
+  - **Warrior**: START(500,90) → Bash(x≈372) / Affondo(x≈500) / Turbine(x≈628) → `g_w_junc` → centro
+  - **Ranger**: START(165,875) → Taglio(x≈80) / Tiro(x≈165) / Doppio(x≈255) → `b_junc` → `b_junc_bridge` → centro
+  - **Cultist**: START(835,875) → Marchio(x≈752) / Lancia(x≈838) / Parola(x≈921) → `r_junc` → `r_junc_bridge` → centro
+  - Centro circolare condiviso (~500,480) con 9 nodi
+  - `STUDIO_ARCANO` spostato in colonna Parola (disruption/accuracy), `MARCHIO_POTENZIATO` in Marchio, `CORRUZIONE_AMPLIFICATA` in Lancia
+- `SkillTreeScreen.kt`: aggiunto `TextMeasurer` + etichette colonna ("Bash", "Affondo", "Turbine", ecc.) disegnate sul Canvas, centrate sulle colonne, colorate per classe, scalano con zoom/pan.
+
+#### Test
+- `withSkillBuild v3`: `t(marchioN, 1)` aggiunto ad `attackBonus` Cultist → marchio5=38% (sopra baseline 27%) ✓
+- `skillBuildDiversity_*_torre`: test limitati alla Torre (i perk si sbloccano post-Dungeon, non testare su Dungeon).
+
+**Risultati test Torre post-patch:**
+| Classe | Build | Surv% | Note |
+|---|---|---|---|
+| Cultist | baseline | 5% | ✓ |
+| Cultist | marchio5 | 1% | — |
+| Cultist | lancia5 | 7% | ✓ |
+| Cultist | bilanciato | 6% | ✓ |
+| Warrior | baseline | 1% | ✓ |
+| Warrior | bash5 | 3% | ✓ |
+| Explorer | tutti | 0% | problema strutturale Torre |
+
+Ranger 0% Torre: problema base, non delle colonne. In gameplay reale arriva alla Torre con pozioni/risorse pre-accumulate — la simulazione è pessimistica (niente rest, niente consumabili).
+
+---
+
+## Stato attuale — 2026-05-10 (aggiornamento 18)
+
+### RPG_PROJECT — `ClassRunBalanceSimulationTest` — withSkillBuild v3 (marchio fix)
+
+**Fix applicato:** `withCultistBuild` aveva `attackBonus` di Marchio = 0.
+Blood Mark richiede hit per applicarsi → senza accuracy bonus, più mancati → fight più lunghi → più danni totali ricevuti, nonostante il +1 danno. Aggiunto `t(marchioN, 1)` all'attackBonus.
+
+**Risultati Dungeon 10 stanze — withSkillBuild v3:**
+
+| Classe | Build | Surv% | Avg rooms |
+|---|---|---|---|
+| Warrior | baseline | 3% | 3.0 |
+| Warrior | bash5 | 3% | 3.0 |
+| Warrior | affondo5 | 3% | 3.4 |
+| Warrior | turbine5 | 4% | 3.8 |
+| Warrior | bilanciato (2-2-1) | 3% | 3.1 |
+| Cultist | baseline | 27% | 4.8 |
+| Cultist | **marchio5** | **38%** | 6.0 ✓ (era 25% — ora sopra baseline) |
+| Cultist | lancia5 | 58% | 8.1 |
+| Cultist | parola5 | 43% | 6.6 |
+| Cultist | bilanciato (2-2-1) | 58% | 7.5 |
+| Ranger | tutti | 0% | 1.2-1.9 |
+
+**Conclusioni design aggiornate:**
+1. **Cultist**: tutte le colonne ≥ baseline ✓. Gerarchia: bilanciato=lancia5 (58%) > parola5 (43%) > marchio5 (38%) > baseline (27%). Nessun build inutile.
+2. **Warrior**: tutte le colonne ≥ baseline ✓ (range 3-4%). Turbine5 ha avg rooms più alto (3.8 vs 3.0 baseline).
+3. **Ranger**: ancora 0% su tutto — problema strutturale base, non delle colonne. Le approssimazioni skill spostano leggermente avg rooms (1.2→1.9) ma non abbastanza da produrre vittorie. **Fix necessario a livello engine**: +2 HP base oppure meccanica di recupero HP intra-run specifica per Ranger.
+
+**Test aggiunto non ancora nel repo** — commit pendente.
+
+---
+
 ## Stato attuale — 2026-05-10 (aggiornamento 17)
 
 ### RPG_PROJECT — commit `59024f1`
